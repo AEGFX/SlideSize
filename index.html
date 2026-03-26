@@ -88,7 +88,7 @@
     padding: 28px 20px 48px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
   }
 
   /* MODE TOGGLE */
@@ -154,15 +154,35 @@
   }
   input[type="text"]:focus { border-color: var(--accent); }
   input[type="text"].input-error { border-color: var(--red); color: var(--red); }
+
+  /* MINI OPTIONS */
+  .mini-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .mini-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .mini-label {
+    font-family: var(--sans);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
   select {
     width: 100%;
     background: var(--bg);
     border: 1px solid var(--border2);
     color: var(--text);
     font-family: var(--sans);
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 500;
-    padding: 10px 12px;
+    padding: 7px 10px;
     border-radius: 2px;
     outline: none;
     cursor: pointer;
@@ -170,6 +190,8 @@
   }
   select:focus { border-color: var(--accent); }
   select option { background: #1e1e1e; }
+
+  /* UNIT TOGGLE */
   .unit-toggle {
     display: flex;
     border: 1px solid var(--border2);
@@ -220,11 +242,12 @@
     border: 1px solid var(--border2);
     border-top: 2px solid var(--accent);
     border-radius: 2px;
-    padding: 28px 24px 24px;
+    padding: 24px 20px 20px;
     text-align: center;
     display: flex;
     flex-direction: column;
     align-items: center;
+    gap: 10px;
   }
   .result-hero-label {
     font-family: var(--sans);
@@ -233,65 +256,92 @@
     letter-spacing: 3px;
     text-transform: uppercase;
     color: var(--accent);
-    margin-bottom: 16px;
   }
-  .result-cm {
+
+  /* CM result boxes — side by side, no separator */
+  .result-cm-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    width: 100%;
+  }
+  .result-box {
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    border-radius: 2px;
+    padding: 12px 8px;
     display: flex;
-    align-items: baseline;
-    gap: 8px;
-    line-height: 1;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
   }
-  .result-cm-num {
-    font-family: var(--mono);
-    font-size: 60px;
-    color: #fff;
-    letter-spacing: -2px;
-    transition: color 0.2s;
-  }
-  .result-cm-sep {
-    font-family: var(--mono);
-    font-size: 36px;
-    color: #fff;
-  }
-  .result-cm-unit {
-    font-family: var(--mono);
-    font-size: 14px;
-    color: var(--muted);
-    letter-spacing: 2px;
-    align-self: flex-end;
-    padding-bottom: 7px;
-  }
-  .result-inches {
-    margin-top: 10px;
-    font-family: var(--mono);
-    font-size: 20px;
-    color: var(--label);
+  .result-box-label {
+    font-family: var(--sans);
+    font-size: 10px;
+    font-weight: 600;
     letter-spacing: 1px;
-    transition: color 0.2s;
-  }
-  .result-inches-unit {
-    font-family: var(--mono);
-    font-size: 12px;
     color: var(--muted);
-    margin-left: 3px;
-    letter-spacing: 2px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .result-box-value {
+    font-family: var(--mono);
+    font-size: clamp(20px, 6vw, 44px);
+    color: #fff;
+    line-height: 1;
+    width: 100%;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Inch result boxes — same layout, shorter, smaller text */
+  .result-in-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    width: 100%;
+  }
+  .result-box-in {
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    border-radius: 2px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    min-width: 0;
+  }
+  .result-box-in .result-box-label { font-size: 9px; }
+  .result-box-in-value {
+    font-family: var(--mono);
+    font-size: clamp(13px, 3.5vw, 20px);
+    color: var(--label);
+    line-height: 1;
+    width: 100%;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   /* Preview inside hero */
   .hero-preview {
-    margin-top: 22px;
     width: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 100px;
+    min-height: 90px;
   }
   #canvas-preview {
     background: linear-gradient(135deg, #1e1e1e 0%, #141414 100%);
     border: 1px solid var(--accent);
     position: relative;
     max-width: 100%;
-    max-height: 150px;
+    max-height: 140px;
     box-shadow: 0 0 20px rgba(231,48,42,0.1);
     transition: all 0.35s ease;
     display: flex;
@@ -321,9 +371,50 @@
   }
 
   /* Empty state */
-  .result-hero.empty .result-cm-num { color: var(--border2); }
-  .result-hero.empty .result-cm-sep { color: var(--border2); }
-  .result-hero.empty .result-inches { color: var(--border2); }
+  .result-hero.empty .result-box-value    { color: var(--border2); }
+  .result-hero.empty .result-box-in-value { color: var(--border2); }
+
+  /* SHARE BUTTON */
+  .share-btn {
+    display: none;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: transparent;
+    border: 1px solid var(--border2);
+    color: var(--label);
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 13px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+  }
+  .share-btn.visible { display: flex; }
+  .share-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .share-btn svg { flex-shrink: 0; }
+
+  /* SHARE TOAST */
+  .share-toast {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: rgba(76,175,130,0.1);
+    border: 1px solid rgba(76,175,130,0.4);
+    border-radius: 2px;
+    padding: 10px 14px;
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--green);
+    text-align: center;
+  }
+  .share-toast.visible { display: flex; }
 
   /* PPT WARNING */
   .ppt-warn {
@@ -417,13 +508,6 @@
   .secondary-panel { display: none; flex-direction: column; gap: 20px; }
   .secondary-panel.open { display: flex; }
 
-  /* OPTIONS ROW */
-  .options-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-  }
-
   /* PRESETS */
   .presets-grid {
     display: grid;
@@ -502,9 +586,11 @@
     flex-direction: column;
     align-items: center;
     text-align: center;
-    gap: 4px;
+    gap: 3px;
+    line-height: 1.6;
   }
   footer a { color: var(--accent); text-decoration: none; }
+  .footer-sep { margin: 4px 0; height: 1px; width: 40px; background: var(--border2); }
 
   /* ANIMATION */
   @keyframes pop {
@@ -530,24 +616,25 @@
     <button class="mode-btn" id="btn-physical" onclick="setMode('physical')">Physical</button>
   </div>
 
+  <!-- PIXEL INPUTS -->
   <div id="panel-pixel">
     <div class="input-row">
       <div class="input-group">
         <label>Width (px)</label>
-        <input type="text" id="px-w" placeholder="1920" inputmode="decimal" autocomplete="off">
+        <input type="text" id="px-w" placeholder="1280" inputmode="decimal" autocomplete="off">
       </div>
       <div class="input-group">
         <label>Height (px)</label>
-        <input type="text" id="px-h" placeholder="1080" inputmode="decimal" autocomplete="off">
+        <input type="text" id="px-h" placeholder="720" inputmode="decimal" autocomplete="off">
       </div>
     </div>
   </div>
 
+  <!-- PHYSICAL INPUTS -->
   <div id="panel-physical" style="display:none">
     <div class="unit-toggle" style="margin-bottom:12px">
       <button class="unit-btn active" id="unit-m"  onclick="setUnit('m')">Metres</button>
-      <button class="unit-btn"        id="unit-cm" onclick="setUnit('cm')">CM</button>
-      <button class="unit-btn"        id="unit-mm" onclick="setUnit('mm')">MM</button>
+      <button class="unit-btn"        id="unit-ft" onclick="setUnit('ft')">Feet</button>
     </div>
     <div class="input-row">
       <div class="input-group">
@@ -564,20 +651,64 @@
     </p>
   </div>
 
+  <!-- MINI OPTIONS above calculate (pixel mode only) -->
+  <div class="mini-options" id="mini-options">
+    <div class="mini-group">
+      <div class="mini-label">Colour Depth</div>
+      <select id="bit-depth">
+        <option value="8" selected>8-bit</option>
+        <option value="10">10-bit</option>
+        <option value="12">12-bit</option>
+      </select>
+    </div>
+    <div class="mini-group">
+      <div class="mini-label">Frame Rate</div>
+      <select id="fps">
+        <option value="23.976">23.98 fps</option>
+        <option value="24">24 fps</option>
+        <option value="25" selected>25 fps</option>
+        <option value="29.97">29.97 fps</option>
+        <option value="30">30 fps</option>
+        <option value="47.952">47.95 fps</option>
+        <option value="48">48 fps</option>
+        <option value="50">50 fps</option>
+        <option value="59.94">59.94 fps</option>
+        <option value="60">60 fps</option>
+      </select>
+    </div>
+  </div>
+
   <button class="calc-btn" onclick="calculate()">Calculate</button>
 
   <!-- RESULT HERO -->
   <div class="result-hero empty" id="result-hero">
     <div class="result-hero-label">Slide Size</div>
-    <div class="result-cm">
-      <div class="result-cm-num" id="rh-w">--</div>
-      <div class="result-cm-sep">&times;</div>
-      <div class="result-cm-num" id="rh-h">--</div>
-      <div class="result-cm-unit">cm</div>
+
+    <!-- CM boxes -->
+    <div class="result-cm-row">
+      <div class="result-box">
+        <div class="result-box-label">Width (cm)</div>
+        <div class="result-box-value" id="rh-w">--</div>
+      </div>
+      <div class="result-box">
+        <div class="result-box-label">Height (cm)</div>
+        <div class="result-box-value" id="rh-h">--</div>
+      </div>
     </div>
-    <div class="result-inches">
-      <span id="rh-in">-- x --</span><span class="result-inches-unit">in</span>
+
+    <!-- Inch boxes -->
+    <div class="result-in-row">
+      <div class="result-box-in">
+        <div class="result-box-label">Width (in)</div>
+        <div class="result-box-in-value" id="rh-win">--</div>
+      </div>
+      <div class="result-box-in">
+        <div class="result-box-label">Height (in)</div>
+        <div class="result-box-in-value" id="rh-hin">--</div>
+      </div>
     </div>
+
+    <!-- Slide shape preview -->
     <div class="hero-preview">
       <div id="canvas-preview" style="width:142px;height:80px">
         <div class="canvas-grid"></div>
@@ -587,8 +718,22 @@
     </div>
   </div>
 
+  <!-- SHARE BUTTON (appears after calculation) -->
+  <button class="share-btn" id="share-btn" onclick="shareResult()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+    </svg>
+    Share these dimensions
+  </button>
+
+  <!-- SHARE TOAST -->
+  <div class="share-toast" id="share-toast">
+    Link copied to clipboard — paste into email or WhatsApp
+  </div>
+
   <div class="ppt-warn" id="ppt-warn">
-    Width exceeds PPT maximum (142.24cm / 56"). Consider working at reduced scale.
+    Width exceeds PPT maximum (142.24cm / 56in). Consider working at reduced scale.
   </div>
 
   <!-- DETAILS -->
@@ -597,40 +742,14 @@
     <div class="details-grid" id="details-grid"></div>
   </div>
 
-  <!-- SECONDARY PANEL -->
+  <!-- PRESETS -->
   <button class="secondary-toggle-btn" onclick="toggleSecondary()">
-    Options &amp; Presets <span class="sec-arrow" id="sec-arrow">&#9660;</span>
+    Presets <span class="sec-arrow" id="sec-arrow">&#9660;</span>
   </button>
 
   <div class="secondary-panel" id="secondary-panel">
-
-    <!-- OPTIONS first -->
-    <div id="pixel-options">
-      <div class="section-label">Options</div>
-      <div class="options-row">
-        <div>
-          <label style="text-align:left;margin-bottom:6px">Colour Depth</label>
-          <select id="bit-depth">
-            <option value="8" selected>8-bit</option>
-            <option value="10">10-bit</option>
-            <option value="12">12-bit</option>
-          </select>
-        </div>
-        <div>
-          <label style="text-align:left;margin-bottom:6px">Frame Rate</label>
-          <select id="fps">
-            <option value="25">25 fps</option>
-            <option value="30">30 fps</option>
-            <option value="50" selected>50 fps</option>
-            <option value="60">60 fps</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <!-- PRESETS second -->
     <div>
-      <div class="section-label">Presets</div>
+      <div class="section-label">Standard Presets</div>
       <div class="presets-grid">
         <button class="preset-btn" onclick="fillPixels(1280,720)">720p<span>HD</span></button>
         <button class="preset-btn" onclick="fillPixels(1920,1080)">1080p<span>FHD</span></button>
@@ -640,7 +759,6 @@
         <button class="preset-btn" onclick="fillPixels(7680,4320)">8K<span>UHD-2</span></button>
       </div>
     </div>
-
   </div>
 
   <!-- REFERENCE TABLE -->
@@ -653,18 +771,21 @@
       <table>
         <thead>
           <tr>
-            <th>Standard</th><th>Pixels WxH</th><th>Aspect</th>
-            <th>PPT W (cm)</th><th>PPT H (cm)</th><th>Mpx</th><th>GB/s</th>
+            <th>Standard</th>
+            <th>Pixels WxH</th>
+            <th>Aspect</th>
+            <th>PPT W (cm)</th>
+            <th>PPT H (cm)</th>
           </tr>
         </thead>
         <tbody>
-          <tr><td class="td-accent">720p HD</td><td>1280x720</td><td class="td-green">16:9</td><td>33.87</td><td>19.05</td><td>0.92</td><td>1.11</td></tr>
-          <tr><td class="td-accent">1080p FHD</td><td>1920x1080</td><td class="td-green">16:9</td><td>33.87</td><td>19.05</td><td>2.07</td><td>2.49</td></tr>
-          <tr><td class="td-accent">1440p QHD</td><td>2560x1440</td><td class="td-green">16:9</td><td>33.87</td><td>19.05</td><td>3.69</td><td>4.42</td></tr>
-          <tr><td class="td-accent">4K UHD</td><td>3840x2160</td><td class="td-green">16:9</td><td>33.87</td><td>19.05</td><td>8.29</td><td>9.95</td></tr>
-          <tr><td class="td-accent">5K</td><td>5120x2880</td><td class="td-green">16:9</td><td>33.87</td><td>19.05</td><td>14.75</td><td>17.69</td></tr>
-          <tr><td class="td-accent">8K UHD-2</td><td>7680x4320</td><td class="td-green">16:9</td><td>33.87</td><td>19.05</td><td>33.18</td><td>39.81</td></tr>
-          <tr><td class="td-red">PowerPoint Max</td><td>-</td><td class="td-green">1:1</td><td>142.24</td><td>142.24</td><td>-</td><td>-</td></tr>
+          <tr><td class="td-accent">720p HD</td><td>1280x720</td><td class="td-green">16:9</td><td>33.87</td><td>19.05</td></tr>
+          <tr><td class="td-accent">1080p FHD</td><td>1920x1080</td><td class="td-green">16:9</td><td>33.87</td><td>19.05</td></tr>
+          <tr><td class="td-accent">1440p QHD</td><td>2560x1440</td><td class="td-green">16:9</td><td>33.87</td><td>19.05</td></tr>
+          <tr><td class="td-accent">4K UHD</td><td>3840x2160</td><td class="td-green">16:9</td><td>33.87</td><td>19.05</td></tr>
+          <tr><td class="td-accent">5K</td><td>5120x2880</td><td class="td-green">16:9</td><td>33.87</td><td>19.05</td></tr>
+          <tr><td class="td-accent">8K UHD-2</td><td>7680x4320</td><td class="td-green">16:9</td><td>33.87</td><td>19.05</td></tr>
+          <tr><td class="td-red">PowerPoint Max</td><td>-</td><td class="td-green">1:1</td><td>142.24</td><td>142.24</td></tr>
         </tbody>
       </table>
     </div>
@@ -673,8 +794,12 @@
 </div>
 
 <footer>
-  <span>Created by Andrew Brandse &middot; <a href="mailto:andrew@aegfx.com">andrew@aegfx.com</a> &middot; Built with Claude (Anthropic)</span>
-  <span>PPT max: 142.24cm x 142.24cm (56" x 56") &middot; Vertical anchor: 19.05cm (7.5")</span>
+  <span>Created by Andrew Brandse</span>
+  <span><a href="mailto:andrew@aegfx.com">andrew@aegfx.com</a></span>
+  <span>Built with Claude (Anthropic)</span>
+  <div class="footer-sep"></div>
+  <span>PowerPoint max dims: 142.24cm x 142.24cm (56in x 56in)</span>
+  <span>Vertical anchor: 19.05cm (7.5in)</span>
 </footer>
 
 <script>
@@ -683,6 +808,7 @@ var physUnit = 'm';
 var PPT_H_CM = 19.05;
 var PPT_H_IN = 7.5;
 var PPT_MAX_IN = 56;
+var toastTimer = null;
 
 function setMode(m) {
   mode = m;
@@ -690,16 +816,16 @@ function setMode(m) {
   document.getElementById('btn-physical').classList.toggle('active', m === 'physical');
   document.getElementById('panel-pixel').style.display = m === 'pixel' ? '' : 'none';
   document.getElementById('panel-physical').style.display = m === 'physical' ? '' : 'none';
-  document.getElementById('pixel-options').style.display = m === 'pixel' ? '' : 'none';
+  document.getElementById('mini-options').style.display = m === 'pixel' ? '' : 'none';
 }
 
 function setUnit(u) {
   physUnit = u;
-  ['m','cm','mm'].forEach(function(x) {
+  ['m','ft'].forEach(function(x) {
     document.getElementById('unit-' + x).classList.toggle('active', x === u);
   });
-  var wl = {m:'Width (m)', cm:'Width (cm)', mm:'Width (mm)'};
-  var hl = {m:'Height (m)', cm:'Height (cm)', mm:'Height (mm)'};
+  var wl = {m:'Width (m)', ft:'Width (ft)'};
+  var hl = {m:'Height (m)', ft:'Height (ft)'};
   document.getElementById('phys-w-label').textContent = wl[u];
   document.getElementById('phys-h-label').textContent = hl[u];
 }
@@ -752,7 +878,7 @@ function stdName(px) {
 
 function updatePreview(w, h) {
   var ratio = w / h;
-  var maxW = 460, maxH = 150;
+  var maxW = 460, maxH = 140;
   var pw = maxW, ph = maxW / ratio;
   if (ph > maxH) { ph = maxH; pw = maxH * ratio; }
   if (pw < 32) pw = 32;
@@ -766,6 +892,53 @@ function updatePreview(w, h) {
   if (lw < 14) lw = 14;
   if (lw > 72) lw = 72;
   logo.style.width = lw + 'px';
+}
+
+function buildShareURL(w, h, m, u, fps, bits) {
+  var base = window.location.href.split('?')[0].split('#')[0];
+  var params = '?mode=' + encodeURIComponent(m);
+  if (m === 'pixel') {
+    params += '&w=' + encodeURIComponent(w) + '&h=' + encodeURIComponent(h);
+  } else {
+    params += '&w=' + encodeURIComponent(w) + '&h=' + encodeURIComponent(h) + '&unit=' + encodeURIComponent(u);
+  }
+  params += '&fps=' + encodeURIComponent(fps) + '&bits=' + encodeURIComponent(bits);
+  return base + params;
+}
+
+function shareResult() {
+  var url = document.getElementById('share-btn').dataset.url;
+  if (!url) return;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(function() {
+      showToast();
+    }).catch(function() {
+      fallbackCopy(url);
+    });
+  } else {
+    fallbackCopy(url);
+  }
+}
+
+function fallbackCopy(text) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); } catch(e) {}
+  document.body.removeChild(ta);
+  showToast();
+}
+
+function showToast() {
+  var toast = document.getElementById('share-toast');
+  toast.classList.add('visible');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() {
+    toast.classList.remove('visible');
+  }, 3000);
 }
 
 function calculate() {
@@ -784,12 +957,12 @@ function calculate() {
       alert('Enter valid physical dimensions. Expressions like 4/3 or 2.4*2 work too.');
       return;
     }
-    var mult = physUnit === 'm' ? 100 : physUnit === 'mm' ? 0.1 : 1;
+    var mult = physUnit === 'm' ? 100 : 30.48;
     w = pw * mult;
     h = ph * mult;
   }
 
-  var fps  = parseFloat(document.getElementById('fps').value) || 50;
+  var fps  = parseFloat(document.getElementById('fps').value) || 25;
   var bits = parseFloat(document.getElementById('bit-depth').value) || 8;
   var ratio   = w / h;
   var pptW_cm = PPT_H_CM * ratio;
@@ -804,11 +977,21 @@ function calculate() {
   void hero.offsetWidth;
   hero.classList.add('fired');
 
-  document.getElementById('rh-w').textContent  = pptW_cm.toFixed(2);
-  document.getElementById('rh-h').textContent  = pptH_cm.toFixed(2);
-  document.getElementById('rh-in').textContent = pptW_in.toFixed(3) + '" x ' + pptH_in.toFixed(3) + '"';
+  document.getElementById('rh-w').textContent   = pptW_cm.toFixed(2);
+  document.getElementById('rh-h').textContent   = pptH_cm.toFixed(2);
+  document.getElementById('rh-win').textContent = pptW_in.toFixed(3);
+  document.getElementById('rh-hin').textContent = pptH_in.toFixed(3);
 
   updatePreview(w, h);
+
+  // Build and store share URL
+  var rawW = mode === 'pixel' ? w : getVal('phys-w');
+  var rawH = mode === 'pixel' ? h : getVal('phys-h');
+  var shareURL = buildShareURL(rawW, rawH, mode, physUnit, fps, bits);
+  var shareBtn = document.getElementById('share-btn');
+  shareBtn.dataset.url = shareURL;
+  shareBtn.classList.add('visible');
+  document.getElementById('share-toast').classList.remove('visible');
 
   var totalPx = mode === 'pixel' ? w * h : null;
   var mpx = totalPx ? (totalPx / 1e6).toFixed(2) : '-';
@@ -839,6 +1022,50 @@ function toggleRef() {
   document.getElementById('ref-arrow').classList.toggle('open');
 }
 
+// Load state from URL params on page load
+function loadFromURL() {
+  var params = new URLSearchParams(window.location.search);
+  if (!params.has('w') || !params.has('h')) return;
+
+  var m    = params.get('mode') || 'pixel';
+  var w    = params.get('w');
+  var h    = params.get('h');
+  var u    = params.get('unit') || 'm';
+  var fps  = params.get('fps') || '25';
+  var bits = params.get('bits') || '8';
+
+  setMode(m);
+
+  if (m === 'pixel') {
+    document.getElementById('px-w').value = w;
+    document.getElementById('px-h').value = h;
+  } else {
+    setUnit(u);
+    document.getElementById('phys-w').value = w;
+    document.getElementById('phys-h').value = h;
+  }
+
+  // Set fps select
+  var fpsEl = document.getElementById('fps');
+  for (var i = 0; i < fpsEl.options.length; i++) {
+    if (Math.abs(parseFloat(fpsEl.options[i].value) - parseFloat(fps)) < 0.01) {
+      fpsEl.selectedIndex = i;
+      break;
+    }
+  }
+
+  // Set bits select
+  var bitsEl = document.getElementById('bit-depth');
+  for (var j = 0; j < bitsEl.options.length; j++) {
+    if (bitsEl.options[j].value === bits) {
+      bitsEl.selectedIndex = j;
+      break;
+    }
+  }
+
+  calculate();
+}
+
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Enter') calculate();
 });
@@ -863,6 +1090,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 updatePreview(16, 9);
+loadFromURL();
 </script>
 </body>
 </html>
