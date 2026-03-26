@@ -80,6 +80,12 @@
     text-transform: uppercase;
     text-align: center;
   }
+  .header-by a {
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .header-by a:hover { color: var(--accent); }
 
   /* WRAP */
   .wrap {
@@ -258,7 +264,7 @@
     color: var(--accent);
   }
 
-  /* CM result boxes — side by side, no separator */
+  /* CM result boxes */
   .result-cm-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -297,7 +303,7 @@
     text-overflow: ellipsis;
   }
 
-  /* Inch result boxes — same layout, shorter, smaller text */
+  /* Inch result boxes */
   .result-in-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -361,13 +367,29 @@
   }
   .canvas-cross::before { left: 50%; top: 0; bottom: 0; width: 1px; }
   .canvas-cross::after  { top: 50%; left: 0; right: 0; height: 1px; }
-  .canvas-ratio-label {
-    font-family: var(--mono);
-    font-size: 18px;
-    color: rgba(231,48,42,0.85);
-    letter-spacing: 3px;
+
+  /* Two-line aspect ratio label inside preview */
+  .canvas-ratio-wrap {
     position: relative;
     z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  .canvas-ratio-integer {
+    font-family: var(--mono);
+    font-size: 18px;
+    color: rgba(231,48,42,0.9);
+    letter-spacing: 3px;
+    line-height: 1;
+  }
+  .canvas-ratio-decimal {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: rgba(231,48,42,0.55);
+    letter-spacing: 2px;
+    line-height: 1;
   }
 
   /* Empty state */
@@ -590,6 +612,7 @@
     line-height: 1.6;
   }
   footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover { color: var(--accent2); }
   .footer-sep { margin: 4px 0; height: 1px; width: 40px; background: var(--border2); }
 
   /* ANIMATION */
@@ -606,7 +629,7 @@
 <header>
   <div class="logo-mark" id="logo-mark"></div>
   <div class="logo-text">Slide Size <span>Calculator</span></div>
-  <div class="header-by">by AEGFX LTD</div>
+  <div class="header-by"><a href="https://aegfx.com" target="_blank" rel="noopener">by AEGFX LTD</a></div>
 </header>
 
 <div class="wrap">
@@ -651,7 +674,7 @@
     </p>
   </div>
 
-  <!-- MINI OPTIONS above calculate (pixel mode only) -->
+  <!-- MINI OPTIONS -->
   <div class="mini-options" id="mini-options">
     <div class="mini-group">
       <div class="mini-label">Colour Depth</div>
@@ -684,7 +707,6 @@
   <div class="result-hero empty" id="result-hero">
     <div class="result-hero-label">Slide Size</div>
 
-    <!-- CM boxes -->
     <div class="result-cm-row">
       <div class="result-box">
         <div class="result-box-label">Width (cm)</div>
@@ -696,7 +718,6 @@
       </div>
     </div>
 
-    <!-- Inch boxes -->
     <div class="result-in-row">
       <div class="result-box-in">
         <div class="result-box-label">Width (in)</div>
@@ -708,17 +729,19 @@
       </div>
     </div>
 
-    <!-- Slide shape preview -->
     <div class="hero-preview">
       <div id="canvas-preview" style="width:142px;height:80px">
         <div class="canvas-grid"></div>
         <div class="canvas-cross"></div>
-        <div class="canvas-ratio-label" id="preview-label">16 : 9</div>
+        <div class="canvas-ratio-wrap">
+          <div class="canvas-ratio-integer" id="ratio-integer">16 : 9</div>
+          <div class="canvas-ratio-decimal" id="ratio-decimal">1.78 : 1</div>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- SHARE BUTTON (appears after calculation) -->
+  <!-- SHARE BUTTON -->
   <button class="share-btn" id="share-btn" onclick="shareResult()">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
@@ -727,10 +750,7 @@
     Share these dimensions
   </button>
 
-  <!-- SHARE TOAST -->
-  <div class="share-toast" id="share-toast">
-    Link copied to clipboard — paste into email or WhatsApp
-  </div>
+  <div class="share-toast" id="share-toast">Link copied to clipboard</div>
 
   <div class="ppt-warn" id="ppt-warn">
     Width exceeds PPT maximum (142.24cm / 56in). Consider working at reduced scale.
@@ -859,11 +879,15 @@ function gcd(a, b) {
   return a;
 }
 
-function aspectStr(w, h) {
+function aspectInteger(w, h) {
   var g = gcd(w, h);
   var rw = w / g, rh = h / g;
-  if (rw > 100 || rh > 100) return (w / h).toFixed(2) + ':1';
-  return rw + ':' + rh;
+  if (rw > 100 || rh > 100) return (w / h).toFixed(2) + ' : 1';
+  return rw + ' : ' + rh;
+}
+
+function aspectDecimal(w, h) {
+  return (w / h).toFixed(2) + ' : 1';
 }
 
 function stdName(px) {
@@ -882,11 +906,12 @@ function updatePreview(w, h) {
   var pw = maxW, ph = maxW / ratio;
   if (ph > maxH) { ph = maxH; pw = maxH * ratio; }
   if (pw < 32) pw = 32;
-  if (ph < 48) ph = 48;
+  if (ph < 56) ph = 56;
   var el = document.getElementById('canvas-preview');
   el.style.width  = Math.round(pw) + 'px';
   el.style.height = Math.round(ph) + 'px';
-  document.getElementById('preview-label').textContent = aspectStr(w, h);
+  document.getElementById('ratio-integer').textContent = aspectInteger(w, h);
+  document.getElementById('ratio-decimal').textContent = aspectDecimal(w, h);
   var logo = document.getElementById('logo-mark');
   var lw = Math.round(24 * ratio);
   if (lw < 14) lw = 14;
@@ -894,15 +919,16 @@ function updatePreview(w, h) {
   logo.style.width = lw + 'px';
 }
 
-function buildShareURL(w, h, m, u, fps, bits) {
+function buildShareURL(rawW, rawH) {
   var base = window.location.href.split('?')[0].split('#')[0];
-  var params = '?mode=' + encodeURIComponent(m);
-  if (m === 'pixel') {
-    params += '&w=' + encodeURIComponent(w) + '&h=' + encodeURIComponent(h);
-  } else {
-    params += '&w=' + encodeURIComponent(w) + '&h=' + encodeURIComponent(h) + '&unit=' + encodeURIComponent(u);
-  }
-  params += '&fps=' + encodeURIComponent(fps) + '&bits=' + encodeURIComponent(bits);
+  var fps  = document.getElementById('fps').value;
+  var bits = document.getElementById('bit-depth').value;
+  var params = '?mode=' + encodeURIComponent(mode);
+  params += '&w=' + encodeURIComponent(rawW);
+  params += '&h=' + encodeURIComponent(rawH);
+  if (mode === 'physical') params += '&unit=' + encodeURIComponent(physUnit);
+  params += '&fps=' + encodeURIComponent(fps);
+  params += '&bits=' + encodeURIComponent(bits);
   return base + params;
 }
 
@@ -910,11 +936,7 @@ function shareResult() {
   var url = document.getElementById('share-btn').dataset.url;
   if (!url) return;
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(url).then(function() {
-      showToast();
-    }).catch(function() {
-      fallbackCopy(url);
-    });
+    navigator.clipboard.writeText(url).then(showToast).catch(function() { fallbackCopy(url); });
   } else {
     fallbackCopy(url);
   }
@@ -942,7 +964,7 @@ function showToast() {
 }
 
 function calculate() {
-  var w, h;
+  var w, h, rawW, rawH;
   if (mode === 'pixel') {
     w = getVal('px-w');
     h = getVal('px-h');
@@ -950,16 +972,17 @@ function calculate() {
       alert('Enter valid pixel dimensions. Expressions like 1920*2 or 1080/2 work too.');
       return;
     }
+    rawW = w; rawH = h;
   } else {
-    var pw = getVal('phys-w');
-    var ph = getVal('phys-h');
-    if (isNaN(pw) || isNaN(ph) || pw <= 0 || ph <= 0) {
+    rawW = getVal('phys-w');
+    rawH = getVal('phys-h');
+    if (isNaN(rawW) || isNaN(rawH) || rawW <= 0 || rawH <= 0) {
       alert('Enter valid physical dimensions. Expressions like 4/3 or 2.4*2 work too.');
       return;
     }
     var mult = physUnit === 'm' ? 100 : 30.48;
-    w = pw * mult;
-    h = ph * mult;
+    w = rawW * mult;
+    h = rawH * mult;
   }
 
   var fps  = parseFloat(document.getElementById('fps').value) || 25;
@@ -979,17 +1002,13 @@ function calculate() {
 
   document.getElementById('rh-w').textContent   = pptW_cm.toFixed(2);
   document.getElementById('rh-h').textContent   = pptH_cm.toFixed(2);
-  document.getElementById('rh-win').textContent = pptW_in.toFixed(3);
-  document.getElementById('rh-hin').textContent = pptH_in.toFixed(3);
+  document.getElementById('rh-win').textContent = pptW_in.toFixed(2);
+  document.getElementById('rh-hin').textContent = pptH_in.toFixed(2);
 
   updatePreview(w, h);
 
-  // Build and store share URL
-  var rawW = mode === 'pixel' ? w : getVal('phys-w');
-  var rawH = mode === 'pixel' ? h : getVal('phys-h');
-  var shareURL = buildShareURL(rawW, rawH, mode, physUnit, fps, bits);
   var shareBtn = document.getElementById('share-btn');
-  shareBtn.dataset.url = shareURL;
+  shareBtn.dataset.url = buildShareURL(rawW, rawH);
   shareBtn.classList.add('visible');
   document.getElementById('share-toast').classList.remove('visible');
 
@@ -1022,20 +1041,16 @@ function toggleRef() {
   document.getElementById('ref-arrow').classList.toggle('open');
 }
 
-// Load state from URL params on page load
 function loadFromURL() {
   var params = new URLSearchParams(window.location.search);
   if (!params.has('w') || !params.has('h')) return;
-
   var m    = params.get('mode') || 'pixel';
   var w    = params.get('w');
   var h    = params.get('h');
   var u    = params.get('unit') || 'm';
   var fps  = params.get('fps') || '25';
   var bits = params.get('bits') || '8';
-
   setMode(m);
-
   if (m === 'pixel') {
     document.getElementById('px-w').value = w;
     document.getElementById('px-h').value = h;
@@ -1044,25 +1059,18 @@ function loadFromURL() {
     document.getElementById('phys-w').value = w;
     document.getElementById('phys-h').value = h;
   }
-
-  // Set fps select
   var fpsEl = document.getElementById('fps');
   for (var i = 0; i < fpsEl.options.length; i++) {
     if (Math.abs(parseFloat(fpsEl.options[i].value) - parseFloat(fps)) < 0.01) {
-      fpsEl.selectedIndex = i;
-      break;
+      fpsEl.selectedIndex = i; break;
     }
   }
-
-  // Set bits select
   var bitsEl = document.getElementById('bit-depth');
   for (var j = 0; j < bitsEl.options.length; j++) {
     if (bitsEl.options[j].value === bits) {
-      bitsEl.selectedIndex = j;
-      break;
+      bitsEl.selectedIndex = j; break;
     }
   }
-
   calculate();
 }
 
