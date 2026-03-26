@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Slide Size Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #1a1a1a;
+    --panel:   #262626;
+    --border:  #333333;
+    --border2: #3d3d3d;
+    --accent:  #E7302A;
+    --accent2: #ff4f49;
+    --green:   #4caf82;
+    --red:     #E7302A;
+    --muted:   #888888;
+    --text:    #F2F2F2;
+    --label:   #D9D9D9;
+    --mono:    'Share Tech Mono', monospace;
+    --sans:    'DM Sans', sans-serif;
+    --max-w:   520px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* HEADER */
+  header {
+    width: 100%;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border2);
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .logo-mark {
+    height: 24px;
+    width: 42px;
+    border: 2px solid var(--accent);
+    flex-shrink: 0;
+    transition: width 0.4s ease;
+    position: relative;
+    background: transparent;
+  }
+  .logo-mark::after {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    background: var(--accent);
+    opacity: 0.2;
+  }
+  .logo-text {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: 3px;
+    color: #fff;
+    text-transform: uppercase;
+    text-align: center;
+  }
+  .logo-text span { color: var(--accent); }
+  .header-by {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  /* WRAP */
+  .wrap {
+    width: 100%;
+    max-width: var(--max-w);
+    padding: 28px 20px 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* MODE TOGGLE */
+  .mode-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border: 1px solid var(--border2);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .mode-btn {
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--border2);
+    color: var(--muted);
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 13px 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .mode-btn:last-child { border-right: none; }
+  .mode-btn.active { background: var(--accent); color: #fff; }
+  .mode-btn:not(.active):hover { color: var(--text); background: var(--border); }
+
+  /* INPUTS */
+  .input-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .input-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  label {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: var(--label);
+    text-transform: uppercase;
+    text-align: center;
+    display: block;
+  }
+  input[type="text"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 28px;
+    padding: 14px 12px;
+    border-radius: 2px;
+    outline: none;
+    transition: border-color 0.15s;
+    text-align: center;
+  }
+  input[type="text"]:focus { border-color: var(--accent); }
+  input[type="text"].input-error { border-color: var(--red); color: var(--red); }
+  select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 500;
+    padding: 10px 12px;
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  select:focus { border-color: var(--accent); }
+  select option { background: #1e1e1e; }
+  .unit-toggle {
+    display: flex;
+    border: 1px solid var(--border2);
+    border-radius: 2px;
+    overflow: hidden;
+    width: 100%;
+  }
+  .unit-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--border2);
+    color: var(--muted);
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding: 10px 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+  }
+  .unit-btn:last-child { border-right: none; }
+  .unit-btn.active { background: rgba(231,48,42,0.15); color: var(--accent); }
+
+  /* CALC BUTTON */
+  .calc-btn {
+    width: 100%;
+    background: var(--accent);
+    border: none;
+    color: #fff;
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 18px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: background 0.15s;
+  }
+  .calc-btn:hover  { background: var(--accent2); }
+  .calc-btn:active { background: #b01a14; }
+
+  /* RESULT HERO */
+  .result-hero {
+    background: var(--panel);
+    border: 1px solid var(--border2);
+    border-top: 2px solid var(--accent);
+    border-radius: 2px;
+    padding: 28px 24px 24px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .result-hero-label {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+  .result-cm {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    line-height: 1;
+  }
+  .result-cm-num {
+    font-family: var(--mono);
+    font-size: 60px;
+    color: #fff;
+    letter-spacing: -2px;
+    transition: color 0.2s;
+  }
+  .result-cm-sep {
+    font-family: var(--mono);
+    font-size: 36px;
+    color: #fff;
+  }
+  .result-cm-unit {
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    align-self: flex-end;
+    padding-bottom: 7px;
+  }
+  .result-inches {
+    margin-top: 10px;
+    font-family: var(--mono);
+    font-size: 20px;
+    color: var(--label);
+    letter-spacing: 1px;
+    transition: color 0.2s;
+  }
+  .result-inches-unit {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    margin-left: 3px;
+    letter-spacing: 2px;
+  }
+
+  /* Preview inside hero */
+  .hero-preview {
+    margin-top: 22px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100px;
+  }
+  #canvas-preview {
+    background: linear-gradient(135deg, #1e1e1e 0%, #141414 100%);
+    border: 1px solid var(--accent);
+    position: relative;
+    max-width: 100%;
+    max-height: 150px;
+    box-shadow: 0 0 20px rgba(231,48,42,0.1);
+    transition: all 0.35s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .canvas-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(231,48,42,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(231,48,42,0.05) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+  .canvas-cross { position: absolute; inset: 0; pointer-events: none; }
+  .canvas-cross::before, .canvas-cross::after {
+    content: ''; position: absolute; background: rgba(231,48,42,0.1);
+  }
+  .canvas-cross::before { left: 50%; top: 0; bottom: 0; width: 1px; }
+  .canvas-cross::after  { top: 50%; left: 0; right: 0; height: 1px; }
+  .canvas-ratio-label {
+    font-family: var(--mono);
+    font-size: 18px;
+    color: rgba(231,48,42,0.85);
+    letter-spacing: 3px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Empty state */
+  .result-hero.empty .result-cm-num { color: var(--border2); }
+  .result-hero.empty .result-cm-sep { color: var(--border2); }
+  .result-hero.empty .result-inches { color: var(--border2); }
+
+  /* PPT WARNING */
+  .ppt-warn {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    background: rgba(231,48,42,0.07);
+    border: 1px solid rgba(231,48,42,0.3);
+    border-radius: 2px;
+    padding: 10px 14px;
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--red);
+  }
+  .ppt-warn.visible { display: flex; }
+
+  /* SECTION LABEL */
+  .section-label {
+    font-family: var(--sans);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border2); }
+
+  /* DETAILS GRID */
+  .details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .detail-card {
+    background: var(--panel);
+    border: 1px solid var(--border2);
+    border-left: 2px solid rgba(231,48,42,0.35);
+    border-radius: 2px;
+    padding: 12px 14px;
+  }
+  .detail-label {
+    font-family: var(--sans);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+  .detail-value {
+    font-family: var(--mono);
+    font-size: 20px;
+    color: var(--text);
+    line-height: 1;
+  }
+  .detail-sub {
+    font-family: var(--sans);
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 3px;
+  }
+
+  /* SECONDARY TOGGLE */
+  .secondary-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--border2);
+    color: var(--muted);
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 11px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+  }
+  .secondary-toggle-btn:hover { color: var(--label); border-color: var(--label); }
+  .sec-arrow { transition: transform 0.2s; display: inline-block; }
+  .sec-arrow.open { transform: rotate(180deg); }
+  .secondary-panel { display: none; flex-direction: column; gap: 20px; }
+  .secondary-panel.open { display: flex; }
+
+  /* OPTIONS ROW */
+  .options-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  /* PRESETS */
+  .presets-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  .preset-btn {
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    color: var(--label);
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 4px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+    text-align: center;
+  }
+  .preset-btn span { font-size: 10px; color: var(--muted); display: block; font-weight: 400; }
+  .preset-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* REFERENCE TABLE */
+  .ref-section { border: 1px solid var(--border2); border-radius: 2px; overflow: hidden; }
+  .ref-header {
+    background: rgba(231,48,42,0.05);
+    border-bottom: 1px solid var(--border2);
+    padding: 11px 14px;
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--accent);
+    text-transform: uppercase;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .ref-header:hover { background: rgba(231,48,42,0.09); }
+  .ref-toggle { transition: transform 0.2s; display: inline-block; }
+  .ref-toggle.open { transform: rotate(180deg); }
+  .ref-body { display: none; overflow-x: auto; }
+  .ref-body.open { display: block; }
+  table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 11px; }
+  th {
+    background: var(--bg);
+    font-family: var(--sans);
+    font-weight: 700;
+    color: var(--muted);
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 7px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  td { padding: 7px 10px; border-bottom: 1px solid var(--border); color: var(--text); white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  .td-accent { color: var(--accent); }
+  .td-red    { color: var(--red); }
+  .td-green  { color: var(--green); }
+  .td-muted  { color: var(--muted); }
+
+  /* FOOTER */
+  footer {
+    width: 100%;
+    border-top: 1px solid var(--border);
+    padding: 14px 24px;
+    font-family: var(--sans);
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 4px;
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+
+  /* ANIMATION */
+  @keyframes pop {
+    0%   { transform: scale(0.98); opacity: 0.7; }
+    60%  { transform: scale(1.01); }
+    100% { transform: scale(1);    opacity: 1; }
+  }
+  .result-hero.fired { animation: pop 0.22s ease both; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-mark" id="logo-mark"></div>
+  <div class="logo-text">Slide Size <span>Calculator</span></div>
+  <div class="header-by">by AEGFX LTD</div>
+</header>
+
+<div class="wrap">
+
+  <div class="mode-toggle">
+    <button class="mode-btn active" id="btn-pixel" onclick="setMode('pixel')">Pixels</button>
+    <button class="mode-btn" id="btn-physical" onclick="setMode('physical')">Physical</button>
+  </div>
+
+  <div id="panel-pixel">
+    <div class="input-row">
+      <div class="input-group">
+        <label>Width (px)</label>
+        <input type="text" id="px-w" placeholder="1920" inputmode="decimal" autocomplete="off">
+      </div>
+      <div class="input-group">
+        <label>Height (px)</label>
+        <input type="text" id="px-h" placeholder="1080" inputmode="decimal" autocomplete="off">
+      </div>
+    </div>
+  </div>
+
+  <div id="panel-physical" style="display:none">
+    <div class="unit-toggle" style="margin-bottom:12px">
+      <button class="unit-btn active" id="unit-m"  onclick="setUnit('m')">Metres</button>
+      <button class="unit-btn"        id="unit-cm" onclick="setUnit('cm')">CM</button>
+      <button class="unit-btn"        id="unit-mm" onclick="setUnit('mm')">MM</button>
+    </div>
+    <div class="input-row">
+      <div class="input-group">
+        <label id="phys-w-label">Width (m)</label>
+        <input type="text" id="phys-w" placeholder="4.0" inputmode="decimal" autocomplete="off">
+      </div>
+      <div class="input-group">
+        <label id="phys-h-label">Height (m)</label>
+        <input type="text" id="phys-h" placeholder="2.25" inputmode="decimal" autocomplete="off">
+      </div>
+    </div>
+    <p style="font-family:var(--sans);font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6;text-align:center">
+      Physical size derives aspect ratio only &middot; PPT anchored to 19.05cm height
+    </p>
+  </div>
+
+  <button class="calc-btn" onclick="calculate()">Calculate</button>
+
+  <!-- RESULT HERO -->
+  <div class="result-hero empty" id="result-hero">
+    <div class="result-hero-label">Slide Size</div>
+    <div class="result-cm">
+      <div class="result-cm-num" id="rh-w">--</div>
+      <div class="result-cm-sep">&times;</div>
+      <div class="result-cm-num" id="rh-h">--</div>
+      <div class="result-cm-unit">cm</div>
+    </div>
+    <div class="result-inches">
+      <span id="rh-in">-- x --</span><span class="result-inches-unit">in</span>
+    </div>
+    <div class="hero-preview">
+      <div id="canvas-preview" style="width:142px;height:80px">
+        <div class="canvas-grid"></div>
+        <div class="canvas-cross"></div>
+        <div class="canvas-ratio-label" id="preview-label">16 : 9</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ppt-warn" id="ppt-warn">
+    Width exceeds PPT maximum (142.24cm / 56"). Consider working at reduced scale.
+  </div>
+
+  <!-- DETAILS -->
+  <div id="details-section" style="display:none">
+    <div class="section-label">Details</div>
+    <div class="details-grid" id="details-grid"></div>
+  </div>
+
+  <!-- SECONDARY PANEL -->
+  <button class="secondary-toggle-btn" onclick="toggleSecondary()">
+    Options &amp; Presets <span class="sec-arrow" id="sec-arrow">&#9660;</span>
+  </button>
+
+  <div class="secondary-panel" id="secondary-panel">
+
+    <!-- OPTIONS first -->
+    <div id="pixel-options">
+      <div class="section-label">Options</div>
+      <div class="options-row">
+        <div>
+          <label style="text-align:left;margin-bottom:6px">Colour Depth</label>
+          <select id="bit-depth">
+            <option value="8" selected>8-bit</option>
+            <option value="10">10-bit</option>
+            <option value="12">12-bit</option>
+          </select>
+        </div>
+        <div>
+          <label style="text-align:left;margin-bottom:6px">Frame Rate</label>
+          <select id="fps">
+            <option value="25">25 fps</option>
+            <option value="30">30 fps</option>
+            <option value="50" selected>50 fps</option>
+            <option value="60">60 fps</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRESETS second -->
+    <div>
+      <div class="section-label">Presets</div>
+      <div class="presets-grid">
+        <button class="preset-btn" onclick="fillPixels(1280,720)">720p<span>HD</span></button>
+        <button class="preset-btn" onclick="fillPixels(1920,1080)">1080p<span>FHD</span></button>
+        <button class="preset-btn" onclick="fillPixels(2560,1440)">1440p<span>2K QHD</span></button>
+        <button class="preset-btn" onclick="fillPixels(3840,2160)">2160p<span>4K UHD</span></button>
+        <button class="preset-btn" onclick="fillPixels(5120,2880)">5K<span>5120x2880</span></button>
+        <button class="preset-btn" onclick="fillPixels(7680,4320)">8K<span>UHD-2</span></button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- REFERENCE TABLE -->
+  <div class="ref-section">
+    <div class="ref-header" onclick="toggleRef()">
+      Standard Presets Reference
+      <span class="ref-toggle" id="ref-arrow">&#9660;</span>
+    </div>
+    <div class="ref-body" id="ref-body">
+      <table>
+        <thead>
+          <tr>
+            <th>Standard</th><th>Pixels WxH</th><th>Aspect</th>
+            <th>PPT W (cm)</th><th>PPT H (cm)</th><th>Mpx</th><th>GB/s</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="td-accent">720p HD</td><td>1280x720</td><td class="td-green">16:9</td><td>33.87</td><td>19.05</td><td>0.92</td><td>1.11</td></tr>
+          <tr><td class="td-accent">1080p FHD</td><td>1920x1080</td><td class="td-green">16:9</td><td>33.87</td><td>19.05</td><td>2.07</td><td>2.49</td></tr>
+          <tr><td class="td-accent">1440p QHD</td><td>2560x1440</td><td class="td-green">16:9</td><td>33.87</td><td>19.05</td><td>3.69</td><td>4.42</td></tr>
+          <tr><td class="td-accent">4K UHD</td><td>3840x2160</td><td class="td-green">16:9</td><td>33.87</td><td>19.05</td><td>8.29</td><td>9.95</td></tr>
+          <tr><td class="td-accent">5K</td><td>5120x2880</td><td class="td-green">16:9</td><td>33.87</td><td>19.05</td><td>14.75</td><td>17.69</td></tr>
+          <tr><td class="td-accent">8K UHD-2</td><td>7680x4320</td><td class="td-green">16:9</td><td>33.87</td><td>19.05</td><td>33.18</td><td>39.81</td></tr>
+          <tr><td class="td-red">PowerPoint Max</td><td>-</td><td class="td-green">1:1</td><td>142.24</td><td>142.24</td><td>-</td><td>-</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <span>Created by Andrew Brandse &middot; <a href="mailto:andrew@aegfx.com">andrew@aegfx.com</a> &middot; Built with Claude (Anthropic)</span>
+  <span>PPT max: 142.24cm x 142.24cm (56" x 56") &middot; Vertical anchor: 19.05cm (7.5")</span>
+</footer>
+
+<script>
+var mode = 'pixel';
+var physUnit = 'm';
+var PPT_H_CM = 19.05;
+var PPT_H_IN = 7.5;
+var PPT_MAX_IN = 56;
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('btn-pixel').classList.toggle('active', m === 'pixel');
+  document.getElementById('btn-physical').classList.toggle('active', m === 'physical');
+  document.getElementById('panel-pixel').style.display = m === 'pixel' ? '' : 'none';
+  document.getElementById('panel-physical').style.display = m === 'physical' ? '' : 'none';
+  document.getElementById('pixel-options').style.display = m === 'pixel' ? '' : 'none';
+}
+
+function setUnit(u) {
+  physUnit = u;
+  ['m','cm','mm'].forEach(function(x) {
+    document.getElementById('unit-' + x).classList.toggle('active', x === u);
+  });
+  var wl = {m:'Width (m)', cm:'Width (cm)', mm:'Width (mm)'};
+  var hl = {m:'Height (m)', cm:'Height (cm)', mm:'Height (mm)'};
+  document.getElementById('phys-w-label').textContent = wl[u];
+  document.getElementById('phys-h-label').textContent = hl[u];
+}
+
+function fillPixels(w, h) {
+  setMode('pixel');
+  document.getElementById('px-w').value = w;
+  document.getElementById('px-h').value = h;
+  calculate();
+}
+
+function parseMath(str) {
+  var c = String(str).trim();
+  if (!/^[\d\s\+\-\*\/\.\(\)]+$/.test(c)) return NaN;
+  try {
+    var r = Function('"use strict";return(' + c + ')')();
+    return (typeof r === 'number' && isFinite(r)) ? r : NaN;
+  } catch(e) { return NaN; }
+}
+
+function getVal(id) {
+  var el = document.getElementById(id);
+  var v = parseMath(el.value);
+  el.classList.toggle('input-error', isNaN(v) && el.value.trim() !== '');
+  return v;
+}
+
+function gcd(a, b) {
+  a = Math.round(a); b = Math.round(b);
+  while (b) { var t = b; b = a % b; a = t; }
+  return a;
+}
+
+function aspectStr(w, h) {
+  var g = gcd(w, h);
+  var rw = w / g, rh = h / g;
+  if (rw > 100 || rh > 100) return (w / h).toFixed(2) + ':1';
+  return rw + ':' + rh;
+}
+
+function stdName(px) {
+  if (px >= 33000000) return '8K';
+  if (px >= 14000000) return '5K';
+  if (px >= 8000000)  return '4K';
+  if (px >= 3500000)  return '2K';
+  if (px >= 2000000)  return '1080';
+  if (px >= 800000)   return '720';
+  return '-';
+}
+
+function updatePreview(w, h) {
+  var ratio = w / h;
+  var maxW = 460, maxH = 150;
+  var pw = maxW, ph = maxW / ratio;
+  if (ph > maxH) { ph = maxH; pw = maxH * ratio; }
+  if (pw < 32) pw = 32;
+  if (ph < 48) ph = 48;
+  var el = document.getElementById('canvas-preview');
+  el.style.width  = Math.round(pw) + 'px';
+  el.style.height = Math.round(ph) + 'px';
+  document.getElementById('preview-label').textContent = aspectStr(w, h);
+  var logo = document.getElementById('logo-mark');
+  var lw = Math.round(24 * ratio);
+  if (lw < 14) lw = 14;
+  if (lw > 72) lw = 72;
+  logo.style.width = lw + 'px';
+}
+
+function calculate() {
+  var w, h;
+  if (mode === 'pixel') {
+    w = getVal('px-w');
+    h = getVal('px-h');
+    if (isNaN(w) || isNaN(h) || w <= 0 || h <= 0) {
+      alert('Enter valid pixel dimensions. Expressions like 1920*2 or 1080/2 work too.');
+      return;
+    }
+  } else {
+    var pw = getVal('phys-w');
+    var ph = getVal('phys-h');
+    if (isNaN(pw) || isNaN(ph) || pw <= 0 || ph <= 0) {
+      alert('Enter valid physical dimensions. Expressions like 4/3 or 2.4*2 work too.');
+      return;
+    }
+    var mult = physUnit === 'm' ? 100 : physUnit === 'mm' ? 0.1 : 1;
+    w = pw * mult;
+    h = ph * mult;
+  }
+
+  var fps  = parseFloat(document.getElementById('fps').value) || 50;
+  var bits = parseFloat(document.getElementById('bit-depth').value) || 8;
+  var ratio   = w / h;
+  var pptW_cm = PPT_H_CM * ratio;
+  var pptH_cm = PPT_H_CM;
+  var pptW_in = PPT_H_IN * ratio;
+  var pptH_in = PPT_H_IN;
+
+  document.getElementById('ppt-warn').classList.toggle('visible', pptW_in > PPT_MAX_IN);
+
+  var hero = document.getElementById('result-hero');
+  hero.classList.remove('empty', 'fired');
+  void hero.offsetWidth;
+  hero.classList.add('fired');
+
+  document.getElementById('rh-w').textContent  = pptW_cm.toFixed(2);
+  document.getElementById('rh-h').textContent  = pptH_cm.toFixed(2);
+  document.getElementById('rh-in').textContent = pptW_in.toFixed(3) + '" x ' + pptH_in.toFixed(3) + '"';
+
+  updatePreview(w, h);
+
+  var totalPx = mode === 'pixel' ? w * h : null;
+  var mpx = totalPx ? (totalPx / 1e6).toFixed(2) : '-';
+  var gb  = totalPx ? ((w * h * fps * bits) / 8e9).toFixed(4) : '-';
+  var gbLabel = mode === 'pixel' ? 'GB/s @ ' + fps + 'fps / ' + bits + 'bit' : '-';
+
+  document.getElementById('details-section').style.display = '';
+  document.getElementById('details-grid').innerHTML =
+    '<div class="detail-card">' +
+      '<div class="detail-label">Total Pixels</div>' +
+      '<div class="detail-value" style="font-size:17px">' + (totalPx ? totalPx.toLocaleString() : '-') + '</div>' +
+      '<div class="detail-sub">' + mpx + ' Mpx</div>' +
+    '</div>' +
+    '<div class="detail-card">' +
+      '<div class="detail-label">Data Rate</div>' +
+      '<div class="detail-value" style="font-size:17px">' + gb + '</div>' +
+      '<div class="detail-sub">' + gbLabel + '</div>' +
+    '</div>';
+}
+
+function toggleSecondary() {
+  document.getElementById('secondary-panel').classList.toggle('open');
+  document.getElementById('sec-arrow').classList.toggle('open');
+}
+
+function toggleRef() {
+  document.getElementById('ref-body').classList.toggle('open');
+  document.getElementById('ref-arrow').classList.toggle('open');
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') calculate();
+});
+
+['px-w', 'px-h', 'phys-w', 'phys-h'].forEach(function(id) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('blur', function() {
+    var wId = mode === 'pixel' ? 'px-w' : 'phys-w';
+    var hId = mode === 'pixel' ? 'px-h' : 'phys-h';
+    var w = parseMath(document.getElementById(wId).value);
+    var h = parseMath(document.getElementById(hId).value);
+    if (w > 0 && h > 0) calculate();
+  });
+  el.addEventListener('input', function() {
+    var wId = mode === 'pixel' ? 'px-w' : 'phys-w';
+    var hId = mode === 'pixel' ? 'px-h' : 'phys-h';
+    var w = parseMath(document.getElementById(wId).value);
+    var h = parseMath(document.getElementById(hId).value);
+    if (w > 0 && h > 0) updatePreview(w, h);
+  });
+});
+
+updatePreview(16, 9);
+</script>
+</body>
+</html>
