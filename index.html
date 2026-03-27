@@ -80,11 +80,7 @@
     text-transform: uppercase;
     text-align: center;
   }
-  .header-by a {
-    color: var(--muted);
-    text-decoration: none;
-    transition: color 0.15s;
-  }
+  .header-by a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
   .header-by a:hover { color: var(--accent); }
 
   /* WRAP */
@@ -167,11 +163,7 @@
     grid-template-columns: 1fr 1fr;
     gap: 10px;
   }
-  .mini-group {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
+  .mini-group { display: flex; flex-direction: column; gap: 4px; }
   .mini-label {
     font-family: var(--sans);
     font-size: 9px;
@@ -368,27 +360,27 @@
   .canvas-cross::before { left: 50%; top: 0; bottom: 0; width: 1px; }
   .canvas-cross::after  { top: 50%; left: 0; right: 0; height: 1px; }
 
-  /* Two-line aspect ratio label inside preview */
+  /* Two-line aspect ratio — equal size and prominence */
   .canvas-ratio-wrap {
     position: relative;
     z-index: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2px;
+    gap: 5px;
   }
   .canvas-ratio-integer {
     font-family: var(--mono);
-    font-size: 18px;
-    color: rgba(231,48,42,0.9);
+    font-size: 15px;
+    color: rgba(231,48,42,0.85);
     letter-spacing: 3px;
     line-height: 1;
   }
   .canvas-ratio-decimal {
     font-family: var(--mono);
-    font-size: 11px;
-    color: rgba(231,48,42,0.55);
-    letter-spacing: 2px;
+    font-size: 15px;
+    color: rgba(231,48,42,0.85);
+    letter-spacing: 3px;
     line-height: 1;
   }
 
@@ -425,7 +417,6 @@
     display: none;
     align-items: center;
     justify-content: center;
-    gap: 8px;
     background: rgba(76,175,130,0.1);
     border: 1px solid rgba(76,175,130,0.4);
     border-radius: 2px;
@@ -470,11 +461,7 @@
   .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border2); }
 
   /* DETAILS GRID */
-  .details-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
+  .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .detail-card {
     background: var(--panel);
     border: 1px solid var(--border2);
@@ -491,18 +478,8 @@
     text-transform: uppercase;
     margin-bottom: 5px;
   }
-  .detail-value {
-    font-family: var(--mono);
-    font-size: 20px;
-    color: var(--text);
-    line-height: 1;
-  }
-  .detail-sub {
-    font-family: var(--sans);
-    font-size: 11px;
-    color: var(--muted);
-    margin-top: 3px;
-  }
+  .detail-value { font-family: var(--mono); font-size: 20px; color: var(--text); line-height: 1; }
+  .detail-sub { font-family: var(--sans); font-size: 11px; color: var(--muted); margin-top: 3px; }
 
   /* SECONDARY TOGGLE */
   .secondary-toggle-btn {
@@ -531,11 +508,7 @@
   .secondary-panel.open { display: flex; }
 
   /* PRESETS */
-  .presets-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
-  }
+  .presets-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
   .preset-btn {
     background: var(--bg);
     border: 1px solid var(--border2);
@@ -639,7 +612,6 @@
     <button class="mode-btn" id="btn-physical" onclick="setMode('physical')">Physical</button>
   </div>
 
-  <!-- PIXEL INPUTS -->
   <div id="panel-pixel">
     <div class="input-row">
       <div class="input-group">
@@ -653,7 +625,6 @@
     </div>
   </div>
 
-  <!-- PHYSICAL INPUTS -->
   <div id="panel-physical" style="display:none">
     <div class="unit-toggle" style="margin-bottom:12px">
       <button class="unit-btn active" id="unit-m"  onclick="setUnit('m')">Metres</button>
@@ -674,7 +645,6 @@
     </p>
   </div>
 
-  <!-- MINI OPTIONS -->
   <div class="mini-options" id="mini-options">
     <div class="mini-group">
       <div class="mini-label">Colour Depth</div>
@@ -703,7 +673,6 @@
 
   <button class="calc-btn" onclick="calculate()">Calculate</button>
 
-  <!-- RESULT HERO -->
   <div class="result-hero empty" id="result-hero">
     <div class="result-hero-label">Slide Size</div>
 
@@ -741,7 +710,6 @@
     </div>
   </div>
 
-  <!-- SHARE BUTTON -->
   <button class="share-btn" id="share-btn" onclick="shareResult()">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
@@ -756,13 +724,11 @@
     Width exceeds PPT maximum (142.24cm / 56in). Consider working at reduced scale.
   </div>
 
-  <!-- DETAILS -->
   <div id="details-section" style="display:none">
     <div class="section-label">Details</div>
     <div class="details-grid" id="details-grid"></div>
   </div>
 
-  <!-- PRESETS -->
   <button class="secondary-toggle-btn" onclick="toggleSecondary()">
     Presets <span class="sec-arrow" id="sec-arrow">&#9660;</span>
   </button>
@@ -781,7 +747,6 @@
     </div>
   </div>
 
-  <!-- REFERENCE TABLE -->
   <div class="ref-section">
     <div class="ref-header" onclick="toggleRef()">
       Standard Presets Reference
@@ -791,11 +756,8 @@
       <table>
         <thead>
           <tr>
-            <th>Standard</th>
-            <th>Pixels WxH</th>
-            <th>Aspect</th>
-            <th>PPT W (cm)</th>
-            <th>PPT H (cm)</th>
+            <th>Standard</th><th>Pixels WxH</th><th>Aspect</th>
+            <th>PPT W (cm)</th><th>PPT H (cm)</th>
           </tr>
         </thead>
         <tbody>
@@ -880,10 +842,8 @@ function gcd(a, b) {
 }
 
 function aspectInteger(w, h) {
-  var g = gcd(w, h);
-  var rw = w / g, rh = h / g;
-  if (rw > 100 || rh > 100) return (w / h).toFixed(2) + ' : 1';
-  return rw + ' : ' + rh;
+  var g = gcd(Math.round(w), Math.round(h));
+  return (Math.round(w) / g) + ' : ' + (Math.round(h) / g);
 }
 
 function aspectDecimal(w, h) {
@@ -923,13 +883,13 @@ function buildShareURL(rawW, rawH) {
   var base = window.location.href.split('?')[0].split('#')[0];
   var fps  = document.getElementById('fps').value;
   var bits = document.getElementById('bit-depth').value;
-  var params = '?mode=' + encodeURIComponent(mode);
-  params += '&w=' + encodeURIComponent(rawW);
-  params += '&h=' + encodeURIComponent(rawH);
-  if (mode === 'physical') params += '&unit=' + encodeURIComponent(physUnit);
-  params += '&fps=' + encodeURIComponent(fps);
-  params += '&bits=' + encodeURIComponent(bits);
-  return base + params;
+  var p = '?mode=' + encodeURIComponent(mode);
+  p += '&w=' + encodeURIComponent(rawW);
+  p += '&h=' + encodeURIComponent(rawH);
+  if (mode === 'physical') p += '&unit=' + encodeURIComponent(physUnit);
+  p += '&fps=' + encodeURIComponent(fps);
+  p += '&bits=' + encodeURIComponent(bits);
+  return base + p;
 }
 
 function shareResult() {
@@ -958,9 +918,7 @@ function showToast() {
   var toast = document.getElementById('share-toast');
   toast.classList.add('visible');
   if (toastTimer) clearTimeout(toastTimer);
-  toastTimer = setTimeout(function() {
-    toast.classList.remove('visible');
-  }, 3000);
+  toastTimer = setTimeout(function() { toast.classList.remove('visible'); }, 3000);
 }
 
 function calculate() {
@@ -981,8 +939,7 @@ function calculate() {
       return;
     }
     var mult = physUnit === 'm' ? 100 : 30.48;
-    w = rawW * mult;
-    h = rawH * mult;
+    w = rawW * mult; h = rawH * mult;
   }
 
   var fps  = parseFloat(document.getElementById('fps').value) || 25;
@@ -1067,16 +1024,12 @@ function loadFromURL() {
   }
   var bitsEl = document.getElementById('bit-depth');
   for (var j = 0; j < bitsEl.options.length; j++) {
-    if (bitsEl.options[j].value === bits) {
-      bitsEl.selectedIndex = j; break;
-    }
+    if (bitsEl.options[j].value === bits) { bitsEl.selectedIndex = j; break; }
   }
   calculate();
 }
 
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') calculate();
-});
+document.addEventListener('keydown', function(e) { if (e.key === 'Enter') calculate(); });
 
 ['px-w', 'px-h', 'phys-w', 'phys-h'].forEach(function(id) {
   var el = document.getElementById(id);
