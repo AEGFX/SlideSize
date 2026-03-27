@@ -33,8 +33,6 @@
     flex-direction: column;
     align-items: center;
   }
-
-  /* HEADER */
   header {
     width: 100%;
     background: var(--panel);
@@ -82,8 +80,6 @@
   }
   .header-by a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
   .header-by a:hover { color: var(--accent); }
-
-  /* WRAP */
   .wrap {
     width: 100%;
     max-width: var(--max-w);
@@ -92,8 +88,6 @@
     flex-direction: column;
     gap: 16px;
   }
-
-  /* MODE TOGGLE */
   .mode-toggle {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -118,8 +112,6 @@
   .mode-btn:last-child { border-right: none; }
   .mode-btn.active { background: var(--accent); color: #fff; }
   .mode-btn:not(.active):hover { color: var(--text); background: var(--border); }
-
-  /* INPUTS */
   .input-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -156,8 +148,6 @@
   }
   input[type="text"]:focus { border-color: var(--accent); }
   input[type="text"].input-error { border-color: var(--red); color: var(--red); }
-
-  /* MINI OPTIONS */
   .mini-options {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -188,8 +178,6 @@
   }
   select:focus { border-color: var(--accent); }
   select option { background: #1e1e1e; }
-
-  /* UNIT TOGGLE */
   .unit-toggle {
     display: flex;
     border: 1px solid var(--border2);
@@ -214,8 +202,6 @@
   }
   .unit-btn:last-child { border-right: none; }
   .unit-btn.active { background: rgba(231,48,42,0.15); color: var(--accent); }
-
-  /* CALC BUTTON */
   .calc-btn {
     width: 100%;
     background: var(--accent);
@@ -233,8 +219,6 @@
   }
   .calc-btn:hover  { background: var(--accent2); }
   .calc-btn:active { background: #b01a14; }
-
-  /* RESULT HERO */
   .result-hero {
     background: var(--panel);
     border: 1px solid var(--border2);
@@ -255,8 +239,6 @@
     text-transform: uppercase;
     color: var(--accent);
   }
-
-  /* CM result boxes */
   .result-cm-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -294,8 +276,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-
-  /* Inch result boxes */
   .result-in-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -325,8 +305,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-
-  /* Preview inside hero */
   .hero-preview {
     width: 100%;
     display: flex;
@@ -359,8 +337,6 @@
   }
   .canvas-cross::before { left: 50%; top: 0; bottom: 0; width: 1px; }
   .canvas-cross::after  { top: 50%; left: 0; right: 0; height: 1px; }
-
-  /* Aspect ratio text — two lines normally, one line when wide */
   .canvas-ratio-wrap {
     position: relative;
     z-index: 1;
@@ -377,20 +353,15 @@
   }
   .canvas-ratio-integer,
   .canvas-ratio-decimal {
-    font-family: var(--sans);
-    font-weight: 700;
+    font-family: var(--mono);
     font-size: clamp(14px, 2.8vw, 22px);
     color: #fff;
     letter-spacing: 0;
     line-height: 1;
     white-space: nowrap;
   }
-
-  /* Empty state */
   .result-hero.empty .result-box-value    { color: var(--border2); }
   .result-hero.empty .result-box-in-value { color: var(--border2); }
-
-  /* SHARE BUTTON */
   .share-btn {
     display: none;
     width: 100%;
@@ -413,8 +384,6 @@
   .share-btn.visible { display: flex; }
   .share-btn:hover { border-color: var(--accent); color: var(--accent); }
   .share-btn svg { flex-shrink: 0; }
-
-  /* SHARE TOAST */
   .share-toast {
     display: none;
     align-items: center;
@@ -430,8 +399,6 @@
     text-align: center;
   }
   .share-toast.visible { display: flex; }
-
-  /* PPT WARNING */
   .ppt-warn {
     display: none;
     align-items: center;
@@ -446,8 +413,6 @@
     color: var(--red);
   }
   .ppt-warn.visible { display: flex; }
-
-  /* SECTION LABEL */
   .section-label {
     font-family: var(--sans);
     font-size: 10px;
@@ -461,8 +426,6 @@
     gap: 8px;
   }
   .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border2); }
-
-  /* DETAILS GRID */
   .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .detail-card {
     background: var(--panel);
@@ -482,8 +445,6 @@
   }
   .detail-value { font-family: var(--mono); font-size: 20px; color: var(--text); line-height: 1; }
   .detail-sub { font-family: var(--sans); font-size: 11px; color: var(--muted); margin-top: 3px; }
-
-  /* SECONDARY TOGGLE */
   .secondary-toggle-btn {
     display: flex;
     align-items: center;
@@ -508,8 +469,6 @@
   .sec-arrow.open { transform: rotate(180deg); }
   .secondary-panel { display: none; flex-direction: column; gap: 20px; }
   .secondary-panel.open { display: flex; }
-
-  /* PRESETS */
   .presets-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
   .preset-btn {
     background: var(--bg);
@@ -526,8 +485,6 @@
   }
   .preset-btn span { font-size: 10px; color: var(--muted); display: block; font-weight: 400; }
   .preset-btn:hover { border-color: var(--accent); color: var(--accent); }
-
-  /* REFERENCE TABLE */
   .ref-section { border: 1px solid var(--border2); border-radius: 2px; overflow: hidden; }
   .ref-header {
     background: rgba(231,48,42,0.05);
@@ -570,8 +527,6 @@
   .td-red    { color: var(--red); }
   .td-green  { color: var(--green); }
   .td-muted  { color: var(--muted); }
-
-  /* FOOTER */
   footer {
     width: 100%;
     border-top: 1px solid var(--border);
@@ -589,8 +544,6 @@
   footer a { color: var(--accent); text-decoration: none; }
   footer a:hover { color: var(--accent2); }
   .footer-sep { margin: 4px 0; height: 1px; width: 40px; background: var(--border2); }
-
-  /* ANIMATION */
   @keyframes pop {
     0%   { transform: scale(0.98); opacity: 0.7; }
     60%  { transform: scale(1.01); }
@@ -677,7 +630,6 @@
 
   <div class="result-hero empty" id="result-hero">
     <div class="result-hero-label">Slide Size</div>
-
     <div class="result-cm-row">
       <div class="result-box">
         <div class="result-box-label">Width (cm)</div>
@@ -688,7 +640,6 @@
         <div class="result-box-value" id="rh-h">--</div>
       </div>
     </div>
-
     <div class="result-in-row">
       <div class="result-box-in">
         <div class="result-box-label">Width (in)</div>
@@ -699,7 +650,6 @@
         <div class="result-box-in-value" id="rh-hin">--</div>
       </div>
     </div>
-
     <div class="hero-preview">
       <div id="canvas-preview" style="width:142px;height:80px">
         <div class="canvas-grid"></div>
@@ -779,7 +729,7 @@
 
 <footer>
   <span>Created by Andrew Brandse</span>
-  <span><a href="mailto:andrew@aegfx.com">andrew@aegfx.com</a></span>
+  <span><a href="mailto:info@aegfx.com">info@aegfx.com</a></span>
   <span>Built with Claude (Anthropic)</span>
   <div class="footer-sep"></div>
   <span>PowerPoint max dims: 142.24cm x 142.24cm (56in x 56in)</span>
@@ -808,10 +758,8 @@ function setUnit(u) {
   ['m','ft'].forEach(function(x) {
     document.getElementById('unit-' + x).classList.toggle('active', x === u);
   });
-  var wl = {m:'Width (m)', ft:'Width (ft)'};
-  var hl = {m:'Height (m)', ft:'Height (ft)'};
-  document.getElementById('phys-w-label').textContent = wl[u];
-  document.getElementById('phys-h-label').textContent = hl[u];
+  document.getElementById('phys-w-label').textContent = u === 'm' ? 'Width (m)' : 'Width (ft)';
+  document.getElementById('phys-h-label').textContent = u === 'm' ? 'Height (m)' : 'Height (ft)';
 }
 
 function fillPixels(w, h) {
@@ -875,7 +823,6 @@ function updatePreview(w, h) {
   el.style.height = ph + 'px';
   document.getElementById('ratio-integer').textContent = aspectInteger(w, h);
   document.getElementById('ratio-decimal').textContent = aspectDecimal(w, h);
-  // Switch to single line when canvas is wide and short (i.e. ratio > 2.5:1 roughly)
   var wrap = document.getElementById('ratio-wrap');
   wrap.classList.toggle('single-line', ph < 70);
   var logo = document.getElementById('logo-mark');
