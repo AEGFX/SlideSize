@@ -360,28 +360,30 @@
   .canvas-cross::before { left: 50%; top: 0; bottom: 0; width: 1px; }
   .canvas-cross::after  { top: 50%; left: 0; right: 0; height: 1px; }
 
-  /* Two-line aspect ratio — equal size and prominence */
+  /* Aspect ratio text — two lines normally, one line when wide */
   .canvas-ratio-wrap {
     position: relative;
     z-index: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: 5px;
+    padding: 4px 8px;
   }
-  .canvas-ratio-integer {
-    font-family: var(--mono);
-    font-size: 15px;
-    color: rgba(231,48,42,0.85);
-    letter-spacing: 3px;
-    line-height: 1;
+  .canvas-ratio-wrap.single-line {
+    flex-direction: row;
+    gap: 8px;
   }
+  .canvas-ratio-integer,
   .canvas-ratio-decimal {
-    font-family: var(--mono);
-    font-size: 15px;
-    color: rgba(231,48,42,0.85);
-    letter-spacing: 3px;
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: clamp(14px, 2.8vw, 22px);
+    color: #fff;
+    letter-spacing: 0;
     line-height: 1;
+    white-space: nowrap;
   }
 
   /* Empty state */
@@ -702,9 +704,9 @@
       <div id="canvas-preview" style="width:142px;height:80px">
         <div class="canvas-grid"></div>
         <div class="canvas-cross"></div>
-        <div class="canvas-ratio-wrap">
-          <div class="canvas-ratio-integer" id="ratio-integer">16 : 9</div>
-          <div class="canvas-ratio-decimal" id="ratio-decimal">1.78 : 1</div>
+        <div class="canvas-ratio-wrap" id="ratio-wrap">
+          <div class="canvas-ratio-integer" id="ratio-integer">16:9</div>
+          <div class="canvas-ratio-decimal" id="ratio-decimal">(1.78:1)</div>
         </div>
       </div>
     </div>
@@ -843,11 +845,11 @@ function gcd(a, b) {
 
 function aspectInteger(w, h) {
   var g = gcd(Math.round(w), Math.round(h));
-  return (Math.round(w) / g) + ' : ' + (Math.round(h) / g);
+  return (Math.round(w) / g) + ':' + (Math.round(h) / g);
 }
 
 function aspectDecimal(w, h) {
-  return (w / h).toFixed(2) + ' : 1';
+  return '(' + (w / h).toFixed(2) + ':1)';
 }
 
 function stdName(px) {
@@ -867,11 +869,15 @@ function updatePreview(w, h) {
   if (ph > maxH) { ph = maxH; pw = maxH * ratio; }
   if (pw < 32) pw = 32;
   if (ph < 56) ph = 56;
+  pw = Math.round(pw); ph = Math.round(ph);
   var el = document.getElementById('canvas-preview');
-  el.style.width  = Math.round(pw) + 'px';
-  el.style.height = Math.round(ph) + 'px';
+  el.style.width  = pw + 'px';
+  el.style.height = ph + 'px';
   document.getElementById('ratio-integer').textContent = aspectInteger(w, h);
   document.getElementById('ratio-decimal').textContent = aspectDecimal(w, h);
+  // Switch to single line when canvas is wide and short (i.e. ratio > 2.5:1 roughly)
+  var wrap = document.getElementById('ratio-wrap');
+  wrap.classList.toggle('single-line', ph < 70);
   var logo = document.getElementById('logo-mark');
   var lw = Math.round(24 * ratio);
   if (lw < 14) lw = 14;
