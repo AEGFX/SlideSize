@@ -810,7 +810,7 @@ function stdName(px) {
   return '-';
 }
 
-function updatePreview(w, h) {
+function updatePreviewShape(w, h) {
   var ratio = w / h;
   var maxW = 460, maxH = 140;
   var pw = maxW, ph = maxW / ratio;
@@ -821,8 +821,6 @@ function updatePreview(w, h) {
   var el = document.getElementById('canvas-preview');
   el.style.width  = pw + 'px';
   el.style.height = ph + 'px';
-  document.getElementById('ratio-integer').textContent = aspectInteger(w, h);
-  document.getElementById('ratio-decimal').textContent = aspectDecimal(w, h);
   var wrap = document.getElementById('ratio-wrap');
   wrap.classList.toggle('single-line', ph < 70);
   var logo = document.getElementById('logo-mark');
@@ -830,6 +828,11 @@ function updatePreview(w, h) {
   if (lw < 14) lw = 14;
   if (lw > 72) lw = 72;
   logo.style.width = lw + 'px';
+}
+
+function updatePreviewRatio(w, h) {
+  document.getElementById('ratio-integer').textContent = aspectInteger(w, h);
+  document.getElementById('ratio-decimal').textContent = aspectDecimal(w, h);
 }
 
 function buildShareURL(rawW, rawH) {
@@ -915,7 +918,8 @@ function calculate() {
   document.getElementById('rh-win').textContent = pptW_in.toFixed(2);
   document.getElementById('rh-hin').textContent = pptH_in.toFixed(2);
 
-  updatePreview(w, h);
+  updatePreviewShape(w, h);
+  updatePreviewRatio(w, h); 
 
   var shareBtn = document.getElementById('share-btn');
   shareBtn.dataset.url = buildShareURL(rawW, rawH);
@@ -999,11 +1003,12 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Enter') calcul
     var hId = mode === 'pixel' ? 'px-h' : 'phys-h';
     var w = parseMath(document.getElementById(wId).value);
     var h = parseMath(document.getElementById(hId).value);
-    if (w > 0 && h > 0) updatePreview(w, h);
+    if (w > 0 && h > 0) updatePreviewShape(w, h);
   });
 });
 
-updatePreview(16, 9);
+updatePreviewShape(16, 9);
+updatePreviewRatio(16, 9);
 loadFromURL();
 </script>
 </body>
