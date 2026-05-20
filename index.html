@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Slide Size Calculator</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23E7302A'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -1018,25 +1019,24 @@ Standard Presets Reference
 </div>
 <div class="other-tools">
 <div class="other-tools-head"><span class="ot-label">Other Tools</span></div>
-<div class="emf-tool">
-<div class="emf-tool-title">EMF Extractor <span class="emf-chip">Hybrid EMF &rarr; PDF</span></div>
+<div class="emf-tool report-tool">
+<div class="emf-tool-title">PPT Report <span class="emf-chip">PPTX &rarr; Pre-flight</span></div>
 <p class="emf-intro">
-Mac-origin EMF files often carry a tiny low-res bitmap <strong>plus</strong> a full-quality vector PDF
-hidden in an Office GDIC block. Windows PowerPoint only draws the bitmap &mdash; hence the blur.
-This pulls the real PDF (or fallback raster) back out. Drop a single <strong>.emf</strong>, or a
-<strong>.pptx</strong> to list every EMF inside it.
+A pre-flight summary for graphics ops &mdash; slide count, hidden slides, videos (full-screen vs framed,
+muted vs audio), audio, embedded fonts, transitions, animation click-counts, speaker notes and more.
+Drop a <strong>.pptx</strong> to generate a report you can send to the breakout room.
 </p>
-<label class="emf-drop" id="emf-drop" for="emf-file">
-<svg class="emf-dz-icon" viewBox="0 0 24 24"><path d="M12 16V4m0 0l-4 4m4-4l4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
-<div class="emf-dz-big">Drop EMF or PPTX</div>
-<div class="emf-dz-small">or tap to browse &middot; multiple files OK</div>
-<input type="file" id="emf-file" accept=".emf,.pptx,image/x-emf,application/octet-stream,application/vnd.openxmlformats-officedocument.presentationml.presentation" multiple>
+<label class="emf-drop" id="report-drop" for="report-file">
+<svg class="emf-dz-icon" viewBox="0 0 24 24"><path d="M14 3v4a1 1 0 001 1h4M5 3h9l5 5v11a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/><path d="M9 13h6M9 17h6"/></svg>
+<div class="emf-dz-big">Drop PPTX</div>
+<div class="emf-dz-small">or tap to browse</div>
+<input type="file" id="report-file" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation">
 <div class="emf-privacy">
 <svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
 Processed in your browser &middot; nothing uploaded
 </div>
 </label>
-<div id="emf-results"></div>
+<div id="report-results"></div>
 </div>
 
 <div class="emf-tool media-tool">
@@ -1058,24 +1058,25 @@ Processed in your browser &middot; nothing uploaded
 <div id="media-results"></div>
 </div>
 
-<div class="emf-tool report-tool">
-<div class="emf-tool-title">PPT Report <span class="emf-chip">PPTX &rarr; Pre-flight</span></div>
+<div class="emf-tool">
+<div class="emf-tool-title">EMF Extractor <span class="emf-chip">Hybrid EMF &rarr; PDF</span></div>
 <p class="emf-intro">
-A pre-flight summary for graphics ops &mdash; slide count, hidden slides, videos (full-screen vs framed,
-muted vs audio), audio, embedded fonts, transitions, animation click-counts, speaker notes and more.
-Drop a <strong>.pptx</strong> to generate a report you can send to the breakout room.
+Mac-origin EMF files often carry a tiny low-res bitmap <strong>plus</strong> a full-quality vector PDF
+hidden in an Office GDIC block. Windows PowerPoint only draws the bitmap &mdash; hence the blur.
+This pulls the real PDF (or fallback raster) back out. Drop a single <strong>.emf</strong>, or a
+<strong>.pptx</strong> to list every EMF inside it.
 </p>
-<label class="emf-drop" id="report-drop" for="report-file">
-<svg class="emf-dz-icon" viewBox="0 0 24 24"><path d="M14 3v4a1 1 0 001 1h4M5 3h9l5 5v11a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/><path d="M9 13h6M9 17h6"/></svg>
-<div class="emf-dz-big">Drop PPTX</div>
-<div class="emf-dz-small">or tap to browse</div>
-<input type="file" id="report-file" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation">
+<label class="emf-drop" id="emf-drop" for="emf-file">
+<svg class="emf-dz-icon" viewBox="0 0 24 24"><path d="M12 16V4m0 0l-4 4m4-4l4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+<div class="emf-dz-big">Drop EMF or PPTX</div>
+<div class="emf-dz-small">or tap to browse &middot; multiple files OK</div>
+<input type="file" id="emf-file" accept=".emf,.pptx,image/x-emf,application/octet-stream,application/vnd.openxmlformats-officedocument.presentationml.presentation" multiple>
 <div class="emf-privacy">
 <svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
 Processed in your browser &middot; nothing uploaded
 </div>
 </label>
-<div id="report-results"></div>
+<div id="emf-results"></div>
 </div>
 </div>
 
@@ -2086,72 +2087,90 @@ return R;
 });
 }
 
-function rpBuildText(R) {
+function rpStats(R) {
+var s = {};
+s.hidden = R.slides.filter(function(x){return x.hidden;}).map(function(x){return x.no;});
+s.vids = R.slides.filter(function(x){return x.video;});
+s.auds = R.slides.filter(function(x){return x.audio;}).map(function(x){return x.no;});
+s.trans = R.slides.filter(function(x){return x.transition;});
+s.anims = R.slides.filter(function(x){return x.clicks > 0 || x.animObjects > 0;});
+s.notes = R.slides.filter(function(x){return x.notesWords > 0;});
+s.fs = s.vids.filter(function(x){return x.video.mode==='fullscreen';}).length;
+s.pip = s.vids.length - s.fs;
+s.linked = s.vids.filter(function(x){return x.video.linked;}).length;
+s.embeddedV = s.vids.length - s.linked;
+s.muted = s.vids.filter(function(x){return x.video.mute;});
+s.linkedSlides = s.vids.filter(function(x){return x.video.linked;}).map(function(x){return x.no;});
+if (s.notes.length) s.mostNotes = s.notes.slice().sort(function(a,b){return b.notesWords-a.notesWords;})[0];
+return s;
+}
+function rpAspect(R) {
+if (!R.widthEmu || !R.heightEmu) return null;
+var g = rpGcd(R.widthEmu, R.heightEmu);
+var rw = R.widthEmu/g, rh = R.heightEmu/g;
+var dec = (R.widthEmu/R.heightEmu).toFixed(2);
+return { ratio: rw + ':' + rh, dec: dec };
+}
+
+/* Lean on-screen summary — stacked single lines, vertical font lists. */
+function rpBuildSummary(R) {
+var st = rpStats(R);
 var L = [];
-var hidden = R.slides.filter(function(s){return s.hidden;}).map(function(s){return s.no;});
-var vids = R.slides.filter(function(s){return s.video;});
-var auds = R.slides.filter(function(s){return s.audio;}).map(function(s){return s.no;});
-var trans = R.slides.filter(function(s){return s.transition;});
-var anims = R.slides.filter(function(s){return s.clicks > 0 || s.animObjects > 0;});
-var notes = R.slides.filter(function(s){return s.notesWords > 0;});
-var linkedVids = vids.filter(function(s){return s.video.linked;});
-
-var arW = R.widthEmu, arH = R.heightEmu;
-var arStr = '';
-if (arW && arH) {
-var g = rpGcd(arW, arH);
-arStr = (arW/g) + ':' + (arH/g) + ' (' + rpEmuToCm(arW).toFixed(2) + ' × ' + rpEmuToCm(arH).toFixed(2) + ' cm)';
-}
-
-L.push('PPT REPORT — ' + R.fileName);
 L.push('Generated: ' + new Date().toISOString().slice(0,10));
+L.push('PPT REPORT — ' + R.fileName);
+L.push('File size: ' + emfFmtBytes(R.fileSize));
 L.push('');
-L.push(R.slideCount + ' slides' + (hidden.length ? ' (' + hidden.length + ' hidden: ' + hidden.join(', ') + ')' : ' (0 hidden)')
-+ (arStr ? ' · ' + arStr : '') + ' · ' + emfFmtBytes(R.fileSize));
 
-if (R.fontsEmbedded) {
-L.push('Fonts: EMBEDDED — ' + (R.embeddedFonts.length ? R.embeddedFonts.join(', ') : 'yes'));
-if (R.usedFonts.length) L.push('       Used in deck: ' + R.usedFonts.join(', '));
-} else {
-L.push('Fonts: NOT embedded' + (R.usedFonts.length ? ' — uses ' + R.usedFonts.join(', ') : ''));
+L.push('Slide count: ' + R.slideCount + (st.hidden.length ? '  (' + st.hidden.length + ' hidden)' : '  (0 hidden)'));
+var asp = rpAspect(R);
+if (asp) {
+L.push('Aspect: ' + asp.ratio + ' (' + asp.dec + ':1)');
+L.push('Slide size: ' + rpEmuToCm(R.widthEmu).toFixed(2) + ' × ' + rpEmuToCm(R.heightEmu).toFixed(2) + ' cm ('
++ rpEmuToIn(R.widthEmu).toFixed(2) + ' × ' + rpEmuToIn(R.heightEmu).toFixed(2) + ' in)');
 }
 
-if (vids.length) {
-var fs = vids.filter(function(s){return s.video.mode==='fullscreen';}).length;
-var fr = vids.length - fs;
-L.push('Videos: ' + vids.length + ' slide' + (vids.length>1?'s':'') + ' (' + vids.map(function(s){return s.no;}).join(', ') + ') — '
-+ fs + ' full-screen, ' + fr + ' framed');
-var muted = vids.filter(function(s){return s.video.mute;}).map(function(s){return s.no;});
-if (muted.length) L.push('        Muted (authored): slide ' + muted.join(', '));
+if (st.vids.length) {
+L.push('Videos: ' + st.vids.length + ' (' + st.fs + ' FS, ' + st.pip + ' PIP, ' + st.embeddedV + ' embedded, ' + st.linked + ' linked)');
 } else {
 L.push('Videos: none');
 }
-if (linkedVids.length) {
-L.push('⚠ ' + linkedVids.length + ' LINKED video' + (linkedVids.length>1?'s':'') + ' (slide ' + linkedVids.map(function(s){return s.no;}).join(', ') + ') — file(s) not embedded, will fail if missing');
-R.warnings.push('linked-video');
-}
+L.push('Audio: ' + (st.auds.length ? st.auds.length + (st.auds.length>1?' slides':' slide') : 'none'));
+L.push('Transitions: ' + (st.trans.length ? st.trans.length + (st.trans.length>1?' slides':' slide') : 'none'));
+L.push('Animations: ' + (st.anims.length ? st.anims.length + (st.anims.length>1?' slides':' slide') + ', ' + R.totalClicks + ' clicks' : 'none'));
+L.push('Speaker notes: ' + (st.notes.length ? st.notes.length + (st.notes.length>1?' slides':' slide') + ' (most on slide ' + st.mostNotes.no + ')' : 'none'));
+if (R.mediaBytes) L.push('Media: ' + emfFmtBytes(R.mediaBytes) + ' embedded');
 
-L.push('Audio: ' + (auds.length ? auds.length + ' slide' + (auds.length>1?'s':'') + ' (' + auds.join(', ') + ')' : 'none'));
-L.push('Transitions: ' + (trans.length ? trans.length + ' slide' + (trans.length>1?'s':'') + ' (' + trans.map(function(s){return s.no;}).join(', ') + ')' : 'none'));
-L.push('Animations: ' + (anims.length ? anims.length + ' slide' + (anims.length>1?'s':'') + ', ' + R.totalClicks + ' total clicks to advance' : 'none'));
-
-if (notes.length) {
-var most = notes.slice().sort(function(a,b){return b.notesWords-a.notesWords;})[0];
-L.push('Speaker notes: ' + notes.length + ' slide' + (notes.length>1?'s':'') + ' — most on slide ' + most.no + ' (~' + most.notesWords + ' words)');
-} else {
-L.push('Speaker notes: none');
-}
-
-if (R.largestAsset) {
-L.push('Media: ' + emfFmtBytes(R.mediaBytes) + ' embedded, largest ' + R.largestAsset.name + ' (' + emfFmtBytes(R.largestAsset.size) + ')');
+if (st.linkedSlides.length) {
+L.push('');
+L.push('⚠ ' + st.linkedSlides.length + ' linked video' + (st.linkedSlides.length>1?'s':'') + ' (slide ' + st.linkedSlides.join(', ') + ') — not embedded, will fail if missing');
 }
 
 L.push('');
-L.push('PER-SLIDE');
+L.push('Fonts used in deck:');
+if (R.usedFonts.length) R.usedFonts.forEach(function(f){ L.push(f); });
+else L.push('(none detected)');
+L.push('');
+L.push('Embedded fonts:');
+if (R.fontsEmbedded && R.embeddedFonts.length) R.embeddedFonts.forEach(function(f){ L.push(f); });
+else if (R.fontsEmbedded) L.push('(embedded, names unavailable)');
+else L.push('none');
+
+return L.join('\n');
+}
+
+/* Full downloadable .txt — lean summary + the detailed per-slide table. */
+function rpBuildText(R) {
+var st = rpStats(R);
+var L = [rpBuildSummary(R)];
+L.push('');
+L.push('');
+L.push('PER-SLIDE  (FS = full screen, PIP = framed)');
 L.push(rpPad('SLIDE',7) + rpPad('HIDE',6) + rpPad('VIDEO',16) + rpPad('AUDIO',7) + rpPad('CLICKS',8) + rpPad('TRANS',12) + 'NOTES');
 R.slides.forEach(function(s) {
 var vstr = '-';
-if (s.video) { vstr = s.video.mode + (s.video.mute ? '/mute' : '') + (s.video.linked ? '⚠link' : ''); }
+if (s.video) {
+vstr = (s.video.mode==='fullscreen' ? 'FS' : 'PIP') + (s.video.mute ? '/mute' : '') + (s.video.linked ? '⚠link' : '');
+}
 var nstr = s.notesWords ? (s.notesWords >= 150 ? 'LONG(' + s.notesWords + 'w)' : s.notesWords + 'w') : '-';
 var tstr = s.transition ? s.transition.type : '-';
 L.push(rpPad(s.no,7) + rpPad(s.hidden?'hide':'-',6) + rpPad(vstr,16) + rpPad(s.audio?'yes':'-',7) + rpPad(s.clicks||'0',8) + rpPad(tstr,12) + nstr);
@@ -2169,7 +2188,7 @@ rows.push([
 s.no,
 s.hidden ? 'yes' : 'no',
 s.video ? 'yes' : 'no',
-s.video ? s.video.mode : '',
+s.video ? (s.video.mode==='fullscreen' ? 'FS' : 'PIP') : '',
 s.video ? (s.video.mute ? 'yes' : 'no') : '',
 s.video ? (s.video.linked ? 'yes' : 'no') : '',
 s.audio ? 'yes' : 'no',
@@ -2190,12 +2209,13 @@ return /[",\n]/.test(c) ? '"' + c.replace(/"/g,'""') + '"' : c;
 
 function rpRender(R, file) {
 var results = document.getElementById('report-results');
+var summary = rpBuildSummary(R);
 var txt = rpBuildText(R);
 var csv = rpBuildCsv(R);
 var base = file.name.replace(/\.pptx$/i, '');
 
-/* on-screen: highlight warning lines + header tokens */
-var htmlTxt = txt
+/* on-screen: the lean summary only; per-slide detail lives in the downloads */
+var htmlTxt = summary
 .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
 .replace(/^(⚠.*)$/gm, '<span class="rp-warn">$1</span>')
 .replace(/^(PPT REPORT — .*)$/m, '<span class="rp-key">$1</span>');
@@ -2206,7 +2226,7 @@ results.innerHTML =
 '<button class="report-btn" id="rp-dl-txt">Download report (.txt)</button>' +
 '<button class="report-btn ghost" id="rp-dl-csv">Download slide table (.csv)</button>' +
 '</div>' +
-'<div class="report-note">Saved files: <strong style="color:var(--label)">' + base + '_report.txt</strong> and <strong style="color:var(--label)">' + base + '_slides.csv</strong></div>';
+'<div class="report-note">The .txt adds a per-slide breakdown · the .csv opens in Sheets/Excel</div>';
 
 document.getElementById('rp-dl-txt').addEventListener('click', function() {
 emfDownload(new Blob([txt], {type:'text/plain'}), base + '_report.txt', 'text/plain');
