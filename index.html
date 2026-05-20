@@ -7,735 +7,907 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg:      #1a1a1a;
-    --panel:   #262626;
-    --border:  #333333;
-    --border2: #3d3d3d;
-    --accent:  #E7302A;
-    --accent2: #ff4f49;
-    --green:   #4caf82;
-    --red:     #E7302A;
-    --muted:   #888888;
-    --text:    #F2F2F2;
-    --label:   #D9D9D9;
-    --mono:    'Share Tech Mono', monospace;
-    --sans:    'DM Sans', sans-serif;
-    --max-w:   520px;
-  }
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-  header {
-    width: 100%;
-    background: var(--panel);
-    border-bottom: 1px solid var(--border2);
-    padding: 20px 24px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-  }
-  .logo-mark {
-    height: 24px;
-    width: 42px;
-    border: 2px solid var(--accent);
-    flex-shrink: 0;
-    transition: width 0.4s ease;
-    position: relative;
-    background: transparent;
-  }
-  .logo-mark::after {
-    content: '';
-    position: absolute;
-    inset: 3px;
-    background: var(--accent);
-    opacity: 0.2;
-  }
-  .logo-text {
-    font-family: var(--sans);
-    font-weight: 700;
-    font-size: 18px;
-    letter-spacing: 3px;
-    color: #fff;
-    text-transform: uppercase;
-    text-align: center;
-  }
-  .logo-text span { color: var(--accent); }
-  .header-by {
-    font-family: var(--sans);
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--muted);
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    text-align: center;
-  }
-  .header-by a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
-  .header-by a:hover { color: var(--accent); }
-  .wrap {
-    width: 100%;
-    max-width: var(--max-w);
-    padding: 28px 20px 48px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-  .mode-toggle {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    border: 1px solid var(--border2);
-    border-radius: 2px;
-    overflow: hidden;
-  }
-  .mode-btn {
-    background: transparent;
-    border: none;
-    border-right: 1px solid var(--border2);
-    color: var(--muted);
-    font-family: var(--sans);
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    padding: 13px 8px;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .mode-btn:last-child { border-right: none; }
-  .mode-btn.active { background: var(--accent); color: #fff; }
-  .mode-btn:not(.active):hover { color: var(--text); background: var(--border); }
-  .input-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-  }
-  .input-group {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-  }
-  label {
-    font-family: var(--sans);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 1px;
-    color: var(--label);
-    text-transform: uppercase;
-    text-align: center;
-    display: block;
-  }
-  input[type="text"] {
-    width: 100%;
-    background: var(--bg);
-    border: 1px solid var(--border2);
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: 28px;
-    padding: 14px 12px;
-    border-radius: 2px;
-    outline: none;
-    transition: border-color 0.15s;
-    text-align: center;
-  }
-  input[type="text"]:focus { border-color: var(--accent); }
-  input[type="text"].input-error { border-color: var(--red); color: var(--red); }
-  .mini-options {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-  .mini-group { display: flex; flex-direction: column; gap: 4px; }
-  .mini-label {
-    font-family: var(--sans);
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: 1px;
-    color: var(--muted);
-    text-transform: uppercase;
-  }
-  select {
-    width: 100%;
-    background: var(--bg);
-    border: 1px solid var(--border2);
-    color: var(--text);
-    font-family: var(--sans);
-    font-size: 12px;
-    font-weight: 500;
-    padding: 7px 10px;
-    border-radius: 2px;
-    outline: none;
-    cursor: pointer;
-    transition: border-color 0.15s;
-  }
-  select:focus { border-color: var(--accent); }
-  select option { background: #1e1e1e; }
-  .unit-toggle {
-    display: flex;
-    border: 1px solid var(--border2);
-    border-radius: 2px;
-    overflow: hidden;
-    width: 100%;
-  }
-  .unit-btn {
-    flex: 1;
-    background: transparent;
-    border: none;
-    border-right: 1px solid var(--border2);
-    color: var(--muted);
-    font-family: var(--sans);
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 1px;
-    padding: 10px 4px;
-    cursor: pointer;
-    transition: all 0.15s;
-    text-transform: uppercase;
-  }
-  .unit-btn:last-child { border-right: none; }
-  .unit-btn.active { background: rgba(231,48,42,0.15); color: var(--accent); }
-  .calc-btn {
-    width: 100%;
-    background: var(--accent);
-    border: none;
-    color: #fff;
-    font-family: var(--sans);
-    font-weight: 700;
-    font-size: 16px;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    padding: 18px;
-    cursor: pointer;
-    border-radius: 2px;
-    transition: background 0.15s;
-  }
-  .calc-btn:hover  { background: var(--accent2); }
-  .calc-btn:active { background: #b01a14; }
-  .result-hero {
-    background: var(--panel);
-    border: 1px solid var(--border2);
-    border-top: 2px solid var(--accent);
-    border-radius: 2px;
-    padding: 24px 20px 20px;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-  }
-  .result-hero-label {
-    font-family: var(--sans);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    color: var(--accent);
-  }
-  .result-cm-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    width: 100%;
-  }
-  .result-box {
-    background: var(--bg);
-    border: 1px solid var(--border2);
-    border-radius: 2px;
-    padding: 12px 8px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
-    min-width: 0;
-  }
-  .result-box-label {
-    font-family: var(--sans);
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 1px;
-    color: var(--muted);
-    text-transform: uppercase;
-    white-space: nowrap;
-  }
-  .result-box-value {
-    font-family: var(--mono);
-    font-size: clamp(20px, 6vw, 44px);
-    color: #fff;
-    line-height: 1;
-    width: 100%;
-    text-align: center;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .result-in-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    width: 100%;
-  }
-  .result-box-in {
-    background: var(--bg);
-    border: 1px solid var(--border2);
-    border-radius: 2px;
-    padding: 8px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 3px;
-    min-width: 0;
-  }
-  .result-box-in .result-box-label { font-size: 9px; }
-  .result-box-in-value {
-    font-family: var(--mono);
-    font-size: clamp(13px, 3.5vw, 20px);
-    color: var(--label);
-    line-height: 1;
-    width: 100%;
-    text-align: center;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .hero-preview {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 90px;
-  }
-  #canvas-preview {
-    background: linear-gradient(135deg, #1e1e1e 0%, #141414 100%);
-    border: 1px solid var(--accent);
-    position: relative;
-    max-width: 100%;
-    max-height: 140px;
-    box-shadow: 0 0 20px rgba(231,48,42,0.1);
-    transition: all 0.35s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .canvas-grid {
-    position: absolute; inset: 0;
-    background-image:
-      linear-gradient(rgba(231,48,42,0.05) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(231,48,42,0.05) 1px, transparent 1px);
-    background-size: 20px 20px;
-  }
-  .canvas-cross { position: absolute; inset: 0; pointer-events: none; }
-  .canvas-cross::before, .canvas-cross::after {
-    content: ''; position: absolute; background: rgba(231,48,42,0.1);
-  }
-  .canvas-cross::before { left: 50%; top: 0; bottom: 0; width: 1px; }
-  .canvas-cross::after  { top: 50%; left: 0; right: 0; height: 1px; }
-  .canvas-ratio-wrap {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    padding: 4px 8px;
-  }
-  .canvas-ratio-wrap.single-line {
-    flex-direction: row;
-    gap: 8px;
-  }
-  .canvas-ratio-integer,
-  .canvas-ratio-decimal {
-    font-family: var(--mono);
-    font-size: clamp(14px, 2.8vw, 22px);
-    color: #fff;
-    letter-spacing: 0;
-    line-height: 1;
-    white-space: nowrap;
-  }
-  .result-hero.empty .result-box-value    { color: var(--border2); }
-  .result-hero.empty .result-box-in-value { color: var(--border2); }
-  .share-btn {
-    display: none;
-    width: 100%;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    background: transparent;
-    border: 1px solid var(--border2);
-    color: var(--label);
-    font-family: var(--sans);
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    padding: 13px;
-    cursor: pointer;
-    border-radius: 2px;
-    transition: all 0.15s;
-  }
-  .share-btn.visible { display: flex; }
-  .share-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .share-btn svg { flex-shrink: 0; }
-  .share-toast {
-    display: none;
-    align-items: center;
-    justify-content: center;
-    background: rgba(76,175,130,0.1);
-    border: 1px solid rgba(76,175,130,0.4);
-    border-radius: 2px;
-    padding: 10px 14px;
-    font-family: var(--sans);
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--green);
-    text-align: center;
-  }
-  .share-toast.visible { display: flex; }
-  .ppt-warn {
-    display: none;
-    align-items: center;
-    gap: 8px;
-    background: rgba(231,48,42,0.07);
-    border: 1px solid rgba(231,48,42,0.3);
-    border-radius: 2px;
-    padding: 10px 14px;
-    font-family: var(--sans);
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--red);
-  }
-  .ppt-warn.visible { display: flex; }
-  .section-label {
-    font-family: var(--sans);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border2); }
-  .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .detail-card {
-    background: var(--panel);
-    border: 1px solid var(--border2);
-    border-left: 2px solid rgba(231,48,42,0.35);
-    border-radius: 2px;
-    padding: 12px 14px;
-  }
-  .detail-label {
-    font-family: var(--sans);
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 1px;
-    color: var(--muted);
-    text-transform: uppercase;
-    margin-bottom: 5px;
-  }
-  .detail-value { font-family: var(--mono); font-size: 20px; color: var(--text); line-height: 1; }
-  .detail-sub { font-family: var(--sans); font-size: 11px; color: var(--muted); margin-top: 3px; }
-  .secondary-toggle-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    width: 100%;
-    background: transparent;
-    border: 1px solid var(--border2);
-    color: var(--muted);
-    font-family: var(--sans);
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    padding: 11px;
-    cursor: pointer;
-    border-radius: 2px;
-    transition: all 0.15s;
-  }
-  .secondary-toggle-btn:hover { color: var(--label); border-color: var(--label); }
-  .sec-arrow { transition: transform 0.2s; display: inline-block; }
-  .sec-arrow.open { transform: rotate(180deg); }
-  .secondary-panel { display: none; flex-direction: column; gap: 20px; }
-  .secondary-panel.open { display: flex; }
-  .presets-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-  .preset-btn {
-    background: var(--bg);
-    border: 1px solid var(--border2);
-    color: var(--label);
-    font-family: var(--sans);
-    font-size: 13px;
-    font-weight: 600;
-    padding: 10px 4px;
-    cursor: pointer;
-    border-radius: 2px;
-    transition: all 0.15s;
-    text-align: center;
-  }
-  .preset-btn span { font-size: 10px; color: var(--muted); display: block; font-weight: 400; }
-  .preset-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .ref-section { border: 1px solid var(--border2); border-radius: 2px; overflow: hidden; }
-  .ref-header {
-    background: rgba(231,48,42,0.05);
-    border-bottom: 1px solid var(--border2);
-    padding: 11px 14px;
-    font-family: var(--sans);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    color: var(--accent);
-    text-transform: uppercase;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .ref-header:hover { background: rgba(231,48,42,0.09); }
-  .ref-toggle { transition: transform 0.2s; display: inline-block; }
-  .ref-toggle.open { transform: rotate(180deg); }
-  .ref-body { display: none; overflow-x: auto; }
-  .ref-body.open { display: block; }
-  table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 11px; }
-  th {
-    background: var(--bg);
-    font-family: var(--sans);
-    font-weight: 700;
-    color: var(--muted);
-    font-size: 9px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    padding: 7px 10px;
-    text-align: left;
-    border-bottom: 1px solid var(--border);
-    white-space: nowrap;
-  }
-  td { padding: 7px 10px; border-bottom: 1px solid var(--border); color: var(--text); white-space: nowrap; }
-  tr:last-child td { border-bottom: none; }
-  tr:hover td { background: rgba(255,255,255,0.02); }
-  .td-accent { color: var(--accent); }
-  .td-red    { color: var(--red); }
-  .td-green  { color: var(--green); }
-  .td-muted  { color: var(--muted); }
-  footer {
-    width: 100%;
-    border-top: 1px solid var(--border);
-    padding: 14px 24px;
-    font-family: var(--sans);
-    font-size: 11px;
-    color: var(--muted);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 3px;
-    line-height: 1.6;
-  }
-  footer a { color: var(--accent); text-decoration: none; }
-  footer a:hover { color: var(--accent2); }
-  .footer-sep { margin: 4px 0; height: 1px; width: 40px; background: var(--border2); }
-  @keyframes pop {
-    0%   { transform: scale(0.98); opacity: 0.7; }
-    60%  { transform: scale(1.01); }
-    100% { transform: scale(1);    opacity: 1; }
-  }
-  .result-hero.fired { animation: pop 0.22s ease both; }
+:root {
+--bg: #1a1a1a;
+--panel: #262626;
+--border: #333333;
+--border2: #3d3d3d;
+--accent: #E7302A;
+--accent2: #ff4f49;
+--green: #4caf82;
+--red: #E7302A;
+--muted: #888888;
+--text: #F2F2F2;
+--label: #D9D9D9;
+--mono: 'Share Tech Mono', monospace;
+--sans: 'DM Sans', sans-serif;
+--max-w: 520px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+background: var(--bg);
+color: var(--text);
+font-family: var(--sans);
+min-height: 100vh;
+display: flex;
+flex-direction: column;
+align-items: center;
+}
+header {
+width: 100%;
+background: var(--panel);
+border-bottom: 1px solid var(--border2);
+padding: 20px 24px;
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 6px;
+}
+.logo-mark {
+height: 24px;
+width: 42px;
+border: 2px solid var(--accent);
+flex-shrink: 0;
+transition: width 0.4s ease;
+position: relative;
+background: transparent;
+}
+.logo-mark::after {
+content: '';
+position: absolute;
+inset: 3px;
+background: var(--accent);
+opacity: 0.2;
+}
+.logo-text {
+font-family: var(--sans);
+font-weight: 700;
+font-size: 18px;
+letter-spacing: 3px;
+color: #fff;
+text-transform: uppercase;
+text-align: center;
+}
+.logo-text span { color: var(--accent); }
+.header-by {
+font-family: var(--sans);
+font-size: 11px;
+font-weight: 500;
+color: var(--muted);
+letter-spacing: 1px;
+text-transform: uppercase;
+text-align: center;
+}
+.header-by a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
+.header-by a:hover { color: var(--accent); }
+.wrap {
+width: 100%;
+max-width: var(--max-w);
+padding: 28px 20px 48px;
+display: flex;
+flex-direction: column;
+gap: 16px;
+}
+.mode-toggle {
+display: grid;
+grid-template-columns: 1fr 1fr;
+border: 1px solid var(--border2);
+border-radius: 2px;
+overflow: hidden;
+}
+.mode-btn {
+background: transparent;
+border: none;
+border-right: 1px solid var(--border2);
+color: var(--muted);
+font-family: var(--sans);
+font-size: 13px;
+font-weight: 600;
+letter-spacing: 1px;
+text-transform: uppercase;
+padding: 13px 8px;
+cursor: pointer;
+transition: all 0.15s;
+}
+.mode-btn:last-child { border-right: none; }
+.mode-btn.active { background: var(--accent); color: #fff; }
+.mode-btn:not(.active):hover { color: var(--text); background: var(--border); }
+.input-row {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 12px;
+}
+.input-group {
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 6px;
+}
+label {
+font-family: var(--sans);
+font-size: 11px;
+font-weight: 600;
+letter-spacing: 1px;
+color: var(--label);
+text-transform: uppercase;
+text-align: center;
+display: block;
+}
+input[type="text"] {
+width: 100%;
+background: var(--bg);
+border: 1px solid var(--border2);
+color: var(--text);
+font-family: var(--mono);
+font-size: 28px;
+padding: 14px 12px;
+border-radius: 2px;
+outline: none;
+transition: border-color 0.15s;
+text-align: center;
+}
+input[type="text"]:focus { border-color: var(--accent); }
+input[type="text"].input-error { border-color: var(--red); color: var(--red); }
+.mini-options {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 10px;
+}
+.mini-group { display: flex; flex-direction: column; gap: 4px; }
+.mini-label {
+font-family: var(--sans);
+font-size: 9px;
+font-weight: 600;
+letter-spacing: 1px;
+color: var(--muted);
+text-transform: uppercase;
+}
+select {
+width: 100%;
+background: var(--bg);
+border: 1px solid var(--border2);
+color: var(--text);
+font-family: var(--sans);
+font-size: 12px;
+font-weight: 500;
+padding: 7px 10px;
+border-radius: 2px;
+outline: none;
+cursor: pointer;
+transition: border-color 0.15s;
+}
+select:focus { border-color: var(--accent); }
+select option { background: #1e1e1e; }
+.unit-toggle {
+display: flex;
+border: 1px solid var(--border2);
+border-radius: 2px;
+overflow: hidden;
+width: 100%;
+}
+.unit-btn {
+flex: 1;
+background: transparent;
+border: none;
+border-right: 1px solid var(--border2);
+color: var(--muted);
+font-family: var(--sans);
+font-size: 12px;
+font-weight: 600;
+letter-spacing: 1px;
+padding: 10px 4px;
+cursor: pointer;
+transition: all 0.15s;
+text-transform: uppercase;
+}
+.unit-btn:last-child { border-right: none; }
+.unit-btn.active { background: rgba(231,48,42,0.15); color: var(--accent); }
+.calc-btn {
+width: 100%;
+background: var(--accent);
+border: none;
+color: #fff;
+font-family: var(--sans);
+font-weight: 700;
+font-size: 16px;
+letter-spacing: 3px;
+text-transform: uppercase;
+padding: 18px;
+cursor: pointer;
+border-radius: 2px;
+transition: background 0.15s;
+}
+.calc-btn:hover { background: var(--accent2); }
+.calc-btn:active { background: #b01a14; }
+.result-hero {
+background: var(--panel);
+border: 1px solid var(--border2);
+border-top: 2px solid var(--accent);
+border-radius: 2px;
+padding: 24px 20px 20px;
+text-align: center;
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 10px;
+}
+.result-hero-label {
+font-family: var(--sans);
+font-size: 11px;
+font-weight: 700;
+letter-spacing: 3px;
+text-transform: uppercase;
+color: var(--accent);
+}
+.result-cm-row {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 10px;
+width: 100%;
+}
+.result-box {
+background: var(--bg);
+border: 1px solid var(--border2);
+border-radius: 2px;
+padding: 12px 8px;
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 5px;
+min-width: 0;
+}
+.result-box-label {
+font-family: var(--sans);
+font-size: 10px;
+font-weight: 600;
+letter-spacing: 1px;
+color: var(--muted);
+text-transform: uppercase;
+white-space: nowrap;
+}
+.result-box-value {
+font-family: var(--mono);
+font-size: clamp(20px, 6vw, 44px);
+color: #fff;
+line-height: 1;
+width: 100%;
+text-align: center;
+white-space: nowrap;
+overflow: hidden;
+text-overflow: ellipsis;
+}
+.result-in-row {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 10px;
+width: 100%;
+}
+.result-box-in {
+background: var(--bg);
+border: 1px solid var(--border2);
+border-radius: 2px;
+padding: 8px;
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 3px;
+min-width: 0;
+}
+.result-box-in .result-box-label { font-size: 9px; }
+.result-box-in-value {
+font-family: var(--mono);
+font-size: clamp(13px, 3.5vw, 20px);
+color: var(--label);
+line-height: 1;
+width: 100%;
+text-align: center;
+white-space: nowrap;
+overflow: hidden;
+text-overflow: ellipsis;
+}
+.hero-preview {
+width: 100%;
+display: flex;
+align-items: center;
+justify-content: center;
+min-height: 90px;
+}
+#canvas-preview {
+background: linear-gradient(135deg, #1e1e1e 0%, #141414 100%);
+border: 1px solid var(--accent);
+position: relative;
+max-width: 100%;
+max-height: 140px;
+box-shadow: 0 0 20px rgba(231,48,42,0.1);
+transition: all 0.35s ease;
+display: flex;
+align-items: center;
+justify-content: center;
+}
+.canvas-grid {
+position: absolute; inset: 0;
+background-image:
+linear-gradient(rgba(231,48,42,0.05) 1px, transparent 1px),
+linear-gradient(90deg, rgba(231,48,42,0.05) 1px, transparent 1px);
+background-size: 20px 20px;
+}
+.canvas-cross { position: absolute; inset: 0; pointer-events: none; }
+.canvas-cross::before, .canvas-cross::after {
+content: ''; position: absolute; background: rgba(231,48,42,0.1);
+}
+.canvas-cross::before { left: 50%; top: 0; bottom: 0; width: 1px; }
+.canvas-cross::after { top: 50%; left: 0; right: 0; height: 1px; }
+.canvas-ratio-wrap {
+position: relative;
+z-index: 1;
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+gap: 5px;
+padding: 4px 8px;
+}
+.canvas-ratio-wrap.single-line {
+flex-direction: row;
+gap: 8px;
+}
+.canvas-ratio-integer,
+.canvas-ratio-decimal {
+font-family: var(--mono);
+font-size: clamp(14px, 2.8vw, 22px);
+color: #fff;
+letter-spacing: 0;
+line-height: 1;
+white-space: nowrap;
+}
+.result-hero.empty .result-box-value { color: var(--border2); }
+.result-hero.empty .result-box-in-value { color: var(--border2); }
+.share-btn {
+display: none;
+width: 100%;
+align-items: center;
+justify-content: center;
+gap: 10px;
+background: transparent;
+border: 1px solid var(--border2);
+color: var(--label);
+font-family: var(--sans);
+font-size: 13px;
+font-weight: 600;
+letter-spacing: 1px;
+text-transform: uppercase;
+padding: 13px;
+cursor: pointer;
+border-radius: 2px;
+transition: all 0.15s;
+}
+.share-btn.visible { display: flex; }
+.share-btn:hover { border-color: var(--accent); color: var(--accent); }
+.share-btn svg { flex-shrink: 0; }
+.share-toast {
+display: none;
+align-items: center;
+justify-content: center;
+background: rgba(76,175,130,0.1);
+border: 1px solid rgba(76,175,130,0.4);
+border-radius: 2px;
+padding: 10px 14px;
+font-family: var(--sans);
+font-size: 12px;
+font-weight: 500;
+color: var(--green);
+text-align: center;
+}
+.share-toast.visible { display: flex; }
+.ppt-warn {
+display: none;
+align-items: center;
+gap: 8px;
+background: rgba(231,48,42,0.07);
+border: 1px solid rgba(231,48,42,0.3);
+border-radius: 2px;
+padding: 10px 14px;
+font-family: var(--sans);
+font-size: 12px;
+font-weight: 500;
+color: var(--red);
+}
+.ppt-warn.visible { display: flex; }
+.section-label {
+font-family: var(--sans);
+font-size: 10px;
+font-weight: 700;
+letter-spacing: 3px;
+text-transform: uppercase;
+color: var(--accent);
+margin-bottom: 10px;
+display: flex;
+align-items: center;
+gap: 8px;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--border2); }
+.details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.detail-card {
+background: var(--panel);
+border: 1px solid var(--border2);
+border-left: 2px solid rgba(231,48,42,0.35);
+border-radius: 2px;
+padding: 12px 14px;
+}
+.detail-label {
+font-family: var(--sans);
+font-size: 10px;
+font-weight: 600;
+letter-spacing: 1px;
+color: var(--muted);
+text-transform: uppercase;
+margin-bottom: 5px;
+}
+.detail-value { font-family: var(--mono); font-size: 20px; color: var(--text); line-height: 1; }
+.detail-sub { font-family: var(--sans); font-size: 11px; color: var(--muted); margin-top: 3px; }
+.secondary-toggle-btn {
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 8px;
+width: 100%;
+background: transparent;
+border: 1px solid var(--border2);
+color: var(--muted);
+font-family: var(--sans);
+font-size: 12px;
+font-weight: 600;
+letter-spacing: 1px;
+text-transform: uppercase;
+padding: 11px;
+cursor: pointer;
+border-radius: 2px;
+transition: all 0.15s;
+}
+.secondary-toggle-btn:hover { color: var(--label); border-color: var(--label); }
+.sec-arrow { transition: transform 0.2s; display: inline-block; }
+.sec-arrow.open { transform: rotate(180deg); }
+.secondary-panel { display: none; flex-direction: column; gap: 20px; }
+.secondary-panel.open { display: flex; }
+.presets-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.preset-btn {
+background: var(--bg);
+border: 1px solid var(--border2);
+color: var(--label);
+font-family: var(--sans);
+font-size: 13px;
+font-weight: 600;
+padding: 10px 4px;
+cursor: pointer;
+border-radius: 2px;
+transition: all 0.15s;
+text-align: center;
+}
+.preset-btn span { font-size: 10px; color: var(--muted); display: block; font-weight: 400; }
+.preset-btn:hover { border-color: var(--accent); color: var(--accent); }
+.ref-section { border: 1px solid var(--border2); border-radius: 2px; overflow: hidden; }
+.ref-header {
+background: rgba(231,48,42,0.05);
+border-bottom: 1px solid var(--border2);
+padding: 11px 14px;
+font-family: var(--sans);
+font-size: 11px;
+font-weight: 700;
+letter-spacing: 1px;
+color: var(--accent);
+text-transform: uppercase;
+cursor: pointer;
+display: flex;
+align-items: center;
+justify-content: space-between;
+}
+.ref-header:hover { background: rgba(231,48,42,0.09); }
+.ref-toggle { transition: transform 0.2s; display: inline-block; }
+.ref-toggle.open { transform: rotate(180deg); }
+.ref-body { display: none; overflow-x: auto; }
+.ref-body.open { display: block; }
+table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 11px; }
+th {
+background: var(--bg);
+font-family: var(--sans);
+font-weight: 700;
+color: var(--muted);
+font-size: 9px;
+letter-spacing: 1px;
+text-transform: uppercase;
+padding: 7px 10px;
+text-align: left;
+border-bottom: 1px solid var(--border);
+white-space: nowrap;
+}
+td { padding: 7px 10px; border-bottom: 1px solid var(--border); color: var(--text); white-space: nowrap; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(255,255,255,0.02); }
+.td-accent { color: var(--accent); }
+.td-red { color: var(--red); }
+.td-green { color: var(--green); }
+.td-muted { color: var(--muted); }
+footer {
+width: 100%;
+border-top: 1px solid var(--border);
+padding: 14px 24px;
+font-family: var(--sans);
+font-size: 11px;
+color: var(--muted);
+display: flex;
+flex-direction: column;
+align-items: center;
+text-align: center;
+gap: 3px;
+line-height: 1.6;
+}
+footer a { color: var(--accent); text-decoration: none; }
+footer a:hover { color: var(--accent2); }
+.footer-sep { margin: 4px 0; height: 1px; width: 40px; background: var(--border2); }
+@keyframes pop {
+0% { transform: scale(0.98); opacity: 0.7; }
+60% { transform: scale(1.01); }
+100% { transform: scale(1); opacity: 1; }
+}
+.result-hero.fired { animation: pop 0.22s ease both; }
+
+/* ===== Other Tools: EMF Extractor (complementary teal accent) ===== */
+.other-tools {
+display: flex;
+flex-direction: column;
+gap: 16px;
+margin-top: 12px;
+--emf: #1FB6A6;        /* teal — complementary to the red accent */
+--emf2: #43d6c6;
+--emf-dim: rgba(31,182,166,0.12);
+}
+.other-tools-head {
+display: flex;
+align-items: center;
+gap: 12px;
+margin-top: 8px;
+}
+.other-tools-head .ot-label {
+font-family: var(--sans);
+font-size: 11px;
+font-weight: 700;
+letter-spacing: 3px;
+text-transform: uppercase;
+color: var(--emf);
+white-space: nowrap;
+}
+.other-tools-head::before,
+.other-tools-head::after { content: ''; flex: 1; height: 1px; background: var(--border2); }
+
+.emf-tool {
+background: var(--panel);
+border: 1px solid var(--border2);
+border-top: 2px solid var(--emf);
+border-radius: 2px;
+padding: 20px 18px;
+display: flex;
+flex-direction: column;
+gap: 14px;
+}
+.emf-tool-title {
+font-family: var(--sans);
+font-size: 15px;
+font-weight: 700;
+letter-spacing: 1px;
+text-transform: uppercase;
+color: #fff;
+display: flex;
+align-items: center;
+gap: 9px;
+}
+.emf-tool-title .emf-chip {
+font-family: var(--mono);
+font-size: 9px;
+font-weight: 400;
+letter-spacing: 1px;
+color: var(--emf);
+border: 1px solid var(--emf);
+border-radius: 2px;
+padding: 2px 6px;
+text-transform: uppercase;
+}
+.emf-intro {
+font-family: var(--sans);
+font-size: 12px;
+color: var(--muted);
+line-height: 1.6;
+}
+.emf-drop {
+border: 1px dashed var(--border2);
+border-radius: 2px;
+background: var(--bg);
+padding: 34px 20px;
+text-align: center;
+cursor: pointer;
+transition: border-color 0.15s, background 0.15s;
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 8px;
+}
+.emf-drop:hover { border-color: var(--emf); }
+.emf-drop.drag { border-color: var(--emf); background: var(--emf-dim); }
+.emf-drop svg.emf-dz-icon { stroke: var(--emf); fill: none; stroke-width: 1.6; width: 36px; height: 36px; }
+.emf-drop .emf-dz-big {
+font-family: var(--sans);
+font-size: 13px;
+font-weight: 700;
+letter-spacing: 1px;
+text-transform: uppercase;
+color: var(--text);
+}
+.emf-drop .emf-dz-small { font-family: var(--sans); font-size: 11px; color: var(--muted); }
+.emf-drop input[type="file"] { display: none; }
+.emf-privacy {
+display: flex; align-items: center; justify-content: center; gap: 7px;
+font-family: var(--sans); font-size: 10px; letter-spacing: 0.5px;
+color: var(--emf); text-transform: uppercase; margin-top: 2px;
+}
+.emf-privacy svg { stroke: var(--emf); fill: none; stroke-width: 2; width: 13px; height: 13px; }
+
+#emf-results { display: flex; flex-direction: column; gap: 12px; }
+
+.emf-card {
+background: var(--bg);
+border: 1px solid var(--border2);
+border-left: 2px solid var(--emf);
+border-radius: 2px;
+overflow: hidden;
+animation: pop 0.22s ease both;
+}
+.emf-card-head {
+display: flex; align-items: center; gap: 10px;
+padding: 11px 14px; border-bottom: 1px solid var(--border2);
+}
+.emf-fname {
+font-family: var(--mono); font-size: 13px; color: var(--text);
+flex: 1; min-width: 0; word-break: break-all;
+}
+.emf-badge {
+font-family: var(--sans); font-size: 9px; font-weight: 700;
+letter-spacing: 1px; text-transform: uppercase;
+padding: 4px 9px; border-radius: 2px; white-space: nowrap;
+border: 1px solid transparent;
+}
+.emf-badge.pdf { color: var(--emf); border-color: var(--emf); background: var(--emf-dim); }
+.emf-badge.ras { color: #d8a657; border-color: rgba(216,166,87,0.4); background: rgba(216,166,87,0.1); }
+.emf-badge.none { color: var(--red); border-color: rgba(231,48,42,0.4); background: rgba(231,48,42,0.08); }
+
+.emf-card-body { display: grid; grid-template-columns: 112px 1fr; gap: 16px; padding: 14px; align-items: center; }
+@media (max-width: 460px) { .emf-card-body { grid-template-columns: 1fr; } }
+
+.emf-preview {
+width: 112px; height: 112px; border-radius: 2px;
+border: 1px solid var(--border2); background: #fff;
+display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.emf-preview img, .emf-preview canvas { max-width: 100%; max-height: 100%; display: block; }
+.emf-preview .emf-nopreview { font-family: var(--sans); font-size: 10px; color: var(--muted); text-align: center; padding: 6px; }
+
+.emf-meta { font-family: var(--sans); font-size: 12px; }
+.emf-meta .erow { display: flex; gap: 8px; margin-bottom: 4px; }
+.emf-meta .erow span:first-child { color: var(--muted); min-width: 80px; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; padding-top: 2px; }
+.emf-meta .erow span:last-child { color: var(--text); font-family: var(--mono); }
+.emf-note { font-family: var(--sans); font-size: 11px; line-height: 1.5; margin-top: 8px; color: #d8a657; }
+.emf-note.ok { color: var(--emf); }
+.emf-note.err { color: var(--red); }
+
+.emf-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+.emf-btn {
+background: transparent; border: 1px solid var(--border2); color: var(--label);
+font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: 1px;
+text-transform: uppercase; padding: 9px 14px; border-radius: 2px; cursor: pointer;
+transition: all 0.15s;
+}
+.emf-btn:hover { border-color: var(--emf); color: var(--emf); }
+.emf-btn.primary { background: var(--emf); border-color: var(--emf); color: #06201d; }
+.emf-btn.primary:hover { background: var(--emf2); color: #06201d; }
+.emf-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.emf-dpi { display: inline-flex; align-items: center; gap: 6px; font-family: var(--sans); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.emf-dpi select { width: auto; padding: 6px 8px; font-size: 11px; }
+.emf-dpi select:focus { border-color: var(--emf); }
+.emf-spinner {
+width: 13px; height: 13px; border: 2px solid var(--border2);
+border-top-color: var(--emf); border-radius: 50%;
+animation: emfspin 0.7s linear infinite; display: inline-block; vertical-align: -2px; margin-right: 5px;
+}
+@keyframes emfspin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
-
 <header>
-  <div class="logo-mark" id="logo-mark"></div>
-  <div class="logo-text">Slide Size <span>Calculator</span></div>
-  <div class="header-by"><a href="https://aegfx.com" target="_blank" rel="noopener">by AEGFX LTD</a></div>
+<div class="logo-mark" id="logo-mark"></div>
+<div class="logo-text">Slide Size <span>Calculator</span></div>
+<div class="header-by"><a href="https://aegfx.com" target="_blank" rel="noopener">by AEGFX LTD</a></div>
 </header>
-
 <div class="wrap">
-
-  <div class="mode-toggle">
-    <button class="mode-btn active" id="btn-pixel" onclick="setMode('pixel')">Pixels</button>
-    <button class="mode-btn" id="btn-physical" onclick="setMode('physical')">Physical</button>
-  </div>
-
-  <div id="panel-pixel">
-    <div class="input-row">
-      <div class="input-group">
-        <label>Width (px)</label>
-        <input type="text" id="px-w" placeholder="1280" inputmode="decimal" autocomplete="off">
-      </div>
-      <div class="input-group">
-        <label>Height (px)</label>
-        <input type="text" id="px-h" placeholder="720" inputmode="decimal" autocomplete="off">
-      </div>
-    </div>
-  </div>
-
-  <div id="panel-physical" style="display:none">
-    <div class="unit-toggle" style="margin-bottom:12px">
-      <button class="unit-btn active" id="unit-m"  onclick="setUnit('m')">Metres</button>
-      <button class="unit-btn"        id="unit-ft" onclick="setUnit('ft')">Feet</button>
-    </div>
-    <div class="input-row">
-      <div class="input-group">
-        <label id="phys-w-label">Width (m)</label>
-        <input type="text" id="phys-w" placeholder="4.0" inputmode="decimal" autocomplete="off">
-      </div>
-      <div class="input-group">
-        <label id="phys-h-label">Height (m)</label>
-        <input type="text" id="phys-h" placeholder="2.25" inputmode="decimal" autocomplete="off">
-      </div>
-    </div>
-    <p style="font-family:var(--sans);font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6;text-align:center">
-      Physical size derives aspect ratio only &middot; PPT anchored to 19.05cm height
-    </p>
-  </div>
-
-  <div class="mini-options" id="mini-options">
-    <div class="mini-group">
-      <div class="mini-label">Colour Depth</div>
-      <select id="bit-depth">
-        <option value="8" selected>8-bit</option>
-        <option value="10">10-bit</option>
-        <option value="12">12-bit</option>
-      </select>
-    </div>
-    <div class="mini-group">
-      <div class="mini-label">Frame Rate</div>
-      <select id="fps">
-        <option value="23.976">23.98 fps</option>
-        <option value="24">24 fps</option>
-        <option value="25" selected>25 fps</option>
-        <option value="29.97">29.97 fps</option>
-        <option value="30">30 fps</option>
-        <option value="47.952">47.95 fps</option>
-        <option value="48">48 fps</option>
-        <option value="50">50 fps</option>
-        <option value="59.94">59.94 fps</option>
-        <option value="60">60 fps</option>
-      </select>
-    </div>
-  </div>
-
-  <button class="calc-btn" onclick="calculate()">Calculate</button>
-
-  <div class="result-hero empty" id="result-hero">
-    <div class="result-hero-label">Slide Size</div>
-    <div class="result-cm-row">
-      <div class="result-box">
-        <div class="result-box-label">Width (cm)</div>
-        <div class="result-box-value" id="rh-w">--</div>
-      </div>
-      <div class="result-box">
-        <div class="result-box-label">Height (cm)</div>
-        <div class="result-box-value" id="rh-h">--</div>
-      </div>
-    </div>
-    <div class="result-in-row">
-      <div class="result-box-in">
-        <div class="result-box-label">Width (in)</div>
-        <div class="result-box-in-value" id="rh-win">--</div>
-      </div>
-      <div class="result-box-in">
-        <div class="result-box-label">Height (in)</div>
-        <div class="result-box-in-value" id="rh-hin">--</div>
-      </div>
-    </div>
-    <div class="hero-preview">
-      <div id="canvas-preview" style="width:142px;height:80px">
-        <div class="canvas-grid"></div>
-        <div class="canvas-cross"></div>
-        <div class="canvas-ratio-wrap" id="ratio-wrap">
-          <div class="canvas-ratio-integer" id="ratio-integer">16:9</div>
-          <div class="canvas-ratio-decimal" id="ratio-decimal">(1.78:1)</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <button class="share-btn" id="share-btn" onclick="shareResult()">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-    </svg>
-    Share these dimensions
-  </button>
-
-  <div class="share-toast" id="share-toast">Link copied to clipboard</div>
-
-  <div class="ppt-warn" id="ppt-warn">
-    Width exceeds PPT maximum (142.24cm / 56in). Consider working at reduced scale.
-  </div>
-
-  <div id="details-section" style="display:none">
-    <div class="section-label">Details</div>
-    <div class="details-grid" id="details-grid"></div>
-  </div>
-
-  <button class="secondary-toggle-btn" onclick="toggleSecondary()">
-    Presets <span class="sec-arrow" id="sec-arrow">&#9660;</span>
-  </button>
-
-  <div class="secondary-panel" id="secondary-panel">
-    <div>
-      <div class="section-label">Standard Presets</div>
-      <div class="presets-grid">
-        <button class="preset-btn" onclick="fillPixels(1280,720)">720p<span>HD</span></button>
-        <button class="preset-btn" onclick="fillPixels(1920,1080)">1080p<span>FHD</span></button>
-        <button class="preset-btn" onclick="fillPixels(2560,1440)">1440p<span>2K QHD</span></button>
-        <button class="preset-btn" onclick="fillPixels(3840,2160)">2160p<span>4K UHD</span></button>
-        <button class="preset-btn" onclick="fillPixels(5120,2880)">5K<span>5120x2880</span></button>
-        <button class="preset-btn" onclick="fillPixels(7680,4320)">8K<span>UHD-2</span></button>
-      </div>
-    </div>
-  </div>
-
-  <div class="ref-section">
-    <div class="ref-header" onclick="toggleRef()">
-      Standard Presets Reference
-      <span class="ref-toggle" id="ref-arrow">&#9660;</span>
-    </div>
-    <div class="ref-body" id="ref-body">
-      <table>
-        <thead>
-          <tr>
-            <th>Standard</th><th>Pixels WxH</th><th>Aspect</th>
-            <th>PPT W (cm)</th><th>PPT H (cm)</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr><td class="td-accent">720p HD</td><td>1280x720</td><td class="td-green">16:9</td><td>33.87</td><td>19.05</td></tr>
-          <tr><td class="td-accent">1080p FHD</td><td>1920x1080</td><td class="td-green">16:9</td><td>33.87</td><td>19.05</td></tr>
-          <tr><td class="td-accent">1440p QHD</td><td>2560x1440</td><td class="td-green">16:9</td><td>33.87</td><td>19.05</td></tr>
-          <tr><td class="td-accent">4K UHD</td><td>3840x2160</td><td class="td-green">16:9</td><td>33.87</td><td>19.05</td></tr>
-          <tr><td class="td-accent">5K</td><td>5120x2880</td><td class="td-green">16:9</td><td>33.87</td><td>19.05</td></tr>
-          <tr><td class="td-accent">8K UHD-2</td><td>7680x4320</td><td class="td-green">16:9</td><td>33.87</td><td>19.05</td></tr>
-          <tr><td class="td-red">PowerPoint Max</td><td>-</td><td class="td-green">1:1</td><td>142.24</td><td>142.24</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
+<div class="mode-toggle">
+<button class="mode-btn active" id="btn-pixel" onclick="setMode('pixel')">Pixels</button>
+<button class="mode-btn" id="btn-physical" onclick="setMode('physical')">Physical</button>
+</div>
+<div id="panel-pixel">
+<div class="input-row">
+<div class="input-group">
+<label>Width (px)</label>
+<input type="text" id="px-w" placeholder="1280" inputmode="decimal" autocomplete="off">
+</div>
+<div class="input-group">
+<label>Height (px)</label>
+<input type="text" id="px-h" placeholder="720" inputmode="decimal" autocomplete="off">
+</div>
+</div>
+</div>
+<div id="panel-physical" style="display:none">
+<div class="unit-toggle" style="margin-bottom:12px">
+<button class="unit-btn active" id="unit-m" onclick="setUnit('m')">Metres</button>
+<button class="unit-btn" id="unit-ft" onclick="setUnit('ft')">Feet</button>
+</div>
+<div class="input-row">
+<div class="input-group">
+<label id="phys-w-label">Width (m)</label>
+<input type="text" id="phys-w" placeholder="4.0" inputmode="decimal" autocomplete="off">
+</div>
+<div class="input-group">
+<label id="phys-h-label">Height (m)</label>
+<input type="text" id="phys-h" placeholder="2.25" inputmode="decimal" autocomplete="off">
+</div>
+</div>
+<p style="font-family:var(--sans);font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6;text-align:center">
+Physical size derives aspect ratio only &middot; PPT anchored to 19.05cm height
+</p>
+</div>
+<div class="mini-options" id="mini-options">
+<div class="mini-group">
+<div class="mini-label">Colour Depth</div>
+<select id="bit-depth">
+<option value="8" selected>8-bit</option>
+<option value="10">10-bit</option>
+<option value="12">12-bit</option>
+</select>
+</div>
+<div class="mini-group">
+<div class="mini-label">Frame Rate</div>
+<select id="fps">
+<option value="23.976">23.98 fps</option>
+<option value="24">24 fps</option>
+<option value="25" selected>25 fps</option>
+<option value="29.97">29.97 fps</option>
+<option value="30">30 fps</option>
+<option value="47.952">47.95 fps</option>
+<option value="48">48 fps</option>
+<option value="50">50 fps</option>
+<option value="59.94">59.94 fps</option>
+<option value="60">60 fps</option>
+</select>
+</div>
+</div>
+<button class="calc-btn" onclick="calculate()">Calculate</button>
+<div class="result-hero empty" id="result-hero">
+<div class="result-hero-label">Slide Size</div>
+<div class="result-cm-row">
+<div class="result-box">
+<div class="result-box-label">Width (cm)</div>
+<div class="result-box-value" id="rh-w">--</div>
+</div>
+<div class="result-box">
+<div class="result-box-label">Height (cm)</div>
+<div class="result-box-value" id="rh-h">--</div>
+</div>
+</div>
+<div class="result-in-row">
+<div class="result-box-in">
+<div class="result-box-label">Width (in)</div>
+<div class="result-box-in-value" id="rh-win">--</div>
+</div>
+<div class="result-box-in">
+<div class="result-box-label">Height (in)</div>
+<div class="result-box-in-value" id="rh-hin">--</div>
+</div>
+</div>
+<div class="hero-preview">
+<div id="canvas-preview" style="width:142px;height:80px">
+<div class="canvas-grid"></div>
+<div class="canvas-cross"></div>
+<div class="canvas-ratio-wrap" id="ratio-wrap">
+<div class="canvas-ratio-integer" id="ratio-integer">16:9</div>
+<div class="canvas-ratio-decimal" id="ratio-decimal">(1.78:1)</div>
+</div>
+</div>
+</div>
+</div>
+<button class="share-btn" id="share-btn" onclick="shareResult()">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+<line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+</svg>
+Share these dimensions
+</button>
+<div class="share-toast" id="share-toast">Link copied to clipboard</div>
+<div class="ppt-warn" id="ppt-warn">
+Width exceeds PPT maximum (142.24cm / 56in). Consider working at reduced scale.
+</div>
+<div id="details-section" style="display:none">
+<div class="section-label">Details</div>
+<div class="details-grid" id="details-grid"></div>
+</div>
+<button class="secondary-toggle-btn" onclick="toggleSecondary()">
+Presets <span class="sec-arrow" id="sec-arrow">&#9660;</span>
+</button>
+<div class="secondary-panel" id="secondary-panel">
+<div>
+<div class="section-label">Standard Presets</div>
+<div class="presets-grid">
+<button class="preset-btn" onclick="fillPixels(1280,720)">720p<span>HD</span></button>
+<button class="preset-btn" onclick="fillPixels(1920,1080)">1080p<span>FHD</span></button>
+<button class="preset-btn" onclick="fillPixels(2560,1440)">1440p<span>2K QHD</span></button>
+<button class="preset-btn" onclick="fillPixels(3840,2160)">2160p<span>4K UHD</span></button>
+<button class="preset-btn" onclick="fillPixels(5120,2880)">5K<span>5120x2880</span></button>
+<button class="preset-btn" onclick="fillPixels(7680,4320)">8K<span>UHD-2</span></button>
+</div>
+</div>
+</div>
+<div class="ref-section">
+<div class="ref-header" onclick="toggleRef()">
+Standard Presets Reference
+<span class="ref-toggle" id="ref-arrow">&#9660;</span>
+</div>
+<div class="ref-body" id="ref-body">
+<table>
+<thead>
+<tr>
+<th>Standard</th><th>Pixels WxH</th><th>Aspect</th>
+<th>PPT W (cm)</th><th>PPT H (cm)</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="td-accent">720p HD</td><td>1280x720</td><td class="td-green">16:9</td><td>33.87</td><td>19.05</td></tr>
+<tr><td class="td-accent">1080p FHD</td><td>1920x1080</td><td class="td-green">16:9</td><td>33.87</td><td>19.05</td></tr>
+<tr><td class="td-accent">1440p QHD</td><td>2560x1440</td><td class="td-green">16:9</td><td>33.87</td><td>19.05</td></tr>
+<tr><td class="td-accent">4K UHD</td><td>3840x2160</td><td class="td-green">16:9</td><td>33.87</td><td>19.05</td></tr>
+<tr><td class="td-accent">5K</td><td>5120x2880</td><td class="td-green">16:9</td><td>33.87</td><td>19.05</td></tr>
+<tr><td class="td-accent">8K UHD-2</td><td>7680x4320</td><td class="td-green">16:9</td><td>33.87</td><td>19.05</td></tr>
+<tr><td class="td-red">PowerPoint Max</td><td>-</td><td class="td-green">1:1</td><td>142.24</td><td>142.24</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="other-tools">
+<div class="other-tools-head"><span class="ot-label">Other Tools</span></div>
+<div class="emf-tool">
+<div class="emf-tool-title">EMF Extractor <span class="emf-chip">Hybrid EMF &rarr; PDF</span></div>
+<p class="emf-intro">
+Mac-origin EMF files often carry a tiny low-res bitmap <strong>plus</strong> a full-quality vector PDF
+hidden in an Office GDIC block. Windows PowerPoint only draws the bitmap &mdash; hence the blur.
+This pulls the real PDF (or fallback raster) back out.
+</p>
+<label class="emf-drop" id="emf-drop" for="emf-file">
+<svg class="emf-dz-icon" viewBox="0 0 24 24"><path d="M12 16V4m0 0l-4 4m4-4l4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+<div class="emf-dz-big">Drop EMF files</div>
+<div class="emf-dz-small">or tap to browse &middot; multiple files OK</div>
+<input type="file" id="emf-file" accept=".emf,image/x-emf,application/octet-stream" multiple>
+<div class="emf-privacy">
+<svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+Processed in your browser &middot; nothing uploaded
+</div>
+</label>
+<div id="emf-results"></div>
+</div>
 </div>
 
 <footer>
-  <span>Created by Andrew Brandse</span>
-  <span><a href="mailto:info@aegfx.com">info@aegfx.com</a></span>
-  <span>Built with Claude (Anthropic)</span>
-  <div class="footer-sep"></div>
-  <span>PowerPoint max dims: 142.24cm x 142.24cm (56in x 56in)</span>
-  <span>Vertical anchor: 19.05cm (7.5in)</span>
+<span>Created by Andrew Brandse</span>
+<span><a href="mailto:info@aegfx.com">info@aegfx.com</a></span>
+<span>Built with Claude (Anthropic)</span>
+<div class="footer-sep"></div>
+<span>PowerPoint max dims: 142.24cm x 142.24cm (56in x 56in)</span>
+<span>Vertical anchor: 19.05cm (7.5in)</span>
 </footer>
-
 <script>
 var mode = 'pixel';
 var physUnit = 'm';
@@ -743,272 +915,481 @@ var PPT_H_CM = 19.05;
 var PPT_H_IN = 7.5;
 var PPT_MAX_IN = 56;
 var toastTimer = null;
-
 function setMode(m) {
-  mode = m;
-  document.getElementById('btn-pixel').classList.toggle('active', m === 'pixel');
-  document.getElementById('btn-physical').classList.toggle('active', m === 'physical');
-  document.getElementById('panel-pixel').style.display = m === 'pixel' ? '' : 'none';
-  document.getElementById('panel-physical').style.display = m === 'physical' ? '' : 'none';
-  document.getElementById('mini-options').style.display = m === 'pixel' ? '' : 'none';
+mode = m;
+document.getElementById('btn-pixel').classList.toggle('active', m === 'pixel');
+document.getElementById('btn-physical').classList.toggle('active', m === 'physical');
+document.getElementById('panel-pixel').style.display = m === 'pixel' ? '' : 'none';
+document.getElementById('panel-physical').style.display = m === 'physical' ? '' : 'none';
+document.getElementById('mini-options').style.display = m === 'pixel' ? '' : 'none';
 }
-
 function setUnit(u) {
-  physUnit = u;
-  ['m','ft'].forEach(function(x) {
-    document.getElementById('unit-' + x).classList.toggle('active', x === u);
-  });
-  document.getElementById('phys-w-label').textContent = u === 'm' ? 'Width (m)' : 'Width (ft)';
-  document.getElementById('phys-h-label').textContent = u === 'm' ? 'Height (m)' : 'Height (ft)';
+physUnit = u;
+['m','ft'].forEach(function(x) {
+document.getElementById('unit-' + x).classList.toggle('active', x === u);
+});
+document.getElementById('phys-w-label').textContent = u === 'm' ? 'Width (m)' : 'Width (ft)';
+document.getElementById('phys-h-label').textContent = u === 'm' ? 'Height (m)' : 'Height (ft)';
 }
-
 function fillPixels(w, h) {
-  setMode('pixel');
-  document.getElementById('px-w').value = w;
-  document.getElementById('px-h').value = h;
-  calculate();
+setMode('pixel');
+document.getElementById('px-w').value = w;
+document.getElementById('px-h').value = h;
+calculate();
 }
-
 function parseMath(str) {
-  var c = String(str).trim();
-  if (!/^[\d\s\+\-\*\/\.\(\)]+$/.test(c)) return NaN;
-  try {
-    var r = Function('"use strict";return(' + c + ')')();
-    return (typeof r === 'number' && isFinite(r)) ? r : NaN;
-  } catch(e) { return NaN; }
+var c = String(str).trim();
+if (!/^[\d\s\+\-\*\/\.\(\)]+$/.test(c)) return NaN;
+try {
+var r = Function('"use strict";return(' + c + ')')();
+return (typeof r === 'number' && isFinite(r)) ? r : NaN;
+} catch(e) { return NaN; }
 }
-
 function getVal(id) {
-  var el = document.getElementById(id);
-  var v = parseMath(el.value);
-  el.classList.toggle('input-error', isNaN(v) && el.value.trim() !== '');
-  return v;
+var el = document.getElementById(id);
+var v = parseMath(el.value);
+el.classList.toggle('input-error', isNaN(v) && el.value.trim() !== '');
+return v;
 }
-
 function gcd(a, b) {
-  a = Math.round(a); b = Math.round(b);
-  while (b) { var t = b; b = a % b; a = t; }
-  return a;
+a = Math.round(a); b = Math.round(b);
+while (b) { var t = b; b = a % b; a = t; }
+return a;
 }
-
 function aspectInteger(w, h) {
-  var g = gcd(Math.round(w), Math.round(h));
-  return (Math.round(w) / g) + ':' + (Math.round(h) / g);
+var g = gcd(Math.round(w), Math.round(h));
+return (Math.round(w) / g) + ':' + (Math.round(h) / g);
 }
-
 function aspectDecimal(w, h) {
-  return '(' + (w / h).toFixed(2) + ':1)';
+return '(' + (w / h).toFixed(2) + ':1)';
 }
-
 function stdName(px) {
-  if (px >= 33000000) return '8K';
-  if (px >= 14000000) return '5K';
-  if (px >= 8000000)  return '4K';
-  if (px >= 3500000)  return '2K';
-  if (px >= 2000000)  return '1080';
-  if (px >= 800000)   return '720';
-  return '-';
+if (px >= 33000000) return '8K';
+if (px >= 14000000) return '5K';
+if (px >= 8000000) return '4K';
+if (px >= 3500000) return '2K';
+if (px >= 2000000) return '1080';
+if (px >= 800000) return '720';
+return '-';
 }
-
 function updatePreviewShape(w, h) {
-  var ratio = w / h;
-  var maxW = 460, maxH = 140;
-  var pw = maxW, ph = maxW / ratio;
-  if (ph > maxH) { ph = maxH; pw = maxH * ratio; }
-  if (pw < 32) pw = 32;
-  if (ph < 56) ph = 56;
-  pw = Math.round(pw); ph = Math.round(ph);
-  var el = document.getElementById('canvas-preview');
-  el.style.width  = pw + 'px';
-  el.style.height = ph + 'px';
-  var wrap = document.getElementById('ratio-wrap');
-  wrap.classList.toggle('single-line', ph < 70);
-  var logo = document.getElementById('logo-mark');
-  var lw = Math.round(24 * ratio);
-  if (lw < 14) lw = 14;
-  if (lw > 72) lw = 72;
-  logo.style.width = lw + 'px';
+var ratio = w / h;
+var maxW = 460, maxH = 140;
+var pw = maxW, ph = maxW / ratio;
+if (ph > maxH) { ph = maxH; pw = maxH * ratio; }
+if (pw < 32) pw = 32;
+if (ph < 56) ph = 56;
+pw = Math.round(pw); ph = Math.round(ph);
+var el = document.getElementById('canvas-preview');
+el.style.width = pw + 'px';
+el.style.height = ph + 'px';
+var wrap = document.getElementById('ratio-wrap');
+wrap.classList.toggle('single-line', ph < 70);
+var logo = document.getElementById('logo-mark');
+var lw = Math.round(24 * ratio);
+if (lw < 14) lw = 14;
+if (lw > 72) lw = 72;
+logo.style.width = lw + 'px';
 }
-
 function updatePreviewRatio(w, h) {
-  document.getElementById('ratio-integer').textContent = aspectInteger(w, h);
-  document.getElementById('ratio-decimal').textContent = aspectDecimal(w, h);
+document.getElementById('ratio-integer').textContent = aspectInteger(w, h);
+document.getElementById('ratio-decimal').textContent = aspectDecimal(w, h);
 }
-
 function buildShareURL(rawW, rawH) {
-  var base = window.location.href.split('?')[0].split('#')[0];
-  var fps  = document.getElementById('fps').value;
-  var bits = document.getElementById('bit-depth').value;
-  var p = '?mode=' + encodeURIComponent(mode);
-  p += '&w=' + encodeURIComponent(rawW);
-  p += '&h=' + encodeURIComponent(rawH);
-  if (mode === 'physical') p += '&unit=' + encodeURIComponent(physUnit);
-  p += '&fps=' + encodeURIComponent(fps);
-  p += '&bits=' + encodeURIComponent(bits);
-  return base + p;
+var base = window.location.href.split('?')[0].split('#')[0];
+var fps = document.getElementById('fps').value;
+var bits = document.getElementById('bit-depth').value;
+var p = '?mode=' + encodeURIComponent(mode);
+p += '&w=' + encodeURIComponent(rawW);
+p += '&h=' + encodeURIComponent(rawH);
+if (mode === 'physical') p += '&unit=' + encodeURIComponent(physUnit);
+p += '&fps=' + encodeURIComponent(fps);
+p += '&bits=' + encodeURIComponent(bits);
+return base + p;
 }
-
 function shareResult() {
-  var url = document.getElementById('share-btn').dataset.url;
-  if (!url) return;
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(url).then(showToast).catch(function() { fallbackCopy(url); });
-  } else {
-    fallbackCopy(url);
-  }
+var url = document.getElementById('share-btn').dataset.url;
+if (!url) return;
+if (navigator.clipboard && navigator.clipboard.writeText) {
+navigator.clipboard.writeText(url).then(showToast).catch(function() { fallbackCopy(url); });
+} else {
+fallbackCopy(url);
 }
-
+}
 function fallbackCopy(text) {
-  var ta = document.createElement('textarea');
-  ta.value = text;
-  ta.style.position = 'fixed';
-  ta.style.opacity = '0';
-  document.body.appendChild(ta);
-  ta.select();
-  try { document.execCommand('copy'); } catch(e) {}
-  document.body.removeChild(ta);
-  showToast();
+var ta = document.createElement('textarea');
+ta.value = text;
+ta.style.position = 'fixed';
+ta.style.opacity = '0';
+document.body.appendChild(ta);
+ta.select();
+try { document.execCommand('copy'); } catch(e) {}
+document.body.removeChild(ta);
+showToast();
 }
-
 function showToast() {
-  var toast = document.getElementById('share-toast');
-  toast.classList.add('visible');
-  if (toastTimer) clearTimeout(toastTimer);
-  toastTimer = setTimeout(function() { toast.classList.remove('visible'); }, 3000);
+var toast = document.getElementById('share-toast');
+toast.classList.add('visible');
+if (toastTimer) clearTimeout(toastTimer);
+toastTimer = setTimeout(function() { toast.classList.remove('visible'); }, 3000);
 }
-
 function calculate() {
-  var w, h, rawW, rawH;
-  if (mode === 'pixel') {
-    w = getVal('px-w');
-    h = getVal('px-h');
-    if (isNaN(w) || isNaN(h) || w <= 0 || h <= 0) {
-      alert('Enter valid pixel dimensions. Expressions like 1920*2 or 1080/2 work too.');
-      return;
-    }
-    rawW = w; rawH = h;
-  } else {
-    rawW = getVal('phys-w');
-    rawH = getVal('phys-h');
-    if (isNaN(rawW) || isNaN(rawH) || rawW <= 0 || rawH <= 0) {
-      alert('Enter valid physical dimensions. Expressions like 4/3 or 2.4*2 work too.');
-      return;
-    }
-    var mult = physUnit === 'm' ? 100 : 30.48;
-    w = rawW * mult; h = rawH * mult;
-  }
-
-  var fps  = parseFloat(document.getElementById('fps').value) || 25;
-  var bits = parseFloat(document.getElementById('bit-depth').value) || 8;
-  var ratio   = w / h;
-  var pptW_cm = PPT_H_CM * ratio;
-  var pptH_cm = PPT_H_CM;
-  var pptW_in = PPT_H_IN * ratio;
-  var pptH_in = PPT_H_IN;
-
-  document.getElementById('ppt-warn').classList.toggle('visible', pptW_in > PPT_MAX_IN);
-
-  var hero = document.getElementById('result-hero');
-  hero.classList.remove('empty', 'fired');
-  void hero.offsetWidth;
-  hero.classList.add('fired');
-
-  document.getElementById('rh-w').textContent   = pptW_cm.toFixed(2);
-  document.getElementById('rh-h').textContent   = pptH_cm.toFixed(2);
-  document.getElementById('rh-win').textContent = pptW_in.toFixed(2);
-  document.getElementById('rh-hin').textContent = pptH_in.toFixed(2);
-
-  updatePreviewShape(w, h);
-  updatePreviewRatio(w, h); 
-
-  var shareBtn = document.getElementById('share-btn');
-  shareBtn.dataset.url = buildShareURL(rawW, rawH);
-  shareBtn.classList.add('visible');
-  document.getElementById('share-toast').classList.remove('visible');
-
-  var totalPx = mode === 'pixel' ? w * h : null;
-  var mpx = totalPx ? (totalPx / 1e6).toFixed(2) : '-';
-  var gb  = totalPx ? ((w * h * fps * bits) / 8e9).toFixed(4) : '-';
-  var gbLabel = mode === 'pixel' ? 'GB/s @ ' + fps + 'fps / ' + bits + 'bit' : '-';
-
-  document.getElementById('details-section').style.display = '';
-  document.getElementById('details-grid').innerHTML =
-    '<div class="detail-card">' +
-      '<div class="detail-label">Total Pixels</div>' +
-      '<div class="detail-value" style="font-size:17px">' + (totalPx ? totalPx.toLocaleString() : '-') + '</div>' +
-      '<div class="detail-sub">' + mpx + ' Mpx</div>' +
-    '</div>' +
-    '<div class="detail-card">' +
-      '<div class="detail-label">Data Rate</div>' +
-      '<div class="detail-value" style="font-size:17px">' + gb + '</div>' +
-      '<div class="detail-sub">' + gbLabel + '</div>' +
-    '</div>';
+var w, h, rawW, rawH;
+if (mode === 'pixel') {
+w = getVal('px-w');
+h = getVal('px-h');
+if (isNaN(w) || isNaN(h) || w <= 0 || h <= 0) {
+alert('Enter valid pixel dimensions. Expressions like 1920*2 or 1080/2 work too.');
+return;
 }
-
+rawW = w; rawH = h;
+} else {
+rawW = getVal('phys-w');
+rawH = getVal('phys-h');
+if (isNaN(rawW) || isNaN(rawH) || rawW <= 0 || rawH <= 0) {
+alert('Enter valid physical dimensions. Expressions like 4/3 or 2.4*2 work too.');
+return;
+}
+var mult = physUnit === 'm' ? 100 : 30.48;
+w = rawW * mult; h = rawH * mult;
+}
+var fps = parseFloat(document.getElementById('fps').value) || 25;
+var bits = parseFloat(document.getElementById('bit-depth').value) || 8;
+var ratio = w / h;
+var pptW_cm = PPT_H_CM * ratio;
+var pptH_cm = PPT_H_CM;
+var pptW_in = PPT_H_IN * ratio;
+var pptH_in = PPT_H_IN;
+document.getElementById('ppt-warn').classList.toggle('visible', pptW_in > PPT_MAX_IN);
+var hero = document.getElementById('result-hero');
+hero.classList.remove('empty', 'fired');
+void hero.offsetWidth;
+hero.classList.add('fired');
+document.getElementById('rh-w').textContent = pptW_cm.toFixed(2);
+document.getElementById('rh-h').textContent = pptH_cm.toFixed(2);
+document.getElementById('rh-win').textContent = pptW_in.toFixed(2);
+document.getElementById('rh-hin').textContent = pptH_in.toFixed(2);
+updatePreviewShape(w, h);
+updatePreviewRatio(w, h);
+var shareBtn = document.getElementById('share-btn');
+shareBtn.dataset.url = buildShareURL(rawW, rawH);
+shareBtn.classList.add('visible');
+document.getElementById('share-toast').classList.remove('visible');
+var totalPx = mode === 'pixel' ? w * h : null;
+var mpx = totalPx ? (totalPx / 1e6).toFixed(2) : '-';
+var gb = totalPx ? ((w * h * fps * bits) / 8e9).toFixed(4) : '-';
+var gbLabel = mode === 'pixel' ? 'GB/s @ ' + fps + 'fps / ' + bits + 'bit' : '-';
+document.getElementById('details-section').style.display = '';
+document.getElementById('details-grid').innerHTML =
+'<div class="detail-card">' +
+'<div class="detail-label">Total Pixels</div>' +
+'<div class="detail-value" style="font-size:17px">' + (totalPx ? totalPx.toLocaleString() : '-') + '</div>' +
+'<div class="detail-sub">' + mpx + ' Mpx</div>' +
+'</div>' +
+'<div class="detail-card">' +
+'<div class="detail-label">Data Rate</div>' +
+'<div class="detail-value" style="font-size:17px">' + gb + '</div>' +
+'<div class="detail-sub">' + gbLabel + '</div>' +
+'</div>';
+}
 function toggleSecondary() {
-  document.getElementById('secondary-panel').classList.toggle('open');
-  document.getElementById('sec-arrow').classList.toggle('open');
+document.getElementById('secondary-panel').classList.toggle('open');
+document.getElementById('sec-arrow').classList.toggle('open');
 }
-
 function toggleRef() {
-  document.getElementById('ref-body').classList.toggle('open');
-  document.getElementById('ref-arrow').classList.toggle('open');
+document.getElementById('ref-body').classList.toggle('open');
+document.getElementById('ref-arrow').classList.toggle('open');
 }
-
 function loadFromURL() {
-  var params = new URLSearchParams(window.location.search);
-  if (!params.has('w') || !params.has('h')) return;
-  var m    = params.get('mode') || 'pixel';
-  var w    = params.get('w');
-  var h    = params.get('h');
-  var u    = params.get('unit') || 'm';
-  var fps  = params.get('fps') || '25';
-  var bits = params.get('bits') || '8';
-  setMode(m);
-  if (m === 'pixel') {
-    document.getElementById('px-w').value = w;
-    document.getElementById('px-h').value = h;
-  } else {
-    setUnit(u);
-    document.getElementById('phys-w').value = w;
-    document.getElementById('phys-h').value = h;
-  }
-  var fpsEl = document.getElementById('fps');
-  for (var i = 0; i < fpsEl.options.length; i++) {
-    if (Math.abs(parseFloat(fpsEl.options[i].value) - parseFloat(fps)) < 0.01) {
-      fpsEl.selectedIndex = i; break;
-    }
-  }
-  var bitsEl = document.getElementById('bit-depth');
-  for (var j = 0; j < bitsEl.options.length; j++) {
-    if (bitsEl.options[j].value === bits) { bitsEl.selectedIndex = j; break; }
-  }
-  calculate();
+var params = new URLSearchParams(window.location.search);
+if (!params.has('w') || !params.has('h')) return;
+var m = params.get('mode') || 'pixel';
+var w = params.get('w');
+var h = params.get('h');
+var u = params.get('unit') || 'm';
+var fps = params.get('fps') || '25';
+var bits = params.get('bits') || '8';
+setMode(m);
+if (m === 'pixel') {
+document.getElementById('px-w').value = w;
+document.getElementById('px-h').value = h;
+} else {
+setUnit(u);
+document.getElementById('phys-w').value = w;
+document.getElementById('phys-h').value = h;
 }
-
+var fpsEl = document.getElementById('fps');
+for (var i = 0; i < fpsEl.options.length; i++) {
+if (Math.abs(parseFloat(fpsEl.options[i].value) - parseFloat(fps)) < 0.01) {
+fpsEl.selectedIndex = i; break;
+}
+}
+var bitsEl = document.getElementById('bit-depth');
+for (var j = 0; j < bitsEl.options.length; j++) {
+if (bitsEl.options[j].value === bits) { bitsEl.selectedIndex = j; break; }
+}
+calculate();
+}
 document.addEventListener('keydown', function(e) { if (e.key === 'Enter') calculate(); });
 
-['px-w', 'px-h', 'phys-w', 'phys-h'].forEach(function(id) {
-  var el = document.getElementById(id);
-  if (!el) return;
-  el.addEventListener('blur', function() {
-    var wId = mode === 'pixel' ? 'px-w' : 'phys-w';
-    var hId = mode === 'pixel' ? 'px-h' : 'phys-h';
-    var w = parseMath(document.getElementById(wId).value);
-    var h = parseMath(document.getElementById(hId).value);
-    if (w > 0 && h > 0) calculate();
-  });
-  el.addEventListener('input', function() {
-    var wId = mode === 'pixel' ? 'px-w' : 'phys-w';
-    var hId = mode === 'pixel' ? 'px-h' : 'phys-h';
-    var w = parseMath(document.getElementById(wId).value);
-    var h = parseMath(document.getElementById(hId).value);
-    if (w > 0 && h > 0) updatePreviewShape(w, h);
-  });
-});
+/* ============================================================
+   EMF Extractor (Other Tools)
+   Recovers the high-quality embedded PDF (or fallback raster)
+   from Mac-origin "hybrid" EMF files. 100% client-side.
+   ============================================================ */
+var EMF_PDFJS_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+var EMF_PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+var emfPdfjsReady = null;
 
-updatePreviewShape(16, 9);
-updatePreviewRatio(16, 9);
+function emfFmtBytes(n) {
+if (n < 1024) return n + ' B';
+if (n < 1048576) return (n / 1024).toFixed(1) + ' KB';
+return (n / 1048576).toFixed(2) + ' MB';
+}
+
+function emfDownload(data, filename, mime) {
+var blob = new Blob([data], { type: mime });
+var url = URL.createObjectURL(blob);
+var a = document.createElement('a');
+a.href = url; a.download = filename;
+document.body.appendChild(a); a.click(); a.remove();
+setTimeout(function() { URL.revokeObjectURL(url); }, 4000);
+}
+
+/* Walk the EMF record list. Record type 70 = EMR_COMMENT, where an
+   embedded PDF lives (inside the Office GDIC container). Restrict the
+   %PDF...%%EOF search to comment records to avoid false matches. */
+function emfFindPDF(bytes) {
+if (bytes.length < 88) return null;
+var dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+var recType = dv.getUint32(0, true);
+var hdrSize = dv.getUint32(4, true);
+var sig = dv.getUint32(40, true); // " EMF" = 0x464D4520
+if (recType !== 1 || sig !== 0x464D4520) {
+return emfScanPDF(bytes, 0, bytes.length);
+}
+var fileSize = dv.getUint32(48, true);
+var pos = hdrSize;
+var limit = Math.min(bytes.length, fileSize || bytes.length);
+while (pos + 8 <= limit) {
+var rType = dv.getUint32(pos, true);
+var rSize = dv.getUint32(pos + 4, true);
+if (rSize < 8 || rSize % 4 !== 0 || pos + rSize > bytes.length) break;
+if (rType === 70) {
+var hit = emfScanPDF(bytes, pos + 8, pos + rSize);
+if (hit) return hit;
+}
+pos += rSize;
+}
+return emfScanPDF(bytes, 0, bytes.length);
+}
+
+function emfScanPDF(bytes, start, end) {
+var PDF = [0x25, 0x50, 0x44, 0x46];       // %PDF
+var EOF = [0x25, 0x25, 0x45, 0x4F, 0x46]; // %%EOF
+var s = -1, i;
+for (i = start; i <= end - PDF.length; i++) {
+if (bytes[i] === PDF[0] && bytes[i+1] === PDF[1] && bytes[i+2] === PDF[2] && bytes[i+3] === PDF[3]) { s = i; break; }
+}
+if (s < 0) return null;
+var e = -1;
+for (i = Math.min(end, bytes.length) - EOF.length; i >= s; i--) {
+if (bytes[i] === EOF[0] && bytes[i+1] === EOF[1] && bytes[i+2] === EOF[2] && bytes[i+3] === EOF[3] && bytes[i+4] === EOF[4]) { e = i + EOF.length; break; }
+}
+if (e < 0) return null;
+if (bytes[e] === 0x0d) e++;
+if (bytes[e] === 0x0a) e++;
+return bytes.slice(s, e);
+}
+
+/* Fallback: pull an embedded compressed raster (PNG/JPEG) if no PDF. */
+function emfFindRaster(bytes) {
+var sigs = [
+{ magic: [0x89,0x50,0x4E,0x47,0x0D,0x0A,0x1A,0x0A], type: 'image/png', ext: 'png' },
+{ magic: [0xFF,0xD8,0xFF], type: 'image/jpeg', ext: 'jpg' }
+];
+for (var si = 0; si < sigs.length; si++) {
+var s = sigs[si];
+for (var i = 0; i <= bytes.length - s.magic.length; i++) {
+var ok = true;
+for (var j = 0; j < s.magic.length; j++) { if (bytes[i+j] !== s.magic[j]) { ok = false; break; } }
+if (!ok) continue;
+if (s.ext === 'png') {
+var endSig = [0x49,0x45,0x4E,0x44]; // IEND
+for (var k = i + 8; k <= bytes.length - 8; k++) {
+if (bytes[k]===endSig[0] && bytes[k+1]===endSig[1] && bytes[k+2]===endSig[2] && bytes[k+3]===endSig[3]) {
+return { data: bytes.slice(i, k + 8), type: s.type, ext: s.ext };
+}
+}
+} else {
+for (var m = bytes.length - 2; m > i; m--) {
+if (bytes[m] === 0xFF && bytes[m+1] === 0xD9) return { data: bytes.slice(i, m + 2), type: s.type, ext: s.ext };
+}
+}
+}
+}
+return null;
+}
+
+function emfLoadPdfJs() {
+if (emfPdfjsReady) return emfPdfjsReady;
+emfPdfjsReady = new Promise(function(res, rej) {
+var sc = document.createElement('script');
+sc.src = EMF_PDFJS_SRC;
+sc.onload = function() {
+try { window.pdfjsLib.GlobalWorkerOptions.workerSrc = EMF_PDFJS_WORKER; res(window.pdfjsLib); }
+catch (e) { rej(e); }
+};
+sc.onerror = function() { rej(new Error('pdf.js failed to load')); };
+document.head.appendChild(sc);
+});
+return emfPdfjsReady;
+}
+
+function emfRenderPdf(pdfBytes, dpi) {
+return emfLoadPdfJs().then(function(lib) {
+return lib.getDocument({ data: pdfBytes.slice() }).promise;
+}).then(function(doc) {
+return doc.getPage(1);
+}).then(function(page) {
+var viewport = page.getViewport({ scale: dpi / 72 });
+var canvas = document.createElement('canvas');
+canvas.width = Math.round(viewport.width);
+canvas.height = Math.round(viewport.height);
+return page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise.then(function() { return canvas; });
+});
+}
+
+function initEMF() {
+var drop = document.getElementById('emf-drop');
+var fileInput = document.getElementById('emf-file');
+if (!drop || !fileInput) return;
+['dragenter','dragover'].forEach(function(ev) {
+drop.addEventListener(ev, function(e) { e.preventDefault(); drop.classList.add('drag'); });
+});
+['dragleave','drop'].forEach(function(ev) {
+drop.addEventListener(ev, function(e) { e.preventDefault(); if (ev === 'drop' || e.target === drop) drop.classList.remove('drag'); });
+});
+drop.addEventListener('drop', function(e) {
+e.preventDefault(); drop.classList.remove('drag');
+emfHandleFiles(e.dataTransfer.files);
+});
+fileInput.addEventListener('change', function() { emfHandleFiles(fileInput.files); fileInput.value = ''; });
+}
+
+function emfHandleFiles(fileList) {
+var files = Array.prototype.slice.call(fileList);
+files.forEach(function(f) { if (/\.emf$/i.test(f.name) || f.size > 0) emfProcess(f); });
+}
+
+function emfProcess(file) {
+var results = document.getElementById('emf-results');
+var card = document.createElement('div');
+card.className = 'emf-card';
+card.innerHTML =
+'<div class="emf-card-head">' +
+'<div class="emf-fname"></div>' +
+'<div class="emf-badge ras">Analyzing</div>' +
+'</div>' +
+'<div class="emf-card-body">' +
+'<div class="emf-preview"><div class="emf-nopreview"><span class="emf-spinner"></span></div></div>' +
+'<div class="emf-content"><div class="emf-meta"><div class="erow"><span>Size</span><span></span></div></div></div>' +
+'</div>';
+card.querySelector('.emf-fname').textContent = file.name;
+card.querySelector('.emf-meta .erow span:last-child').textContent = emfFmtBytes(file.size);
+results.insertBefore(card, results.firstChild);
+
+var badge = card.querySelector('.emf-badge');
+var preview = card.querySelector('.emf-preview');
+var content = card.querySelector('.emf-content');
+var baseName = file.name.replace(/\.emf$/i, '');
+
+file.arrayBuffer().then(function(ab) {
+var buf = new Uint8Array(ab);
+var pdf = emfFindPDF(buf);
+
+if (pdf) {
+badge.className = 'emf-badge pdf';
+badge.textContent = 'Vector PDF';
+content.innerHTML =
+'<div class="emf-meta">' +
+'<div class="erow"><span>Recovered</span><span>PDF &middot; ' + emfFmtBytes(pdf.length) + '</span></div>' +
+'<div class="erow"><span>Quality</span><span>Full vector</span></div>' +
+'</div>' +
+'<div class="emf-note ok">High-quality original. Use the PDF in PowerPoint, or rasterise to PNG.</div>' +
+'<div class="emf-actions">' +
+'<button class="emf-btn primary dl-pdf">Download PDF</button>' +
+'<span class="emf-dpi">PNG <select class="dpi-sel">' +
+'<option value="150">150dpi</option><option value="300" selected>300dpi</option>' +
+'<option value="600">600dpi</option><option value="1200">1200dpi</option></select></span>' +
+'<button class="emf-btn dl-png">Download PNG</button>' +
+'</div>';
+content.querySelector('.dl-pdf').addEventListener('click', function() {
+emfDownload(pdf, baseName + '.pdf', 'application/pdf');
+});
+emfRenderPdf(pdf, 96).then(function(c) {
+preview.innerHTML = ''; preview.appendChild(c);
+}).catch(function() {
+preview.innerHTML = '<div class="emf-nopreview">PDF ready<br>(preview offline)</div>';
+});
+content.querySelector('.dl-png').addEventListener('click', function(ev) {
+var btn = ev.currentTarget;
+var dpi = parseInt(content.querySelector('.dpi-sel').value, 10);
+var old = btn.textContent;
+btn.disabled = true; btn.innerHTML = '<span class="emf-spinner"></span>Rendering';
+emfRenderPdf(pdf, dpi).then(function(c) {
+c.toBlob(function(b) { emfDownload(b, baseName + '_' + dpi + 'dpi.png', 'image/png'); }, 'image/png');
+btn.textContent = old; btn.disabled = false;
+}).catch(function() {
+btn.textContent = 'Failed (offline?)';
+setTimeout(function() { btn.textContent = old; btn.disabled = false; }, 1800);
+});
+});
+return;
+}
+
+var ras = emfFindRaster(buf);
+if (ras) {
+badge.className = 'emf-badge ras';
+badge.textContent = 'Raster only';
+var url = URL.createObjectURL(new Blob([ras.data], { type: ras.type }));
+var img = document.createElement('img'); img.src = url;
+preview.innerHTML = ''; preview.appendChild(img);
+content.innerHTML =
+'<div class="emf-meta"><div class="erow"><span>Recovered</span><span>' + ras.ext.toUpperCase() + ' &middot; ' + emfFmtBytes(ras.data.length) + '</span></div></div>' +
+'<div class="emf-note">No embedded vector PDF &mdash; the bitmap is the only source. Quality is whatever it was saved at.</div>' +
+'<div class="emf-actions"><button class="emf-btn primary dl-ras">Download ' + ras.ext.toUpperCase() + '</button></div>';
+content.querySelector('.dl-ras').addEventListener('click', function() {
+emfDownload(ras.data, baseName + '.' + ras.ext, ras.type);
+});
+return;
+}
+
+badge.className = 'emf-badge none';
+badge.textContent = 'No source';
+preview.innerHTML = '<div class="emf-nopreview">&mdash;</div>';
+content.innerHTML =
+'<div class="emf-meta"><div class="erow"><span>Result</span><span>Nothing recoverable</span></div></div>' +
+'<div class="emf-note err">No embedded PDF or compressed raster. This EMF stores raw pixels or a vector stream &mdash; re-export from the original app instead.</div>';
+}).catch(function() {
+badge.className = 'emf-badge none';
+badge.textContent = 'Error';
+content.innerHTML = '<div class="emf-note err">Could not read this file.</div>';
+});
+}
+
+initEMF();
+['px-w', 'px-h', 'phys-w', 'phys-h'].forEach(function(id) {
+var el = document.getElementById(id);
+if (!el) return;
+el.addEventListener('blur', function() {
+var wId = mode === 'pixel' ? 'px-w' : 'phys-w';
+var hId = mode === 'pixel' ? 'px-h' : 'phys-h';
+var w = parseMath(document.getElementById(wId).value);
+var h = parseMath(document.getElementById(hId).value);
+if (w > 0 && h > 0) calculate();
+});
+});
 loadFromURL();
 </script>
 </body>
