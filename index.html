@@ -720,6 +720,78 @@ border-top-color: var(--emf); border-radius: 50%;
 animation: emfspin 0.7s linear infinite; display: inline-block; vertical-align: -2px; margin-right: 5px;
 }
 @keyframes emfspin { to { transform: rotate(360deg); } }
+
+/* ===== Other Tools: shared bits ===== */
+.emf-tool + .emf-tool { margin-top: 4px; }
+
+/* ===== PPTX Media Extractor (amber accent) ===== */
+.media-tool { --md: #E0A020; --md2: #f0b840; --md-dim: rgba(224,160,32,0.12); }
+.media-tool { border-top-color: var(--md) !important; }
+.media-tool .emf-tool-title .emf-chip { color: var(--md); border-color: var(--md); }
+.media-tool .emf-drop { }
+.media-tool .emf-drop:hover { border-color: var(--md); }
+.media-tool .emf-drop.drag { border-color: var(--md); background: var(--md-dim); }
+.media-tool .emf-drop svg.emf-dz-icon { stroke: var(--md); }
+.media-tool .emf-privacy { color: var(--md); }
+.media-tool .emf-privacy svg { stroke: var(--md); }
+
+.media-manifest {
+display: flex; flex-wrap: wrap; gap: 7px; margin-top: 4px;
+}
+.media-chip {
+font-family: var(--mono); font-size: 11px;
+color: var(--label); background: var(--bg);
+border: 1px solid var(--border2); border-radius: 2px;
+padding: 5px 9px;
+}
+.media-chip b { color: var(--md); font-weight: 400; }
+.media-summary {
+font-family: var(--sans); font-size: 12px; color: var(--muted);
+margin-top: 2px;
+}
+.media-summary strong { color: var(--text); font-weight: 500; }
+
+.media-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 4px; }
+.media-btn {
+background: var(--md); border: 1px solid var(--md); color: #221700;
+font-family: var(--sans); font-size: 12px; font-weight: 700; letter-spacing: 1px;
+text-transform: uppercase; padding: 11px 16px; border-radius: 2px; cursor: pointer;
+transition: all 0.15s;
+}
+.media-btn:hover { background: var(--md2); }
+.media-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.media-hint { font-family: var(--sans); font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+.media-list { display: flex; flex-direction: column; gap: 0; margin-top: 4px; border: 1px solid var(--border2); border-radius: 2px; overflow: hidden; }
+.media-row {
+display: flex; align-items: center; gap: 10px;
+padding: 8px 12px; border-bottom: 1px solid var(--border);
+font-family: var(--mono); font-size: 12px;
+}
+.media-row:last-child { border-bottom: none; }
+.media-row:hover { background: rgba(255,255,255,0.02); }
+.media-row .mr-name { flex: 1; min-width: 0; color: var(--text); word-break: break-all; }
+.media-row .mr-type {
+font-family: var(--sans); font-size: 9px; font-weight: 700; letter-spacing: 1px;
+text-transform: uppercase; color: var(--md);
+border: 1px solid var(--md); border-radius: 2px; padding: 2px 6px; white-space: nowrap;
+}
+.media-row .mr-size { color: var(--muted); font-size: 11px; white-space: nowrap; min-width: 62px; text-align: right; }
+.media-row .mr-dl {
+background: transparent; border: 1px solid var(--border2); color: var(--label);
+font-family: var(--sans); font-size: 10px; font-weight: 600; letter-spacing: 0.5px;
+text-transform: uppercase; padding: 5px 10px; border-radius: 2px; cursor: pointer;
+transition: all 0.15s; white-space: nowrap;
+}
+.media-row .mr-dl:hover { border-color: var(--md); color: var(--md); }
+.media-note { font-family: var(--sans); font-size: 11px; line-height: 1.5; }
+.media-note.ok { color: var(--md); }
+.media-note.err { color: var(--red); }
+.media-spinner {
+width: 13px; height: 13px; border: 2px solid var(--border2);
+border-top-color: var(--md); border-radius: 50%;
+animation: emfspin 0.7s linear infinite; display: inline-block; vertical-align: -2px; margin-right: 5px;
+}
 </style>
 </head>
 <body>
@@ -887,19 +959,39 @@ Standard Presets Reference
 <p class="emf-intro">
 Mac-origin EMF files often carry a tiny low-res bitmap <strong>plus</strong> a full-quality vector PDF
 hidden in an Office GDIC block. Windows PowerPoint only draws the bitmap &mdash; hence the blur.
-This pulls the real PDF (or fallback raster) back out.
+This pulls the real PDF (or fallback raster) back out. Drop a single <strong>.emf</strong>, or a
+<strong>.pptx</strong> to list every EMF inside it.
 </p>
 <label class="emf-drop" id="emf-drop" for="emf-file">
 <svg class="emf-dz-icon" viewBox="0 0 24 24"><path d="M12 16V4m0 0l-4 4m4-4l4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
-<div class="emf-dz-big">Drop EMF files</div>
+<div class="emf-dz-big">Drop EMF or PPTX</div>
 <div class="emf-dz-small">or tap to browse &middot; multiple files OK</div>
-<input type="file" id="emf-file" accept=".emf,image/x-emf,application/octet-stream" multiple>
+<input type="file" id="emf-file" accept=".emf,.pptx,image/x-emf,application/octet-stream,application/vnd.openxmlformats-officedocument.presentationml.presentation" multiple>
 <div class="emf-privacy">
 <svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
 Processed in your browser &middot; nothing uploaded
 </div>
 </label>
 <div id="emf-results"></div>
+</div>
+
+<div class="emf-tool media-tool">
+<div class="emf-tool-title">Media Extractor <span class="emf-chip">PPTX &rarr; Files</span></div>
+<p class="emf-intro">
+Pull every embedded asset (images, EMF/WMF, video, audio) straight out of a deck &mdash; no renaming
+to .zip and digging through folders. Drop a <strong>.pptx</strong> to see what's inside, then save it all.
+</p>
+<label class="emf-drop" id="media-drop" for="media-file">
+<svg class="emf-dz-icon" viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
+<div class="emf-dz-big">Drop PPTX</div>
+<div class="emf-dz-small">or tap to browse</div>
+<input type="file" id="media-file" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation">
+<div class="emf-privacy">
+<svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+Processed in your browser &middot; nothing uploaded
+</div>
+</label>
+<div id="media-results"></div>
 </div>
 </div>
 
@@ -1142,7 +1234,21 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Enter') calcul
    ============================================================ */
 var EMF_PDFJS_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
 var EMF_PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+var EMF_JSZIP_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
 var emfPdfjsReady = null;
+var emfJszipReady = null;
+
+function emfLoadJSZip() {
+if (emfJszipReady) return emfJszipReady;
+emfJszipReady = new Promise(function(res, rej) {
+var sc = document.createElement('script');
+sc.src = EMF_JSZIP_SRC;
+sc.onload = function() { window.JSZip ? res(window.JSZip) : rej(new Error('JSZip not available')); };
+sc.onerror = function() { rej(new Error('JSZip failed to load')); };
+document.head.appendChild(sc);
+});
+return emfJszipReady;
+}
 
 function emfFmtBytes(n) {
 if (n < 1024) return n + ' B';
@@ -1151,7 +1257,7 @@ return (n / 1048576).toFixed(2) + ' MB';
 }
 
 function emfDownload(data, filename, mime) {
-var blob = new Blob([data], { type: mime });
+var blob = (data instanceof Blob) ? data : new Blob([data], { type: mime });
 var url = URL.createObjectURL(blob);
 var a = document.createElement('a');
 a.href = url; a.download = filename;
@@ -1282,10 +1388,74 @@ fileInput.addEventListener('change', function() { emfHandleFiles(fileInput.files
 
 function emfHandleFiles(fileList) {
 var files = Array.prototype.slice.call(fileList);
-files.forEach(function(f) { if (/\.emf$/i.test(f.name) || f.size > 0) emfProcess(f); });
+files.forEach(function(f) {
+if (/\.pptx$/i.test(f.name)) { emfProcessPptx(f); }
+else if (/\.emf$/i.test(f.name) || f.size > 0) { emfProcess(f); }
+});
+}
+
+/* Drop a PPTX into the EMF tool: unzip, find every ppt/media/*.emf,
+   and render one normal EMF card per file (dumb list). */
+function emfProcessPptx(file) {
+var results = document.getElementById('emf-results');
+var status = document.createElement('div');
+status.className = 'emf-card';
+status.innerHTML =
+'<div class="emf-card-head">' +
+'<div class="emf-fname"></div>' +
+'<div class="emf-badge ras"><span class="emf-spinner"></span>Reading deck</div>' +
+'</div>';
+status.querySelector('.emf-fname').textContent = file.name;
+results.insertBefore(status, results.firstChild);
+
+emfLoadJSZip().then(function(JSZip) {
+return file.arrayBuffer().then(function(ab) { return JSZip.loadAsync(ab); });
+}).then(function(zip) {
+var emfEntries = [];
+zip.forEach(function(path, entry) {
+if (/^ppt\/media\/.*\.emf$/i.test(path) && !entry.dir) emfEntries.push(entry);
+});
+emfEntries.sort(function(a, b) {
+function num(p) { var m = p.match(/(\d+)\.emf$/i); return m ? parseInt(m[1], 10) : 0; }
+return num(a.name) - num(b.name);
+});
+if (!emfEntries.length) {
+var badge = status.querySelector('.emf-badge');
+badge.className = 'emf-badge none';
+badge.textContent = 'No EMFs';
+status.insertAdjacentHTML('beforeend',
+'<div class="emf-card-body" style="grid-template-columns:1fr"><div class="emf-note err">No EMF files found in this deck&rsquo;s media. (It may use PNG/JPG graphics instead.)</div></div>');
+return;
+}
+status.querySelector('.emf-badge').className = 'emf-badge pdf';
+status.querySelector('.emf-badge').textContent = emfEntries.length + ' EMF' + (emfEntries.length === 1 ? '' : 's');
+status.insertAdjacentHTML('beforeend',
+'<div class="emf-card-body" style="grid-template-columns:1fr"><div class="emf-note ok">Found ' + emfEntries.length + ' EMF' + (emfEntries.length === 1 ? '' : 's') + ' in <strong style="color:#fff;font-weight:500">' + file.name + '</strong>. Each is listed below &mdash; extract the ones you need.</div></div>');
+
+emfEntries.forEach(function(entry) {
+entry.async('uint8array').then(function(bytes) {
+var pseudoName = entry.name.replace(/^ppt\/media\//i, '');
+emfProcessBytes(bytes, pseudoName);
+});
+});
+}).catch(function(e) {
+var badge = status.querySelector('.emf-badge');
+badge.className = 'emf-badge none';
+badge.textContent = 'Error';
+status.insertAdjacentHTML('beforeend',
+'<div class="emf-card-body" style="grid-template-columns:1fr"><div class="emf-note err">Could not read this deck. ' + (e && e.message ? '(' + e.message + ')' : '') + '</div></div>');
+});
 }
 
 function emfProcess(file) {
+file.arrayBuffer().then(function(ab) {
+emfProcessBytes(new Uint8Array(ab), file.name, file.size);
+}).catch(function() {
+emfProcessBytes(null, file.name, 0);
+});
+}
+
+function emfProcessBytes(buf, fileName, fileSize) {
 var results = document.getElementById('emf-results');
 var card = document.createElement('div');
 card.className = 'emf-card';
@@ -1298,17 +1468,26 @@ card.innerHTML =
 '<div class="emf-preview"><div class="emf-nopreview"><span class="emf-spinner"></span></div></div>' +
 '<div class="emf-content"><div class="emf-meta"><div class="erow"><span>Size</span><span></span></div></div></div>' +
 '</div>';
-card.querySelector('.emf-fname').textContent = file.name;
-card.querySelector('.emf-meta .erow span:last-child').textContent = emfFmtBytes(file.size);
+card.querySelector('.emf-fname').textContent = fileName;
+card.querySelector('.emf-meta .erow span:last-child').textContent = emfFmtBytes(fileSize != null ? fileSize : (buf ? buf.length : 0));
 results.insertBefore(card, results.firstChild);
 
 var badge = card.querySelector('.emf-badge');
 var preview = card.querySelector('.emf-preview');
 var content = card.querySelector('.emf-content');
-var baseName = file.name.replace(/\.emf$/i, '');
+var baseName = fileName.replace(/\.emf$/i, '');
 
-file.arrayBuffer().then(function(ab) {
-var buf = new Uint8Array(ab);
+if (!buf) {
+badge.className = 'emf-badge none';
+badge.textContent = 'Error';
+content.innerHTML = '<div class="emf-note err">Could not read this file.</div>';
+return;
+}
+
+emfRenderResult(buf, baseName, badge, preview, content);
+}
+
+function emfRenderResult(buf, baseName, badge, preview, content) {
 var pdf = emfFindPDF(buf);
 
 if (pdf) {
@@ -1374,14 +1553,201 @@ preview.innerHTML = '<div class="emf-nopreview">&mdash;</div>';
 content.innerHTML =
 '<div class="emf-meta"><div class="erow"><span>Result</span><span>Nothing recoverable</span></div></div>' +
 '<div class="emf-note err">No embedded PDF or compressed raster. This EMF stores raw pixels or a vector stream &mdash; re-export from the original app instead.</div>';
-}).catch(function() {
-badge.className = 'emf-badge none';
-badge.textContent = 'Error';
-content.innerHTML = '<div class="emf-note err">Could not read this file.</div>';
+}
+
+/* ============================================================
+   PPTX Media Extractor (Other Tools)
+   Unzip a deck, list everything in ppt/media/, and save it all.
+   Uses File System Access API (Chrome/Edge) with a download
+   fallback (Firefox/Safari/mobile). 100% client-side.
+   ============================================================ */
+var mediaState = { files: null, deckBase: '' };
+
+var MEDIA_TYPES = {
+png:'PNG', jpg:'JPG', jpeg:'JPG', gif:'GIF', bmp:'BMP', tiff:'TIFF', tif:'TIFF', svg:'SVG',
+emf:'EMF', wmf:'WMF', webp:'WEBP', ico:'ICO',
+mp4:'MP4', mov:'MOV', avi:'AVI', wmv:'WMV', m4v:'M4V', mkv:'MKV',
+mp3:'MP3', wav:'WAV', m4a:'M4A', wma:'WMA', aac:'AAC',
+ttf:'FONT', otf:'FONT', fntdata:'FONT'
+};
+function mediaExt(name) {
+var m = name.match(/\.([a-z0-9]+)$/i);
+return m ? m[1].toLowerCase() : '';
+}
+function mediaTypeLabel(name) {
+return MEDIA_TYPES[mediaExt(name)] || (mediaExt(name) ? mediaExt(name).toUpperCase() : 'FILE');
+}
+function mediaMime(name) {
+var e = mediaExt(name);
+var map = { png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg', gif:'image/gif', bmp:'image/bmp',
+tiff:'image/tiff', tif:'image/tiff', svg:'image/svg+xml', webp:'image/webp', emf:'image/x-emf',
+wmf:'image/x-wmf', mp4:'video/mp4', mov:'video/quicktime', mp3:'audio/mpeg', wav:'audio/wav' };
+return map[e] || 'application/octet-stream';
+}
+
+function initMedia() {
+var drop = document.getElementById('media-drop');
+var fileInput = document.getElementById('media-file');
+if (!drop || !fileInput) return;
+['dragenter','dragover'].forEach(function(ev) {
+drop.addEventListener(ev, function(e) { e.preventDefault(); drop.classList.add('drag'); });
+});
+['dragleave','drop'].forEach(function(ev) {
+drop.addEventListener(ev, function(e) { e.preventDefault(); if (ev === 'drop' || e.target === drop) drop.classList.remove('drag'); });
+});
+drop.addEventListener('drop', function(e) {
+e.preventDefault(); drop.classList.remove('drag');
+var f = e.dataTransfer.files && e.dataTransfer.files[0];
+if (f) mediaProcess(f);
+});
+fileInput.addEventListener('change', function() {
+if (fileInput.files && fileInput.files[0]) mediaProcess(fileInput.files[0]);
+fileInput.value = '';
+});
+}
+
+function mediaProcess(file) {
+if (!/\.pptx$/i.test(file.name)) {
+mediaShowError('Please drop a .pptx file.');
+return;
+}
+var results = document.getElementById('media-results');
+results.innerHTML = '<div class="media-note" style="padding:8px 0"><span class="media-spinner"></span>Reading deck&hellip;</div>';
+
+emfLoadJSZip().then(function(JSZip) {
+return file.arrayBuffer().then(function(ab) { return JSZip.loadAsync(ab); });
+}).then(function(zip) {
+var entries = [];
+zip.forEach(function(path, entry) {
+if (/^ppt\/media\//i.test(path) && !entry.dir) entries.push(entry);
+});
+entries.sort(function(a, b) {
+function key(p) { var m = p.match(/(\D*)(\d+)?\.[a-z0-9]+$/i); return [m ? m[1] : p, m && m[2] ? parseInt(m[2],10) : 0]; }
+var ka = key(a.name), kb = key(b.name);
+if (ka[0] !== kb[0]) return ka[0] < kb[0] ? -1 : 1;
+return ka[1] - kb[1];
+});
+if (!entries.length) {
+results.innerHTML = '<div class="media-note err" style="padding:8px 0">No media found in this deck (ppt/media/ is empty).</div>';
+return;
+}
+return Promise.all(entries.map(function(entry) {
+return entry.async('blob').then(function(blob) {
+return { name: entry.name.replace(/^ppt\/media\//i, ''), blob: blob, size: blob.size };
+});
+})).then(function(files) {
+mediaState.files = files;
+mediaState.deckBase = file.name.replace(/\.pptx$/i, '');
+mediaRender(files);
+});
+}).catch(function(e) {
+results.innerHTML = '<div class="media-note err" style="padding:8px 0">Could not read this deck. ' + (e && e.message ? '(' + e.message + ')' : '') + '</div>';
+});
+}
+
+function mediaShowError(msg) {
+document.getElementById('media-results').innerHTML = '<div class="media-note err" style="padding:8px 0">' + msg + '</div>';
+}
+
+function mediaRender(files) {
+var results = document.getElementById('media-results');
+var counts = {};
+var totalBytes = 0;
+files.forEach(function(f) {
+var t = mediaTypeLabel(f.name);
+counts[t] = (counts[t] || 0) + 1;
+totalBytes += f.size;
+});
+var chips = Object.keys(counts).sort().map(function(t) {
+return '<span class="media-chip"><b>' + counts[t] + '</b> ' + t + '</span>';
+}).join('');
+
+var supportsFS = (typeof window.showDirectoryPicker === 'function');
+var saveLabel = supportsFS
+? 'Save all to folder&hellip; (' + files.length + ')'
+: 'Download all (' + files.length + ')';
+var hint = supportsFS
+? 'Creates <strong>' + mediaState.deckBase + '_media/</strong> in the folder you choose.'
+: 'Your browser will save the files individually to Downloads (one permission prompt). For a &ldquo;choose folder&rdquo; option, use Chrome or Edge on desktop.';
+
+var listRows = files.map(function(f, i) {
+return '<div class="media-row">' +
+'<span class="mr-type">' + mediaTypeLabel(f.name) + '</span>' +
+'<span class="mr-name">' + f.name + '</span>' +
+'<span class="mr-size">' + emfFmtBytes(f.size) + '</span>' +
+'<button class="mr-dl" data-idx="' + i + '">Save</button>' +
+'</div>';
+}).join('');
+
+results.innerHTML =
+'<div class="media-summary"><strong>' + files.length + '</strong> media file' + (files.length === 1 ? '' : 's') + ' &middot; ' + emfFmtBytes(totalBytes) + '</div>' +
+'<div class="media-manifest">' + chips + '</div>' +
+'<div class="media-actions"><button class="media-btn" id="media-save-all">' + saveLabel + '</button></div>' +
+'<div class="media-hint">' + hint + '</div>' +
+'<div class="media-list">' + listRows + '</div>';
+
+results.querySelector('#media-save-all').addEventListener('click', mediaSaveAll);
+Array.prototype.forEach.call(results.querySelectorAll('.mr-dl'), function(btn) {
+btn.addEventListener('click', function() {
+var f = mediaState.files[parseInt(btn.dataset.idx, 10)];
+emfDownload(f.blob, f.name, mediaMime(f.name));
+});
+});
+}
+
+function mediaSaveAll() {
+var btn = document.getElementById('media-save-all');
+var files = mediaState.files;
+if (!files || !files.length) return;
+
+if (typeof window.showDirectoryPicker === 'function') {
+var dirHandle;
+window.showDirectoryPicker({ mode: 'readwrite' }).then(function(handle) {
+dirHandle = handle;
+return handle.getDirectoryHandle(mediaState.deckBase + '_media', { create: true });
+}).then(function(subDir) {
+var old = btn.innerHTML;
+btn.disabled = true;
+var done = 0;
+function writeNext(i) {
+if (i >= files.length) {
+btn.disabled = false;
+btn.innerHTML = 'Saved ' + done + ' files \u2713';
+setTimeout(function() { btn.innerHTML = old; }, 2500);
+return Promise.resolve();
+}
+var f = files[i];
+return subDir.getFileHandle(f.name, { create: true }).then(function(fh) {
+return fh.createWritable();
+}).then(function(ws) {
+return ws.write(f.blob).then(function() { return ws.close(); });
+}).then(function() {
+done++;
+btn.innerHTML = '<span class="media-spinner"></span>Saving ' + done + '/' + files.length;
+return writeNext(i + 1);
+});
+}
+return writeNext(0);
+}).catch(function(e) {
+if (e && e.name === 'AbortError') return; /* user cancelled the picker */
+btn.disabled = false;
+/* Fall back to individual downloads on any FS error */
+mediaDownloadAll();
+});
+} else {
+mediaDownloadAll();
+}
+}
+
+function mediaDownloadAll() {
+var files = mediaState.files;
+files.forEach(function(f, i) {
+setTimeout(function() { emfDownload(f.blob, f.name, mediaMime(f.name)); }, i * 150);
 });
 }
 
 initEMF();
+initMedia();
 ['px-w', 'px-h', 'phys-w', 'phys-h'].forEach(function(id) {
 var el = document.getElementById(id);
 if (!el) return;
