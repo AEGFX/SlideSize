@@ -792,6 +792,70 @@ width: 13px; height: 13px; border: 2px solid var(--border2);
 border-top-color: var(--md); border-radius: 50%;
 animation: emfspin 0.7s linear infinite; display: inline-block; vertical-align: -2px; margin-right: 5px;
 }
+
+/* ===== PPT Report (slate-blue accent) ===== */
+.report-tool { --rp: #4A78B5; --rp2: #6a96d0; --rp-dim: rgba(74,120,181,0.12); }
+.report-tool { border-top-color: var(--rp) !important; }
+.report-tool .emf-tool-title .emf-chip { color: var(--rp); border-color: var(--rp); }
+.report-tool .emf-drop:hover { border-color: var(--rp); }
+.report-tool .emf-drop.drag { border-color: var(--rp); background: var(--rp-dim); }
+.report-tool .emf-drop svg.emf-dz-icon { stroke: var(--rp); }
+.report-tool .emf-privacy { color: var(--rp); }
+.report-tool .emf-privacy svg { stroke: var(--rp); }
+
+.report-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 4px; }
+.report-btn {
+background: var(--rp); border: 1px solid var(--rp); color: #061321;
+font-family: var(--sans); font-size: 12px; font-weight: 700; letter-spacing: 1px;
+text-transform: uppercase; padding: 11px 16px; border-radius: 2px; cursor: pointer;
+transition: all 0.15s;
+}
+.report-btn:hover { background: var(--rp2); }
+.report-btn.ghost { background: transparent; color: var(--label); border-color: var(--border2); }
+.report-btn.ghost:hover { border-color: var(--rp); color: var(--rp); }
+
+.report-summary {
+background: var(--bg);
+border: 1px solid var(--border2);
+border-left: 2px solid var(--rp);
+border-radius: 2px;
+padding: 14px 16px;
+font-family: var(--mono);
+font-size: 12px;
+line-height: 1.7;
+color: var(--label);
+white-space: pre-wrap;
+word-break: break-word;
+overflow-x: auto;
+}
+.report-summary .rp-warn { color: var(--md, #E0A020); }
+.report-summary .rp-key { color: var(--rp); }
+
+.report-table-wrap {
+border: 1px solid var(--border2);
+border-radius: 2px;
+overflow-x: auto;
+}
+.report-table {
+font-family: var(--mono);
+font-size: 11px;
+white-space: pre;
+color: var(--label);
+padding: 12px 14px;
+margin: 0;
+min-width: 100%;
+display: block;
+line-height: 1.65;
+}
+.report-table .rp-hdr { color: var(--rp); }
+.report-table .rp-warn { color: var(--md, #E0A020); }
+
+.report-note { font-family: var(--sans); font-size: 11px; line-height: 1.5; color: var(--muted); }
+.report-spinner {
+width: 13px; height: 13px; border: 2px solid var(--border2);
+border-top-color: var(--rp); border-radius: 50%;
+animation: emfspin 0.7s linear infinite; display: inline-block; vertical-align: -2px; margin-right: 5px;
+}
 </style>
 </head>
 <body>
@@ -992,6 +1056,26 @@ Processed in your browser &middot; nothing uploaded
 </div>
 </label>
 <div id="media-results"></div>
+</div>
+
+<div class="emf-tool report-tool">
+<div class="emf-tool-title">PPT Report <span class="emf-chip">PPTX &rarr; Pre-flight</span></div>
+<p class="emf-intro">
+A pre-flight summary for graphics ops &mdash; slide count, hidden slides, videos (full-screen vs framed,
+muted vs audio), audio, embedded fonts, transitions, animation click-counts, speaker notes and more.
+Drop a <strong>.pptx</strong> to generate a report you can send to the breakout room.
+</p>
+<label class="emf-drop" id="report-drop" for="report-file">
+<svg class="emf-dz-icon" viewBox="0 0 24 24"><path d="M14 3v4a1 1 0 001 1h4M5 3h9l5 5v11a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/><path d="M9 13h6M9 17h6"/></svg>
+<div class="emf-dz-big">Drop PPTX</div>
+<div class="emf-dz-small">or tap to browse</div>
+<input type="file" id="report-file" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation">
+<div class="emf-privacy">
+<svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+Processed in your browser &middot; nothing uploaded
+</div>
+</label>
+<div id="report-results"></div>
 </div>
 </div>
 
@@ -1746,8 +1830,395 @@ setTimeout(function() { emfDownload(f.blob, f.name, mediaMime(f.name)); }, i * 1
 });
 }
 
+/* ============================================================
+   PPT Report (Other Tools)
+   Pre-flight analysis of a deck for graphics ops.
+   Parses the PPTX XML (via JSZip) entirely client-side.
+   ============================================================ */
+function rpInit() {
+var drop = document.getElementById('report-drop');
+var fileInput = document.getElementById('report-file');
+if (!drop || !fileInput) return;
+['dragenter','dragover'].forEach(function(ev) {
+drop.addEventListener(ev, function(e) { e.preventDefault(); drop.classList.add('drag'); });
+});
+['dragleave','drop'].forEach(function(ev) {
+drop.addEventListener(ev, function(e) { e.preventDefault(); if (ev === 'drop' || e.target === drop) drop.classList.remove('drag'); });
+});
+drop.addEventListener('drop', function(e) {
+e.preventDefault(); drop.classList.remove('drag');
+var f = e.dataTransfer.files && e.dataTransfer.files[0];
+if (f) rpProcess(f);
+});
+fileInput.addEventListener('change', function() {
+if (fileInput.files && fileInput.files[0]) rpProcess(fileInput.files[0]);
+fileInput.value = '';
+});
+}
+
+function rpXml(str) {
+try { return new DOMParser().parseFromString(str, 'application/xml'); }
+catch (e) { return null; }
+}
+/* local-name aware element search (PPTX uses namespaces) */
+function rpEls(root, localName) {
+if (!root) return [];
+var all = root.getElementsByTagName('*');
+var out = [];
+for (var i = 0; i < all.length; i++) {
+var ln = all[i].localName || all[i].tagName.replace(/^.*:/, '');
+if (ln === localName) out.push(all[i]);
+}
+return out;
+}
+function rpAttr(el, name) {
+if (!el) return null;
+if (el.hasAttribute && el.hasAttribute(name)) return el.getAttribute(name);
+/* try namespaced fallback */
+var a = el.attributes;
+if (a) for (var i = 0; i < a.length; i++) {
+var ln = a[i].localName || a[i].name.replace(/^.*:/, '');
+if (ln === name) return a[i].value;
+}
+return null;
+}
+function rpEmuToCm(emu) { return (parseInt(emu, 10) / 360000); }
+function rpEmuToIn(emu) { return (parseInt(emu, 10) / 914400); }
+function rpGcd(a, b) { a = Math.round(a); b = Math.round(b); while (b) { var t = b; b = a % b; a = t; } return a; }
+function rpPad(s, n) { s = String(s); while (s.length < n) s += ' '; return s; }
+function rpWords(t) { t = (t || '').trim(); return t ? t.split(/\s+/).length : 0; }
+
+function rpProcess(file) {
+if (!/\.pptx$/i.test(file.name)) {
+document.getElementById('report-results').innerHTML = '<div class="report-note" style="padding:8px 0;color:var(--red)">Please drop a .pptx file.</div>';
+return;
+}
+var results = document.getElementById('report-results');
+results.innerHTML = '<div class="report-note" style="padding:8px 0"><span class="report-spinner"></span>Analysing deck&hellip;</div>';
+
+emfLoadJSZip().then(function(JSZip) {
+return file.arrayBuffer().then(function(ab) { return JSZip.loadAsync(ab); });
+}).then(function(zip) {
+return rpAnalyse(zip, file).then(function(report) {
+rpRender(report, file);
+});
+}).catch(function(e) {
+results.innerHTML = '<div class="report-note" style="padding:8px 0;color:var(--red)">Could not analyse this deck. ' + (e && e.message ? '(' + e.message + ')' : '') + '</div>';
+});
+}
+
+function rpAnalyse(zip, file) {
+var R = {
+fileName: file.name,
+fileSize: file.size,
+slideCount: 0,
+widthEmu: 0, heightEmu: 0,
+fontsEmbedded: false, embeddedFonts: [], usedFonts: [],
+slides: [],          /* per-slide objects */
+totalClicks: 0,
+mediaBytes: 0, largestAsset: null,
+warnings: []
+};
+
+/* presentation.xml: size, embedded fonts, slide order */
+var pPres = zip.file('ppt/presentation.xml');
+var slideRelOrder = [];
+var prom = [];
+
+prom.push((pPres ? pPres.async('string') : Promise.resolve('')).then(function(xml) {
+var doc = rpXml(xml);
+if (!doc) return;
+var sz = rpEls(doc, 'sldSz')[0];
+if (sz) { R.widthEmu = parseInt(rpAttr(sz, 'cx') || '0', 10); R.heightEmu = parseInt(rpAttr(sz, 'cy') || '0', 10); }
+var embLst = rpEls(doc, 'embeddedFont');
+if (embLst.length) {
+R.fontsEmbedded = true;
+embLst.forEach(function(ef) {
+var fontEl = rpEls(ef, 'font')[0];
+var nm = fontEl ? rpAttr(fontEl, 'typeface') : null;
+if (nm && R.embeddedFonts.indexOf(nm) < 0) R.embeddedFonts.push(nm);
+});
+}
+/* slide id order -> r:id list */
+var sldIds = rpEls(doc, 'sldId');
+sldIds.forEach(function(s) {
+var rid = rpAttr(s, 'id') || rpAttr(s, 'embed');
+slideRelOrder.push(rpAttr(s, 'embed') || rpAttr(s, 'id'));
+});
+}));
+
+/* media size tally */
+zip.forEach(function(path, entry) {
+if (/^ppt\/media\//i.test(path) && !entry.dir) {
+prom.push(entry.async('uint8array').then(function(b) {
+R.mediaBytes += b.length;
+if (!R.largestAsset || b.length > R.largestAsset.size) {
+R.largestAsset = { name: path.replace(/^ppt\/media\//i, ''), size: b.length };
+}
+}));
+}
+});
+
+return Promise.all(prom).then(function() {
+/* enumerate slides in numeric order from the package */
+var slidePaths = [];
+zip.forEach(function(path, entry) {
+if (/^ppt\/slides\/slide\d+\.xml$/i.test(path) && !entry.dir) slidePaths.push(path);
+});
+slidePaths.sort(function(a, b) {
+function n(p) { var m = p.match(/slide(\d+)\.xml/i); return m ? parseInt(m[1], 10) : 0; }
+return n(a) - n(b);
+});
+R.slideCount = slidePaths.length;
+
+var fontSet = {};
+var slideProms = slidePaths.map(function(sPath, idx) {
+var slideNo = idx + 1;
+var relPath = sPath.replace(/slides\/(slide\d+)\.xml$/i, 'slides/_rels/$1.xml.rels');
+var notesPathGuess = null;
+return zip.file(sPath).async('string').then(function(sxml) {
+var sdoc = rpXml(sxml);
+var slide = {
+no: slideNo, hidden: false,
+video: null,           /* {mode, mute, linked} */
+audio: false,
+clicks: 0, animObjects: 0,
+transition: null,      /* {type, durMs} */
+notesWords: 0
+};
+/* hidden: <p:sld show="0"> */
+var sldEl = rpEls(sdoc, 'sld')[0];
+if (sldEl && rpAttr(sldEl, 'show') === '0') slide.hidden = true;
+
+/* fonts used: latin/ea/cs typeface attrs anywhere */
+['latin','ea','cs'].forEach(function(t) {
+rpEls(sdoc, t).forEach(function(el) {
+var tf = rpAttr(el, 'typeface');
+if (tf && tf !== '+mn-lt' && tf !== '+mj-lt' && tf.charAt(0) !== '+') fontSet[tf] = true;
+});
+});
+
+/* transition */
+var tr = rpEls(sdoc, 'transition')[0];
+if (tr) {
+var durMs = rpAttr(tr, 'dur'); /* sometimes in advTm or dur */
+var kids = tr.getElementsByTagName('*');
+var ttype = null;
+for (var k = 0; k < kids.length; k++) {
+var ln = kids[k].localName || kids[k].tagName.replace(/^.*:/, '');
+if (ln && ln !== 'transition') { ttype = ln; break; }
+}
+slide.transition = { type: ttype || 'set', durMs: durMs ? parseInt(durMs, 10) : null };
+}
+
+/* timing tree: count click-triggered animation steps */
+var timing = rpEls(sdoc, 'timing')[0];
+if (timing) {
+/* main sequence cTn nodes with nodeType="clickEffect" or condition click */
+var cTns = rpEls(timing, 'cTn');
+var clickEffects = 0, animObjs = 0;
+cTns.forEach(function(c) {
+var nt = rpAttr(c, 'nodeType');
+if (nt === 'clickEffect' || nt === 'clickPar') clickEffects++;
+});
+/* count actual animation behaviours as "objects" */
+['anim','animEffect','animMotion','animRot','animScale','animClr','set'].forEach(function(a) {
+animObjs += rpEls(timing, a).length;
+});
+slide.clicks = clickEffects;
+slide.animObjects = animObjs;
+}
+
+/* notes */
+var notesPath = sPath.replace(/slides\/slide(\d+)\.xml$/i, 'notesSlides/notesSlide$1.xml');
+var notesProm = zip.file(notesPath)
+? zip.file(notesPath).async('string').then(function(nxml) {
+var ndoc = rpXml(nxml);
+/* notes body text: <a:t> within the notes placeholder, minus slide-number */
+var texts = rpEls(ndoc, 't').map(function(t) { return t.textContent || ''; });
+slide.notesWords = rpWords(texts.join(' '));
+})
+: Promise.resolve();
+
+/* media via slide rels */
+var relProm = zip.file(relPath)
+? zip.file(relPath).async('string').then(function(rxml) {
+var rdoc = rpXml(rxml);
+var rels = rpEls(rdoc, 'Relationship');
+var hasVideo = false, hasAudio = false, linked = false;
+rels.forEach(function(rel) {
+var type = rpAttr(rel, 'Type') || '';
+var mode = rpAttr(rel, 'TargetMode') || '';
+var target = rpAttr(rel, 'Target') || '';
+if (/video/i.test(type) || /\.(mp4|mov|avi|wmv|m4v|mkv)$/i.test(target)) {
+hasVideo = true;
+if (/external/i.test(mode)) linked = true;
+}
+if (/audio/i.test(type) || /\.(mp3|wav|m4a|wma|aac)$/i.test(target)) {
+hasAudio = true;
+}
+});
+if (hasVideo) {
+/* playback flags from slide Xml: <p:video>/<a:videoFile>, fullScrn + mute on <p:cMediaNode>/<p:playLst> */
+var fullScrn = false, mute = false;
+var mediaNodes = rpEls(sdoc, 'cMediaNode');
+mediaNodes.forEach(function(mn) {
+if (rpAttr(mn, 'fullScrn') === '1') fullScrn = true;
+if (rpAttr(mn, 'mute') === '1') mute = true;
+});
+/* also check videoFile/p:video element area dimensions could be parsed; keep mode simple */
+slide.video = { mode: fullScrn ? 'fullscreen' : 'framed', mute: mute, linked: linked };
+}
+slide.audio = hasAudio;
+})
+: Promise.resolve();
+
+return Promise.all([notesProm, relProm]).then(function() { return slide; });
+});
+});
+
+return Promise.all(slideProms).then(function(slides) {
+R.slides = slides;
+R.usedFonts = Object.keys(fontSet).sort();
+slides.forEach(function(s) { R.totalClicks += s.clicks; });
+return R;
+});
+});
+}
+
+function rpBuildText(R) {
+var L = [];
+var hidden = R.slides.filter(function(s){return s.hidden;}).map(function(s){return s.no;});
+var vids = R.slides.filter(function(s){return s.video;});
+var auds = R.slides.filter(function(s){return s.audio;}).map(function(s){return s.no;});
+var trans = R.slides.filter(function(s){return s.transition;});
+var anims = R.slides.filter(function(s){return s.clicks > 0 || s.animObjects > 0;});
+var notes = R.slides.filter(function(s){return s.notesWords > 0;});
+var linkedVids = vids.filter(function(s){return s.video.linked;});
+
+var arW = R.widthEmu, arH = R.heightEmu;
+var arStr = '';
+if (arW && arH) {
+var g = rpGcd(arW, arH);
+arStr = (arW/g) + ':' + (arH/g) + ' (' + rpEmuToCm(arW).toFixed(2) + ' × ' + rpEmuToCm(arH).toFixed(2) + ' cm)';
+}
+
+L.push('PPT REPORT — ' + R.fileName);
+L.push('Generated: ' + new Date().toISOString().slice(0,10));
+L.push('');
+L.push(R.slideCount + ' slides' + (hidden.length ? ' (' + hidden.length + ' hidden: ' + hidden.join(', ') + ')' : ' (0 hidden)')
++ (arStr ? ' · ' + arStr : '') + ' · ' + emfFmtBytes(R.fileSize));
+
+if (R.fontsEmbedded) {
+L.push('Fonts: EMBEDDED — ' + (R.embeddedFonts.length ? R.embeddedFonts.join(', ') : 'yes'));
+if (R.usedFonts.length) L.push('       Used in deck: ' + R.usedFonts.join(', '));
+} else {
+L.push('Fonts: NOT embedded' + (R.usedFonts.length ? ' — uses ' + R.usedFonts.join(', ') : ''));
+}
+
+if (vids.length) {
+var fs = vids.filter(function(s){return s.video.mode==='fullscreen';}).length;
+var fr = vids.length - fs;
+L.push('Videos: ' + vids.length + ' slide' + (vids.length>1?'s':'') + ' (' + vids.map(function(s){return s.no;}).join(', ') + ') — '
++ fs + ' full-screen, ' + fr + ' framed');
+var muted = vids.filter(function(s){return s.video.mute;}).map(function(s){return s.no;});
+if (muted.length) L.push('        Muted (authored): slide ' + muted.join(', '));
+} else {
+L.push('Videos: none');
+}
+if (linkedVids.length) {
+L.push('⚠ ' + linkedVids.length + ' LINKED video' + (linkedVids.length>1?'s':'') + ' (slide ' + linkedVids.map(function(s){return s.no;}).join(', ') + ') — file(s) not embedded, will fail if missing');
+R.warnings.push('linked-video');
+}
+
+L.push('Audio: ' + (auds.length ? auds.length + ' slide' + (auds.length>1?'s':'') + ' (' + auds.join(', ') + ')' : 'none'));
+L.push('Transitions: ' + (trans.length ? trans.length + ' slide' + (trans.length>1?'s':'') + ' (' + trans.map(function(s){return s.no;}).join(', ') + ')' : 'none'));
+L.push('Animations: ' + (anims.length ? anims.length + ' slide' + (anims.length>1?'s':'') + ', ' + R.totalClicks + ' total clicks to advance' : 'none'));
+
+if (notes.length) {
+var most = notes.slice().sort(function(a,b){return b.notesWords-a.notesWords;})[0];
+L.push('Speaker notes: ' + notes.length + ' slide' + (notes.length>1?'s':'') + ' — most on slide ' + most.no + ' (~' + most.notesWords + ' words)');
+} else {
+L.push('Speaker notes: none');
+}
+
+if (R.largestAsset) {
+L.push('Media: ' + emfFmtBytes(R.mediaBytes) + ' embedded, largest ' + R.largestAsset.name + ' (' + emfFmtBytes(R.largestAsset.size) + ')');
+}
+
+L.push('');
+L.push('PER-SLIDE');
+L.push(rpPad('SLIDE',7) + rpPad('HIDE',6) + rpPad('VIDEO',16) + rpPad('AUDIO',7) + rpPad('CLICKS',8) + rpPad('TRANS',12) + 'NOTES');
+R.slides.forEach(function(s) {
+var vstr = '-';
+if (s.video) { vstr = s.video.mode + (s.video.mute ? '/mute' : '') + (s.video.linked ? '⚠link' : ''); }
+var nstr = s.notesWords ? (s.notesWords >= 150 ? 'LONG(' + s.notesWords + 'w)' : s.notesWords + 'w') : '-';
+var tstr = s.transition ? s.transition.type : '-';
+L.push(rpPad(s.no,7) + rpPad(s.hidden?'hide':'-',6) + rpPad(vstr,16) + rpPad(s.audio?'yes':'-',7) + rpPad(s.clicks||'0',8) + rpPad(tstr,12) + nstr);
+});
+L.push('');
+L.push('Note: click counts reflect the main animation sequence; trigger-based / interactive');
+L.push('animations may differ. Muted = authored mute flag, not whether the file has an audio track.');
+return L.join('\n');
+}
+
+function rpBuildCsv(R) {
+var rows = [['slide','hidden','video_present','video_mode','video_muted','video_linked','audio_present','clicks','animation_objects','transition','transition_ms','notes_words']];
+R.slides.forEach(function(s) {
+rows.push([
+s.no,
+s.hidden ? 'yes' : 'no',
+s.video ? 'yes' : 'no',
+s.video ? s.video.mode : '',
+s.video ? (s.video.mute ? 'yes' : 'no') : '',
+s.video ? (s.video.linked ? 'yes' : 'no') : '',
+s.audio ? 'yes' : 'no',
+s.clicks,
+s.animObjects,
+s.transition ? s.transition.type : '',
+s.transition && s.transition.durMs != null ? s.transition.durMs : '',
+s.notesWords
+]);
+});
+return rows.map(function(r) {
+return r.map(function(c) {
+c = String(c);
+return /[",\n]/.test(c) ? '"' + c.replace(/"/g,'""') + '"' : c;
+}).join(',');
+}).join('\n');
+}
+
+function rpRender(R, file) {
+var results = document.getElementById('report-results');
+var txt = rpBuildText(R);
+var csv = rpBuildCsv(R);
+var base = file.name.replace(/\.pptx$/i, '');
+
+/* on-screen: highlight warning lines + header tokens */
+var htmlTxt = txt
+.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+.replace(/^(⚠.*)$/gm, '<span class="rp-warn">$1</span>')
+.replace(/^(PPT REPORT — .*)$/m, '<span class="rp-key">$1</span>');
+
+results.innerHTML =
+'<div class="report-summary">' + htmlTxt + '</div>' +
+'<div class="report-actions">' +
+'<button class="report-btn" id="rp-dl-txt">Download report (.txt)</button>' +
+'<button class="report-btn ghost" id="rp-dl-csv">Download slide table (.csv)</button>' +
+'</div>' +
+'<div class="report-note">Saved files: <strong style="color:var(--label)">' + base + '_report.txt</strong> and <strong style="color:var(--label)">' + base + '_slides.csv</strong></div>';
+
+document.getElementById('rp-dl-txt').addEventListener('click', function() {
+emfDownload(new Blob([txt], {type:'text/plain'}), base + '_report.txt', 'text/plain');
+});
+document.getElementById('rp-dl-csv').addEventListener('click', function() {
+emfDownload(new Blob([csv], {type:'text/csv'}), base + '_slides.csv', 'text/csv');
+});
+}
+
 initEMF();
 initMedia();
+rpInit();
 ['px-w', 'px-h', 'phys-w', 'phys-h'].forEach(function(id) {
 var el = document.getElementById(id);
 if (!el) return;
