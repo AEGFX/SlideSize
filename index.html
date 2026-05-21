@@ -737,6 +737,7 @@ letter-spacing: 0.5px; text-transform: uppercase; color: var(--emf, #1FB6A6);
 }
 .emf-batch-btns { display: flex; gap: 8px; flex-wrap: wrap; }
 .emf-batch-hint { font-family: var(--sans); font-size: 11px; line-height: 1.5; color: var(--muted); }
+.emf-svg-na { font-family: var(--sans); font-size: 11px; color: var(--muted); font-style: italic; align-self: center; cursor: help; }
 
 /* ===== Other Tools: shared bits ===== */
 .emf-tool + .emf-tool { margin-top: 4px; }
@@ -1470,6 +1471,82 @@ return page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise
 });
 }
 
+/* --- SVG conversion via a pinned pdf.js 2.x (which still ships SVGGraphics) --- */
+var EMF_PDFJS2_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js';
+var EMF_PDFJS2_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+var emfPdfjs2Ready = null;
+
+function emfLoadPdfJs2() {
+if (emfPdfjs2Ready) return emfPdfjs2Ready;
+emfPdfjs2Ready = new Promise(function(res, rej) {
+/* pdf.js 2.x and 3.x both define window.pdfjsLib; load 2.x into an isolated
+   global so it can't clobber the 3.x instance used for PNG rendering. */
+var prev = window.pdfjsLib;
+var sc = document.createElement('script');
+sc.src = EMF_PDFJS2_SRC;
+sc.onload = function() {
+try {
+var lib2 = window.pdfjsLib;       /* this is now 2.x */
+window.pdfjsLib = prev;           /* restore 3.x for everyone else */
+lib2.GlobalWorkerOptions.workerSrc = EMF_PDFJS2_WORKER;
+window.__emfPdfjs2 = lib2;
+res(lib2);
+} catch (e) { rej(e); }
+};
+sc.onerror = function() { rej(new Error('pdf.js 2.x failed to load')); };
+document.head.appendChild(sc);
+});
+return emfPdfjs2Ready;
+}
+
+/* Inspect a PDF's first-page operator list to decide if it's real vector
+   (paths/text) or just a wrapped raster image. Returns a Promise<boolean>. */
+function emfPdfIsVector(pdfBytes) {
+return emfLoadPdfJs().then(function(lib) {
+return lib.getDocument({ data: pdfBytes.slice() }).promise;
+}).then(function(doc) {
+return doc.getPage(1);
+}).then(function(page) {
+return page.getOperatorList().then(function(opList) {
+var OPS = (window.pdfjsLib && window.pdfjsLib.OPS) || {};
+var vectorOps = 0, imageOps = 0;
+var vectorSet = {};
+[ 'fill','stroke','fillStroke','eoFill','constructPath','moveTo','lineTo','curveTo',
+  'rectangle','showText','showSpacedText','setFillRGBColor','shadingFill' ].forEach(function(n){ if (OPS[n] != null) vectorSet[OPS[n]] = true; });
+var imageSet = {};
+[ 'paintImageXObject','paintInlineImageXObject','paintImageMaskXObject','paintJpegXObject' ].forEach(function(n){ if (OPS[n] != null) imageSet[OPS[n]] = true; });
+for (var i = 0; i < opList.fnArray.length; i++) {
+var fn = opList.fnArray[i];
+if (vectorSet[fn]) vectorOps++;
+else if (imageSet[fn]) imageOps++;
+}
+/* vector if it has a meaningful number of path/text ops beyond just a
+   single full-page image paint */
+return vectorOps > 2;
+});
+}).catch(function() { return false; });
+}
+
+/* Convert PDF page 1 to an SVG string using pdf.js 2.x SVGGraphics. */
+function emfRenderSvg(pdfBytes) {
+return emfLoadPdfJs2().then(function(lib2) {
+return lib2.getDocument({ data: pdfBytes.slice(), fontExtraProperties: true }).promise.then(function(doc) {
+return doc.getPage(1);
+}).then(function(page) {
+var viewport = page.getViewport({ scale: 1 });
+return page.getOperatorList().then(function(opList) {
+var svgGfx = new lib2.SVGGraphics(page.commonObjs, page.objs);
+svgGfx.embedFonts = true;
+return svgGfx.getSVG(opList, viewport);
+}).then(function(svgEl) {
+var xml = new XMLSerializer().serializeToString(svgEl);
+if (!/^<\?xml/.test(xml)) xml = '<?xml version="1.0" encoding="UTF-8"?>\n' + xml;
+return xml;
+});
+});
+});
+}
+
 function initEMF() {
 var drop = document.getElementById('emf-drop');
 var fileInput = document.getElementById('emf-file');
@@ -1499,11 +1576,11 @@ else if (/\.emf$/i.test(f.name) || f.size > 0) { emfProcess(f); }
    and render one normal EMF card per file (dumb list). */
 var emfBatch = { pdfs: [], deckBase: 'emf', seen: {} };
 
-function emfRegisterPdf(baseName, pdfBytes) {
+function emfRegisterPdf(baseName, pdfBytes, isVector) {
 /* de-dupe by name in case the same card somehow re-registers */
 if (emfBatch.seen[baseName]) return;
 emfBatch.seen[baseName] = true;
-emfBatch.pdfs.push({ name: baseName + '.pdf', bytes: pdfBytes });
+emfBatch.pdfs.push({ name: baseName + '.pdf', base: baseName, bytes: pdfBytes, vector: !!isVector });
 emfUpdateBatchBar();
 }
 
@@ -1519,6 +1596,8 @@ bar.className = 'emf-batch-bar';
 results.parentNode.insertBefore(bar, results);
 }
 var supportsFS = (typeof window.showDirectoryPicker === 'function');
+var vecCount = emfBatch.pdfs.filter(function(p){ return p.vector; }).length;
+var svgBtn = vecCount ? '<button class="emf-btn" id="emf-dl-all-svg">' + (supportsFS ? 'Save vector as SVG…' : 'Download SVG') + ' (' + vecCount + ')</button>' : '';
 bar.innerHTML =
 '<div class="emf-batch-top">' +
 '<span class="emf-batch-count">' + emfBatch.pdfs.length + ' graphics ready</span>' +
@@ -1529,10 +1608,14 @@ bar.innerHTML =
 '<div class="emf-batch-btns">' +
 '<button class="emf-btn primary" id="emf-dl-all-png">' + (supportsFS ? 'Save all as PNG…' : 'Download all PNG') + '</button>' +
 '<button class="emf-btn" id="emf-dl-all-pdf">' + (supportsFS ? 'Save all as PDF…' : 'Download all PDF') + '</button>' +
+svgBtn +
 '</div>' +
-'<div class="emf-batch-hint">PNG re-inserts cleanly into PowerPoint on any OS. PDF stays true vector but goes soft in Windows PowerPoint — use PNG for decks that will run on Windows.</div>';
+'<div class="emf-batch-hint">PNG re-inserts cleanly into PowerPoint on any OS. PDF stays true vector but goes soft in Windows PowerPoint — use PNG for decks that will run on Windows.' +
+(vecCount ? ' SVG is offered only for the ' + vecCount + ' graphic' + (vecCount>1?'s':'') + ' that are genuinely vector.' : '') +
+'</div>';
 document.getElementById('emf-dl-all-pdf').addEventListener('click', emfDownloadAllPdfs);
 document.getElementById('emf-dl-all-png').addEventListener('click', emfDownloadAllPngs);
+if (vecCount) document.getElementById('emf-dl-all-svg').addEventListener('click', emfDownloadAllSvgs);
 }
 
 /* Save a list of {name, blobOrBytes, mime} either into a chosen folder
@@ -1603,6 +1686,18 @@ return { bytes: p.bytes, outName: p.name.replace(/\.pdf$/i, '') + '_' + dpi + 'd
 emfBatchSave(btn, emfBatch.deckBase + '_emf_png', items, function(it) {
 return emfRenderPdf(it.bytes, dpi).then(function(canvas) {
 return new Promise(function(res) { canvas.toBlob(function(b){ res(b); }, 'image/png'); });
+});
+});
+}
+
+function emfDownloadAllSvgs() {
+var btn = document.getElementById('emf-dl-all-svg');
+var items = emfBatch.pdfs.filter(function(p){ return p.vector; }).map(function(p){
+return { bytes: p.bytes, outName: p.base + '.svg' };
+});
+emfBatchSave(btn, emfBatch.deckBase + '_emf_svg', items, function(it) {
+return emfRenderSvg(it.bytes).then(function(svg) {
+return new Blob([svg], { type: 'image/svg+xml' });
 });
 });
 }
@@ -1719,11 +1814,11 @@ content.innerHTML =
 '<option value="150">150dpi</option><option value="300" selected>300dpi</option>' +
 '<option value="600">600dpi</option><option value="1200">1200dpi</option></select></span>' +
 '<button class="emf-btn dl-png">Download PNG</button>' +
+'<span class="dl-svg-slot"></span>' +
 '</div>';
 content.querySelector('.dl-pdf').addEventListener('click', function() {
 emfDownload(pdf, baseName + '.pdf', 'application/pdf');
 });
-emfRegisterPdf(baseName, pdf);
 emfRenderPdf(pdf, 96).then(function(c) {
 preview.innerHTML = ''; preview.appendChild(c);
 }).catch(function() {
@@ -1741,6 +1836,28 @@ btn.textContent = old; btn.disabled = false;
 btn.textContent = 'Failed (offline?)';
 setTimeout(function() { btn.textContent = old; btn.disabled = false; }, 1800);
 });
+});
+/* SVG only when the PDF is genuinely vector */
+emfPdfIsVector(pdf).then(function(isVec) {
+emfRegisterPdf(baseName, pdf, isVec);
+var slot = content.querySelector('.dl-svg-slot');
+if (!slot) return;
+if (isVec) {
+slot.innerHTML = '<button class="emf-btn dl-svg">Download SVG</button>';
+slot.querySelector('.dl-svg').addEventListener('click', function(ev) {
+var btn = ev.currentTarget; var old = btn.textContent;
+btn.disabled = true; btn.innerHTML = '<span class="emf-spinner"></span>Converting';
+emfRenderSvg(pdf).then(function(svg) {
+emfDownload(new Blob([svg], {type:'image/svg+xml'}), baseName + '.svg', 'image/svg+xml');
+btn.textContent = old; btn.disabled = false;
+}).catch(function() {
+btn.textContent = 'SVG failed';
+setTimeout(function(){ btn.textContent = old; btn.disabled = false; }, 1800);
+});
+});
+} else {
+slot.innerHTML = '<span class="emf-svg-na" title="This graphic is a raster image inside the PDF, so SVG would just wrap the bitmap — use PNG instead.">SVG n/a (raster)</span>';
+}
 });
 return;
 }
