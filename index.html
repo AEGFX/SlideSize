@@ -846,7 +846,8 @@ word-break: break-word;
 overflow-x: auto;
 }
 .report-summary .rp-warn { color: var(--md, #E0A020); }
-.report-summary .rp-key { color: var(--rp); }
+.report-summary .rp-key { color: var(--rp); font-weight: 700; }
+.report-summary .rp-hdr { color: var(--rp); font-weight: 700; letter-spacing: 1px; }
 
 .report-table-wrap {
 border: 1px solid var(--border2);
@@ -2048,13 +2049,36 @@ fontsEmbedded: false, embeddedFonts: [], usedFonts: [],
 slides: [],          /* per-slide objects */
 totalClicks: 0,
 mediaBytes: 0, largestAsset: null,
-warnings: []
+largestImage: null,
+warnings: [],
+/* new fields */
+os: 'Unknown', osReasons: [],
+appName: '', appVersion: '',
+customShows: 0, sections: 0,
+masters: 0, layouts: 0,
+images: 0, charts: 0, tables: 0, ole: 0,
+externalLinks: 0,
+hyperlinks: false, autoTiming: false,
+mediaCount: 0, linkedMediaCount: 0,
+hadMacEmf: false
 };
 
-/* presentation.xml: size, embedded fonts, slide order */
+/* docProps/app.xml: application name + version (OS fingerprint) */
+var pApp = zip.file('docProps/app.xml');
+var prom = [];
+prom.push((pApp ? pApp.async('string') : Promise.resolve('')).then(function(xml) {
+if (!xml) return;
+var doc = rpXml(xml);
+if (!doc) return;
+var appEl = rpEls(doc, 'Application')[0];
+var verEl = rpEls(doc, 'AppVersion')[0];
+if (appEl) R.appName = (appEl.textContent || '').trim();
+if (verEl) R.appVersion = (verEl.textContent || '').trim();
+}));
+
+/* presentation.xml: size, embedded fonts, custom shows, sections */
 var pPres = zip.file('ppt/presentation.xml');
 var slideRelOrder = [];
-var prom = [];
 
 prom.push((pPres ? pPres.async('string') : Promise.resolve('')).then(function(xml) {
 var doc = rpXml(xml);
@@ -2070,24 +2094,46 @@ var nm = fontEl ? rpAttr(fontEl, 'typeface') : null;
 if (nm && R.embeddedFonts.indexOf(nm) < 0) R.embeddedFonts.push(nm);
 });
 }
+R.customShows = rpEls(doc, 'custShow').length;
+/* sections live in an extLst p14:section element */
+R.sections = rpEls(doc, 'section').length;
 /* slide id order -> r:id list */
 var sldIds = rpEls(doc, 'sldId');
 sldIds.forEach(function(s) {
-var rid = rpAttr(s, 'id') || rpAttr(s, 'embed');
 slideRelOrder.push(rpAttr(s, 'embed') || rpAttr(s, 'id'));
 });
 }));
 
-/* media size tally */
+/* media + structure scan across the whole package */
+var imgExt = /\.(png|jpe?g|gif|bmp|tiff?|webp|emf|wmf|svg)$/i;
+var emfProms = [];
 zip.forEach(function(path, entry) {
-if (/^ppt\/media\//i.test(path) && !entry.dir) {
+if (entry.dir) return;
+if (/^ppt\/media\//i.test(path)) {
+var nm = path.replace(/^ppt\/media\//i, '');
 prom.push(entry.async('uint8array').then(function(b) {
 R.mediaBytes += b.length;
 if (!R.largestAsset || b.length > R.largestAsset.size) {
-R.largestAsset = { name: path.replace(/^ppt\/media\//i, ''), size: b.length };
+R.largestAsset = { name: nm, size: b.length };
+}
+if (imgExt.test(nm)) {
+R.images++;
+if (!R.largestImage || b.length > R.largestImage.size) {
+R.largestImage = { name: nm, size: b.length };
+}
+}
+/* Mac fingerprint: EMF carrying an embedded PDF (GDIC hybrid) */
+if (/\.emf$/i.test(nm) && !R.hadMacEmf) {
+for (var i = 0; i < b.length - 4; i++) {
+if (b[i]===0x25 && b[i+1]===0x50 && b[i+2]===0x44 && b[i+3]===0x46) { R.hadMacEmf = true; break; }
+}
 }
 }));
 }
+if (/^ppt\/slideMasters\/slideMaster\d+\.xml$/i.test(path)) R.masters++;
+if (/^ppt\/slideLayouts\/slideLayout\d+\.xml$/i.test(path)) R.layouts++;
+if (/^ppt\/embeddings\//i.test(path)) R.ole++;
+if (/^ppt\/charts\/chart\d+\.xml$/i.test(path)) R.charts++;
 });
 
 return Promise.all(prom).then(function() {
@@ -2115,11 +2161,22 @@ video: null,           /* {mode, mute, linked} */
 audio: false,
 clicks: 0, animObjects: 0,
 transition: null,      /* {type, durMs} */
-notesWords: 0
+notesWords: 0,
+hasHyperlink: false, autoAdvance: false, tables: 0
 };
 /* hidden: <p:sld show="0"> */
 var sldEl = rpEls(sdoc, 'sld')[0];
 if (sldEl && rpAttr(sldEl, 'show') === '0') slide.hidden = true;
+
+/* tables: <a:tbl> */
+slide.tables = rpEls(sdoc, 'tbl').length;
+R.tables += slide.tables;
+
+/* charts referenced on this slide: graphicFrame with chart uri (count via rels later too) */
+
+/* hyperlinks / actions: hlinkClick / hlinkHover with an action or rId */
+var hlinks = rpEls(sdoc, 'hlinkClick').concat(rpEls(sdoc, 'hlinkHover'));
+if (hlinks.length) { slide.hasHyperlink = true; R.hyperlinks = true; }
 
 /* fonts used: latin/ea/cs typeface attrs anywhere */
 ['latin','ea','cs'].forEach(function(t) {
@@ -2133,6 +2190,10 @@ if (tf && tf !== '+mn-lt' && tf !== '+mj-lt' && tf.charAt(0) !== '+') fontSet[tf
 var tr = rpEls(sdoc, 'transition')[0];
 if (tr) {
 var durMs = rpAttr(tr, 'dur'); /* sometimes in advTm or dur */
+/* auto-advance: advTm present (timed) or advClick="0" */
+var advTm = rpAttr(tr, 'advTm');
+var advClick = rpAttr(tr, 'advClick');
+if (advTm != null || advClick === '0') { slide.autoAdvance = true; R.autoTiming = true; }
 var kids = tr.getElementsByTagName('*');
 var ttype = null;
 for (var k = 0; k < kids.length; k++) {
@@ -2188,16 +2249,18 @@ if (/external/i.test(mode)) linked = true;
 if (/audio/i.test(type) || /\.(mp3|wav|m4a|wma|aac)$/i.test(target)) {
 hasAudio = true;
 }
+/* external (linked) relationships of any kind, excluding intra-package hyperlinks to slides */
+if (/external/i.test(mode) && !/slide\d+\.xml/i.test(target)) R.externalLinks++;
+/* chart references */
+if (/relationships\/chart/i.test(type)) R.charts++;
 });
 if (hasVideo) {
-/* playback flags from slide Xml: <p:video>/<a:videoFile>, fullScrn + mute on <p:cMediaNode>/<p:playLst> */
 var fullScrn = false, mute = false;
 var mediaNodes = rpEls(sdoc, 'cMediaNode');
 mediaNodes.forEach(function(mn) {
 if (rpAttr(mn, 'fullScrn') === '1') fullScrn = true;
 if (rpAttr(mn, 'mute') === '1') mute = true;
 });
-/* also check videoFile/p:video element area dimensions could be parsed; keep mode simple */
 slide.video = { mode: fullScrn ? 'fullscreen' : 'framed', mute: mute, linked: linked };
 }
 slide.audio = hasAudio;
@@ -2212,9 +2275,34 @@ return Promise.all(slideProms).then(function(slides) {
 R.slides = slides;
 R.usedFonts = Object.keys(fontSet).sort();
 slides.forEach(function(s) { R.totalClicks += s.clicks; });
+/* media counts */
+var vids = slides.filter(function(s){ return s.video; });
+R.mediaCount = vids.length + slides.filter(function(s){ return s.audio; }).length;
+R.linkedMediaCount = vids.filter(function(s){ return s.video.linked; }).length;
+/* dedupe charts (counted via both /charts/ files and rels — prefer file count if present) */
+/* OS detection */
+rpDetectOS(R);
 return R;
 });
 });
+}
+
+/* Infer authoring OS from app.xml token + Mac-hybrid-EMF fingerprint. */
+function rpDetectOS(R) {
+var reasons = [];
+var macApp = /macintosh/i.test(R.appName);
+var winApp = R.appName && !macApp && /powerpoint|office/i.test(R.appName);
+if (macApp) reasons.push('app tag "' + R.appName + '"');
+else if (winApp) reasons.push('app tag "' + R.appName + '"');
+if (R.hadMacEmf) reasons.push('hybrid PDF-in-EMF media (Mac signature)');
+
+if (macApp && R.hadMacEmf) { R.os = 'macOS'; }
+else if (macApp) { R.os = 'macOS'; }
+else if (R.hadMacEmf && winApp) { R.os = 'Mixed'; reasons.push('Windows app tag but Mac-origin media present'); }
+else if (R.hadMacEmf) { R.os = 'macOS'; }
+else if (winApp) { R.os = 'Windows'; }
+else { R.os = 'Unknown'; }
+R.osReasons = reasons;
 }
 
 function rpStats(R) {
@@ -2242,48 +2330,73 @@ var dec = (R.widthEmu/R.heightEmu).toFixed(2);
 return { ratio: rw + ':' + rh, dec: dec };
 }
 
-/* Lean on-screen summary — stacked single lines, vertical font lists. */
+/* Categorised on-screen summary. */
 function rpBuildSummary(R) {
 var st = rpStats(R);
 var L = [];
-L.push('Generated: ' + new Date().toISOString().slice(0,10));
-L.push('PPT REPORT — ' + R.fileName);
-L.push('File size: ' + emfFmtBytes(R.fileSize));
-L.push('');
-
-L.push('Slide count: ' + R.slideCount + (st.hidden.length ? '  (' + st.hidden.length + ' hidden)' : '  (0 hidden)'));
 var asp = rpAspect(R);
-if (asp) {
-L.push('Aspect: ' + asp.ratio + ' (' + asp.dec + ':1)');
-L.push('Slide size: ' + rpEmuToCm(R.widthEmu).toFixed(2) + ' × ' + rpEmuToCm(R.heightEmu).toFixed(2) + ' cm ('
-+ rpEmuToIn(R.widthEmu).toFixed(2) + ' × ' + rpEmuToIn(R.heightEmu).toFixed(2) + ' in)');
-}
+var notesHidden = R.slides.filter(function(s){ return s.hidden && s.notesWords > 0; }).length;
+var fileType = (R.fileName.match(/\.([a-z0-9]+)$/i) || [,''])[1].toUpperCase() + ' (PowerPoint)';
 
-if (st.vids.length) {
-L.push('Videos: ' + st.vids.length + ' (' + st.fs + ' FS, ' + st.pip + ' PIP, ' + st.embeddedV + ' embedded, ' + st.linked + ' linked)');
-} else {
-L.push('Videos: none');
-}
-L.push('Audio: ' + (st.auds.length ? st.auds.length + (st.auds.length>1?' slides':' slide') : 'none'));
-L.push('Transitions: ' + (st.trans.length ? st.trans.length + (st.trans.length>1?' slides':' slide') : 'none'));
-L.push('Animations: ' + (st.anims.length ? st.anims.length + (st.anims.length>1?' slides':' slide') + ', ' + R.totalClicks + ' clicks' : 'none'));
-L.push('Speaker notes: ' + (st.notes.length ? st.notes.length + (st.notes.length>1?' slides':' slide') + ' (most on slide ' + st.mostNotes.no + ')' : 'none'));
-if (R.mediaBytes) L.push('Media: ' + emfFmtBytes(R.mediaBytes) + ' embedded');
-
-if (st.linkedSlides.length) {
+L.push('FILE NAME: ' + R.fileName);
 L.push('');
-L.push('⚠ ' + st.linkedSlides.length + ' linked video' + (st.linkedSlides.length>1?'s':'') + ' (slide ' + st.linkedSlides.join(', ') + ') — not embedded, will fail if missing');
-}
-
+L.push('GENERAL');
+L.push('File size: ' + emfFmtBytes(R.fileSize));
+L.push('File type: ' + fileType);
+L.push('Slide count: ' + R.slideCount);
+L.push('Visible slides: ' + (R.slideCount - st.hidden.length));
+L.push('Hidden slides: ' + st.hidden.length);
+L.push('OS: ' + R.os + (R.osReasons.length ? '  (' + R.osReasons.join('; ') + ')' : ''));
 L.push('');
+L.push('FORMAT');
+L.push('Aspect: ' + (asp ? asp.ratio + ' (' + asp.dec + ':1)' : '—'));
+L.push('Slide size CM: ' + (asp ? rpEmuToCm(R.widthEmu).toFixed(2) + ' × ' + rpEmuToCm(R.heightEmu).toFixed(2) + ' cm' : '—'));
+L.push('Slide size Inch: ' + (asp ? rpEmuToIn(R.widthEmu).toFixed(2) + ' × ' + rpEmuToIn(R.heightEmu).toFixed(2) + ' in' : '—'));
+L.push('');
+L.push('MEDIA');
+L.push('Videos: ' + st.vids.length);
+L.push('Videos FS: ' + st.fs);
+L.push('Videos PIP: ' + st.pip);
+L.push('Audio: ' + st.auds.length);
+L.push('Embedded media: ' + (R.mediaCount - R.linkedMediaCount));
+L.push('Linked media: ' + R.linkedMediaCount);
+if (st.linkedSlides.length) L.push('⚠ Linked video on slide ' + st.linkedSlides.join(', ') + ' — not embedded, will fail if missing');
+L.push('');
+L.push('PLAYBACK');
+L.push('Transitions: ' + st.trans.length);
+L.push('Animations: ' + st.anims.length);
+L.push('Estimated animation/build clicks: ' + R.totalClicks);
+L.push('Automatic slide timings: ' + (R.autoTiming ? 'detected' : 'not detected'));
+L.push('Custom shows: ' + (R.customShows ? 'detected (' + R.customShows + ')' : 'not detected'));
+L.push('Hyperlinks/actions: ' + (R.hyperlinks ? 'detected' : 'not detected'));
+L.push('');
+L.push('NOTES');
+L.push('Speaker notes: ' + (st.notes.length ? 'present' : 'none'));
+L.push('Slides with notes: ' + st.notes.length);
+L.push('Notes on hidden slides: ' + notesHidden);
+L.push('');
+L.push('FONTS');
 L.push('Fonts used in deck:');
-if (R.usedFonts.length) R.usedFonts.forEach(function(f){ L.push(f); });
-else L.push('(none detected)');
-L.push('');
+if (R.usedFonts.length) R.usedFonts.forEach(function(f){ L.push('- ' + f); });
+else L.push('- (none detected)');
 L.push('Embedded fonts:');
-if (R.fontsEmbedded && R.embeddedFonts.length) R.embeddedFonts.forEach(function(f){ L.push(f); });
-else if (R.fontsEmbedded) L.push('(embedded, names unavailable)');
-else L.push('none');
+if (R.fontsEmbedded && R.embeddedFonts.length) R.embeddedFonts.forEach(function(f){ L.push('- ' + f); });
+else if (R.fontsEmbedded) L.push('- (embedded, names unavailable)');
+else L.push('- none detected');
+L.push('');
+L.push('STRUCTURE');
+L.push('Slide masters: ' + R.masters);
+L.push('Layouts: ' + R.layouts);
+L.push('Sections: ' + R.sections);
+L.push('Hidden slide numbers: ' + (st.hidden.length ? st.hidden.join(', ') : 'none'));
+L.push('');
+L.push('ASSETS');
+L.push('Images: ' + R.images);
+L.push('Largest image: ' + (R.largestImage ? R.largestImage.name + ' / ' + emfFmtBytes(R.largestImage.size) : 'none'));
+L.push('Charts: ' + R.charts);
+L.push('Tables: ' + R.tables);
+L.push('OLE objects: ' + R.ole);
+L.push('External links: ' + R.externalLinks);
 
 return L.join('\n');
 }
@@ -2344,11 +2457,12 @@ var txt = rpBuildText(R);
 var csv = rpBuildCsv(R);
 var base = file.name.replace(/\.pptx$/i, '');
 
-/* on-screen: the lean summary only; per-slide detail lives in the downloads */
+/* on-screen: the categorised summary; per-slide detail lives in the downloads */
 var htmlTxt = summary
 .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
 .replace(/^(⚠.*)$/gm, '<span class="rp-warn">$1</span>')
-.replace(/^(PPT REPORT — .*)$/m, '<span class="rp-key">$1</span>');
+.replace(/^(FILE NAME:.*)$/m, '<span class="rp-key">$1</span>')
+.replace(/^(GENERAL|FORMAT|MEDIA|PLAYBACK|NOTES|FONTS|STRUCTURE|ASSETS)$/gm, '<span class="rp-hdr">$1</span>');
 
 results.innerHTML =
 '<div class="report-summary">' + htmlTxt + '</div>' +
