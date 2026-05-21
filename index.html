@@ -722,6 +722,19 @@ animation: emfspin 0.7s linear infinite; display: inline-block; vertical-align: 
 }
 @keyframes emfspin { to { transform: rotate(360deg); } }
 
+.emf-batch-bar {
+display: flex; align-items: center; justify-content: space-between; gap: 12px;
+background: var(--emf-dim, rgba(31,182,166,0.12));
+border: 1px solid var(--emf, #1FB6A6);
+border-radius: 2px;
+padding: 10px 14px;
+margin-bottom: 12px;
+}
+.emf-batch-bar .emf-batch-count {
+font-family: var(--sans); font-size: 12px; font-weight: 700;
+letter-spacing: 0.5px; text-transform: uppercase; color: var(--emf, #1FB6A6);
+}
+
 /* ===== Other Tools: shared bits ===== */
 .emf-tool + .emf-tool { margin-top: 4px; }
 
@@ -1481,8 +1494,75 @@ else if (/\.emf$/i.test(f.name) || f.size > 0) { emfProcess(f); }
 
 /* Drop a PPTX into the EMF tool: unzip, find every ppt/media/*.emf,
    and render one normal EMF card per file (dumb list). */
+var emfBatch = { pdfs: [], deckBase: 'emf', seen: {} };
+
+function emfRegisterPdf(baseName, pdfBytes) {
+/* de-dupe by name in case the same card somehow re-registers */
+if (emfBatch.seen[baseName]) return;
+emfBatch.seen[baseName] = true;
+emfBatch.pdfs.push({ name: baseName + '.pdf', bytes: pdfBytes });
+emfUpdateBatchBar();
+}
+
+function emfUpdateBatchBar() {
+var results = document.getElementById('emf-results');
+if (!results) return;
+var bar = document.getElementById('emf-batch-bar');
+if (emfBatch.pdfs.length < 2) { if (bar) bar.remove(); return; }
+if (!bar) {
+bar = document.createElement('div');
+bar.id = 'emf-batch-bar';
+bar.className = 'emf-batch-bar';
+results.parentNode.insertBefore(bar, results);
+}
+var supportsFS = (typeof window.showDirectoryPicker === 'function');
+bar.innerHTML =
+'<span class="emf-batch-count">' + emfBatch.pdfs.length + ' PDFs ready</span>' +
+'<button class="emf-btn primary" id="emf-dl-all">' + (supportsFS ? 'Save all PDFs to folder…' : 'Download all PDFs') + '</button>';
+document.getElementById('emf-dl-all').addEventListener('click', emfDownloadAllPdfs);
+}
+
+function emfDownloadAllPdfs() {
+var btn = document.getElementById('emf-dl-all');
+var items = emfBatch.pdfs.slice();
+if (!items.length) return;
+if (typeof window.showDirectoryPicker === 'function') {
+window.showDirectoryPicker({ mode: 'readwrite' }).then(function(handle) {
+return handle.getDirectoryHandle(emfBatch.deckBase + '_emf_pdfs', { create: true });
+}).then(function(subDir) {
+var old = btn.textContent; btn.disabled = true;
+var done = 0;
+function writeNext(i) {
+if (i >= items.length) {
+btn.disabled = false; btn.textContent = 'Saved ' + done + ' PDFs \u2713';
+setTimeout(function(){ btn.textContent = old; }, 2500);
+return Promise.resolve();
+}
+return subDir.getFileHandle(items[i].name, { create: true }).then(function(fh) {
+return fh.createWritable();
+}).then(function(ws) {
+return ws.write(new Blob([items[i].bytes], {type:'application/pdf'})).then(function(){ return ws.close(); });
+}).then(function() {
+done++; btn.innerHTML = '<span class="emf-spinner"></span>Saving ' + done + '/' + items.length;
+return writeNext(i + 1);
+});
+}
+return writeNext(0);
+}).catch(function(e) {
+if (e && e.name === 'AbortError') return;
+btn.disabled = false;
+items.forEach(function(it, i){ setTimeout(function(){ emfDownload(it.bytes, it.name, 'application/pdf'); }, i*150); });
+});
+} else {
+items.forEach(function(it, i){ setTimeout(function(){ emfDownload(it.bytes, it.name, 'application/pdf'); }, i*150); });
+}
+}
+
 function emfProcessPptx(file) {
 var results = document.getElementById('emf-results');
+emfBatch.pdfs = []; emfBatch.seen = {};
+emfBatch.deckBase = file.name.replace(/\.pptx$/i, '');
+var bar = document.getElementById('emf-batch-bar'); if (bar) bar.remove();
 var status = document.createElement('div');
 status.className = 'emf-card';
 status.innerHTML =
@@ -1594,6 +1674,7 @@ content.innerHTML =
 content.querySelector('.dl-pdf').addEventListener('click', function() {
 emfDownload(pdf, baseName + '.pdf', 'application/pdf');
 });
+emfRegisterPdf(baseName, pdf);
 emfRenderPdf(pdf, 96).then(function(c) {
 preview.innerHTML = ''; preview.appendChild(c);
 }).catch(function() {
