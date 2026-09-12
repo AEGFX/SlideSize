@@ -874,6 +874,18 @@ width: 13px; height: 13px; border: 2px solid var(--border2);
 border-top-color: var(--rp); border-radius: 50%;
 animation: emfspin 0.7s linear infinite; display: inline-block; vertical-align: -2px; margin-right: 5px;
 }
+
+.emf-tool.tool-link {
+text-decoration: none;
+transition: border-color 0.15s, background 0.15s;
+}
+.emf-tool.tool-link:hover { border-color: var(--emf); background: #2b2b2b; }
+.emf-tool.tool-link .go-row {
+display: flex; align-items: center; justify-content: space-between; gap: 10px;
+font-family: var(--sans); font-size: 11px; font-weight: 700; letter-spacing: 2px;
+text-transform: uppercase; color: var(--emf);
+}
+.emf-tool.tool-link .go-row svg { width: 15px; height: 15px; stroke: var(--emf); fill: none; stroke-width: 2; }
 </style>
 </head>
 <body>
@@ -1036,6 +1048,17 @@ Standard Presets Reference
 </div>
 <div class="other-tools">
 <div class="other-tools-head"><span class="ot-label">Other Tools</span></div>
+<a class="emf-tool tool-link" href="/pdf.html">
+<div class="emf-tool-title">PDF to Slides <span class="emf-chip">PDF &rarr; PNG + PPTX</span></div>
+<p class="emf-intro">
+Drop a PDF and get back a folder of numbered images plus a PowerPoint deck with one image per slide,
+sized to match the PDF instead of squashed into a guess. Flags non-embedded fonts and mixed page sizes
+before it starts. Opens in its own page so this one stays quick to load.
+</p>
+<div class="go-row"><span>Open PDF to Slides</span>
+<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+</a>
+
 <div class="emf-tool report-tool">
 <div class="emf-tool-title">PPT Report <span class="emf-chip">PPTX &rarr; Pre-flight</span></div>
 <p class="emf-intro">

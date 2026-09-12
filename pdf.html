@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDF to Slides &middot; SlideSize</title>
+<meta name="description" content="Turn a PDF into a folder of PNGs and a matching PowerPoint deck. Runs entirely in your browser.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23E7302A'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+--bg: #1a1a1a;
+--panel: #262626;
+--border: #333333;
+--border2: #3d3d3d;
+--accent: #E7302A;
+--accent2: #ff4f49;
+--green: #4caf82;
+--red: #E7302A;
+--amber: #d8a657;
+--muted: #888888;
+--text: #F2F2F2;
+--label: #D9D9D9;
+--mono: 'Share Tech Mono', monospace;
+--sans: 'DM Sans', sans-serif;
+--max-w: 560px;
+--emf: #1FB6A6;
+--emf2: #43d6c6;
+--emf-dim: rgba(31,182,166,0.12);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+background: var(--bg);
+color: var(--text);
+font-family: var(--sans);
+min-height: 100vh;
+display: flex;
+flex-direction: column;
+align-items: center;
+}
+header {
+width: 100%;
+background: var(--panel);
+border-bottom: 1px solid var(--border2);
+padding: 20px 24px;
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 6px;
+}
+.logo-mark {
+height: 24px; width: 42px;
+border: 2px solid var(--accent);
+position: relative; background: transparent;
+}
+.logo-mark::after { content: ''; position: absolute; inset: 3px; background: var(--accent); opacity: 0.2; }
+.logo-text {
+font-family: var(--sans); font-weight: 700; font-size: 18px;
+letter-spacing: 3px; color: #fff; text-transform: uppercase; text-align: center;
+}
+.logo-text span { color: var(--accent); }
+.header-by {
+font-family: var(--sans); font-size: 11px; font-weight: 500;
+color: var(--muted); letter-spacing: 1px; text-transform: uppercase; text-align: center;
+}
+.header-by a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
+.header-by a:hover { color: var(--accent); }
+.backlink {
+font-family: var(--sans); font-size: 11px; letter-spacing: 1px;
+text-transform: uppercase; color: var(--muted); text-decoration: none;
+transition: color 0.15s;
+}
+.backlink:hover { color: var(--accent); }
+
+.wrap {
+width: 100%; max-width: var(--max-w);
+padding: 28px 20px 48px;
+display: flex; flex-direction: column; gap: 16px;
+}
+
+.emf-tool {
+background: var(--panel);
+border: 1px solid var(--border2);
+border-top: 2px solid var(--emf);
+border-radius: 2px;
+padding: 20px 18px;
+display: flex; flex-direction: column; gap: 14px;
+}
+.emf-tool-title {
+font-family: var(--sans); font-size: 15px; font-weight: 700;
+letter-spacing: 1px; text-transform: uppercase; color: #fff;
+display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
+}
+.emf-chip {
+font-family: var(--mono); font-size: 9px; font-weight: 400; letter-spacing: 1px;
+color: var(--emf); border: 1px solid var(--emf); border-radius: 2px;
+padding: 2px 6px; text-transform: uppercase;
+}
+.emf-intro { font-family: var(--sans); font-size: 12px; color: var(--muted); line-height: 1.6; }
+.emf-intro strong { color: var(--label); font-weight: 600; }
+
+.emf-drop {
+border: 1px dashed var(--border2); border-radius: 2px; background: var(--bg);
+padding: 34px 20px; text-align: center; cursor: pointer;
+transition: border-color 0.15s, background 0.15s;
+display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.emf-drop:hover { border-color: var(--emf); }
+.emf-drop.drag { border-color: var(--emf); background: var(--emf-dim); }
+.emf-drop:focus-within { border-color: var(--emf); }
+.emf-drop svg.emf-dz-icon { stroke: var(--emf); fill: none; stroke-width: 1.6; width: 36px; height: 36px; }
+.emf-dz-big {
+font-family: var(--sans); font-size: 13px; font-weight: 700;
+letter-spacing: 1px; text-transform: uppercase; color: var(--text);
+}
+.emf-dz-small { font-family: var(--sans); font-size: 11px; color: var(--muted); }
+.emf-drop input[type="file"] { display: none; }
+.emf-privacy {
+display: flex; align-items: center; justify-content: center; gap: 7px;
+font-family: var(--sans); font-size: 10px; letter-spacing: 0.5px;
+color: var(--emf); text-transform: uppercase; margin-top: 2px;
+}
+.emf-privacy svg { stroke: var(--emf); fill: none; stroke-width: 2; width: 13px; height: 13px; }
+
+label.fld {
+font-family: var(--sans); font-size: 10px; font-weight: 600; letter-spacing: 1px;
+color: var(--muted); text-transform: uppercase; display: block; margin-bottom: 5px;
+}
+select, input[type="number"] {
+width: 100%; background: var(--bg); border: 1px solid var(--border2); color: var(--text);
+font-family: var(--sans); font-size: 12px; font-weight: 500;
+padding: 9px 10px; border-radius: 2px; outline: none; cursor: pointer;
+transition: border-color 0.15s;
+}
+select:focus, input[type="number"]:focus { border-color: var(--emf); }
+select option { background: #1e1e1e; }
+
+.opt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 440px) { .opt-grid { grid-template-columns: 1fr; } }
+
+.seg { display: flex; border: 1px solid var(--border2); border-radius: 2px; overflow: hidden; }
+.seg button {
+flex: 1; background: transparent; border: none; border-right: 1px solid var(--border2);
+color: var(--muted); font-family: var(--sans); font-size: 11px; font-weight: 600;
+letter-spacing: 1px; padding: 9px 4px; cursor: pointer; transition: all 0.15s;
+text-transform: uppercase;
+}
+.seg button:last-child { border-right: none; }
+.seg button.active { background: var(--emf-dim); color: var(--emf); }
+.seg button:not(.active):hover { color: var(--text); background: var(--border); }
+
+.check { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; padding: 2px 0; }
+.check input { width: 15px; height: 15px; accent-color: var(--emf); margin-top: 1px; flex-shrink: 0; cursor: pointer; }
+.check-txt { font-family: var(--sans); font-size: 12px; color: var(--label); line-height: 1.45; }
+.check-txt em { font-style: normal; color: var(--muted); font-size: 11px; display: block; margin-top: 2px; }
+
+.emf-btn {
+background: transparent; border: 1px solid var(--border2); color: var(--label);
+font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: 1px;
+text-transform: uppercase; padding: 10px 14px; border-radius: 2px; cursor: pointer;
+transition: all 0.15s;
+}
+.emf-btn:hover:not(:disabled) { border-color: var(--emf); color: var(--emf); }
+.emf-btn.primary {
+background: var(--emf); border-color: var(--emf); color: #06201d;
+font-size: 13px; font-weight: 700; letter-spacing: 2px; padding: 15px;
+}
+.emf-btn.primary:hover:not(:disabled) { background: var(--emf2); color: #06201d; }
+.emf-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.emf-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+.panel-in {
+background: var(--bg); border: 1px solid var(--border2); border-left: 2px solid var(--emf);
+border-radius: 2px; padding: 14px; display: flex; flex-direction: column; gap: 12px;
+animation: pop 0.22s ease both;
+}
+@keyframes pop {
+0% { transform: scale(0.99); opacity: 0.6; }
+100% { transform: scale(1); opacity: 1; }
+}
+
+.kv { font-family: var(--sans); font-size: 12px; display: flex; flex-direction: column; gap: 5px; }
+.kv .erow { display: flex; gap: 10px; align-items: baseline; }
+.kv .erow > span:first-child {
+color: var(--muted); min-width: 112px; text-transform: uppercase;
+font-size: 10px; letter-spacing: 0.5px; flex-shrink: 0;
+}
+.kv .erow > span:last-child { color: var(--text); font-family: var(--mono); font-size: 13px; word-break: break-word; }
+
+.flag {
+display: flex; gap: 10px; align-items: flex-start;
+border-radius: 2px; padding: 11px 13px;
+font-family: var(--sans); font-size: 12px; line-height: 1.55;
+}
+.flag svg { width: 15px; height: 15px; flex-shrink: 0; margin-top: 1px; fill: none; stroke-width: 2; }
+.flag b { display: block; font-weight: 700; letter-spacing: 0.4px; margin-bottom: 2px; }
+.flag.warn { background: rgba(216,166,87,0.09); border: 1px solid rgba(216,166,87,0.4); color: var(--amber); }
+.flag.warn svg { stroke: var(--amber); }
+.flag.bad { background: rgba(231,48,42,0.08); border: 1px solid rgba(231,48,42,0.4); color: #ff6b66; }
+.flag.bad svg { stroke: #ff6b66; }
+.flag.ok { background: var(--emf-dim); border: 1px solid rgba(31,182,166,0.4); color: var(--emf); }
+.flag.ok svg { stroke: var(--emf); }
+.flag .sub { color: var(--muted); font-size: 11px; display: block; margin-top: 4px; }
+.flag .sub code { font-family: var(--mono); color: var(--label); }
+
+.bar-outer { width: 100%; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.bar-inner { height: 100%; width: 0%; background: var(--emf); transition: width 0.18s linear; }
+.bar-label {
+display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+font-family: var(--sans); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px;
+}
+.bar-label b { font-family: var(--mono); font-size: 13px; color: var(--text); font-weight: 400; text-transform: none; letter-spacing: 0; }
+
+.thumbs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+.thumbs canvas, .thumbs img {
+height: 62px; width: auto; border: 1px solid var(--border2); background: #fff;
+border-radius: 2px; flex-shrink: 0; display: block;
+}
+.spinner {
+width: 13px; height: 13px; border: 2px solid var(--border2);
+border-top-color: var(--emf); border-radius: 50%;
+animation: spin 0.7s linear infinite; display: inline-block; vertical-align: -2px; margin-right: 6px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.hairline { height: 1px; background: var(--border2); width: 100%; }
+
+footer {
+width: 100%; border-top: 1px solid var(--border);
+padding: 14px 24px; font-family: var(--sans); font-size: 11px; color: var(--muted);
+display: flex; flex-direction: column; align-items: center; text-align: center;
+gap: 3px; line-height: 1.6; margin-top: auto;
+}
+footer a { color: var(--accent); text-decoration: none; }
+footer a:hover { color: var(--accent2); }
+.footer-sep { margin: 4px 0; height: 1px; width: 40px; background: var(--border2); }
+
+:focus-visible { outline: 2px solid var(--emf); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+*, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+</style>
+</head>
+<body>
+<header>
+<div class="logo-mark"></div>
+<div class="logo-text">PDF to <span>Slides</span></div>
+<div class="header-by"><a href="/">&larr; Slide Size Calculator</a></div>
+</header>
+
+<div class="wrap">
+
+<div class="emf-tool">
+<div class="emf-tool-title">PDF to Slides <span class="emf-chip">PDF &rarr; PNG + PPTX</span></div>
+<p class="emf-intro">
+Drop a PDF and get back a folder of numbered images plus a PowerPoint deck with one image per slide,
+sized to match the PDF rather than squashed into a guess. Useful when a client sends artwork as a PDF
+and the show file needs slides. Nothing is uploaded, it all runs here in the browser.
+</p>
+
+<label class="emf-drop" id="drop" for="file">
+<svg class="emf-dz-icon" viewBox="0 0 24 24"><path d="M14 3v4a1 1 0 001 1h4M5 3h9l5 5v11a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/><path d="M8 13h8M8 17h5"/></svg>
+<div class="emf-dz-big">Drop PDF</div>
+<div class="emf-dz-small">or tap to browse</div>
+<input type="file" id="file" accept=".pdf,application/pdf">
+<div class="emf-privacy">
+<svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+Processed in your browser &middot; nothing uploaded
+</div>
+</label>
+
+<div id="stage"></div>
+</div>
+
+</div>
+
+<footer>
+<span>Created by Andrew Brandse</span>
+<span><a href="mailto:info@aegfx.com">info@aegfx.com</a></span>
+<span>Built with Claude (Anthropic)</span>
+<div class="footer-sep"></div>
+<span>PowerPoint max slide: 142.24cm x 142.24cm (56in x 56in)</span>
+</footer>
+
+<script>
+(function(){
+'use strict';
+
+/* ---------- config ---------- */
+var CDN       = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+var PDFJS_SRC = CDN + 'pdf.min.js';
+var PDFJS_WK  = CDN + 'pdf.worker.min.js';
+var CMAPS     = CDN + 'cmaps/';
+var STDFONTS  = CDN + 'standard_fonts/';
+
+var EMU_PER_PT   = 12700;
+var EMU_PER_INCH = 914400;
+var PPT_MAX_EMU  = 56 * EMU_PER_INCH;   /* 56in hard ceiling in PowerPoint */
+var PPT_MIN_EMU  = 1  * EMU_PER_INCH;
+var SOFT_LIMIT   = 1.5 * 1024 * 1024 * 1024;  /* warn above 1.5 GB in-memory */
+
+/* ---------- state ---------- */
+var S = {
+  file: null, pdf: null, name: 'slides',
+  pages: [],            /* {n, wPt, hPt} */
+  frame: null,          /* {wPt, hPt, pxW, pxH} */
+  fonts: [],            /* {name, embedded, type3} */
+  longEdge: 1920,
+  fit: 'source',        /* source | fit169 | fill169 */
+  fmt: 'png',
+  pad: '#ffffff',
+  fade: false,
+  bytesPerPage: 0,
+  busy: false
+};
+
+var $ = function(id){ return document.getElementById(id); };
+var stage = $('stage');
+
+/* ---------- tiny helpers ---------- */
+function esc(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                  .replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+}
+function fmtBytes(b){
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(0) + ' KB';
+  if (b < 1073741824) return (b/1048576).toFixed(1) + ' MB';
+  return (b/1073741824).toFixed(2) + ' GB';
+}
+function ptToCm(pt){ return pt * 2.54 / 72; }
+function gcd(a,b){ while(b){ var t=b; b=a%b; a=t; } return a; }
+function aspectLabel(w,h){
+  var rw = Math.round(w*100), rh = Math.round(h*100);
+  var g = gcd(rw,rh) || 1;
+  var a = rw/g, b = rh/g;
+  if (a > 40 || b > 40) return (w >= h) ? (w/h).toFixed(3) + ':1' : '1:' + (h/w).toFixed(3);
+  return a + ':' + b;
+}
+function pad4(n){ return ('000' + n).slice(-4); }
+function loadScript(src){
+  return new Promise(function(res, rej){
+    var t = document.createElement('script');
+    t.src = src; t.onload = res; t.onerror = function(){ rej(new Error('Could not load ' + src)); };
+    document.head.appendChild(t);
+  });
+}
+function nextFrame(){ return new Promise(function(r){ setTimeout(r, 0); }); }
+
+/* ---------- CRC32 + store-only ZIP writer ----------
+   Store-only (method 0) is deliberate. PNG and JPEG are already compressed, so
+   deflating them buys nothing and costs a lot of time and memory. PowerPoint
+   opens stored OOXML packages without complaint. Entries are written out one at
+   a time, so peak memory is a single page rather than the whole archive. */
+var CRC_TABLE = (function(){
+  var t = new Uint32Array(256), c, n, k;
+  for (n = 0; n < 256; n++){
+    c = n;
+    for (k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+function crcInit(){ return 0xFFFFFFFF; }
+function crcUpdate(c, buf){
+  for (var i = 0; i < buf.length; i++) c = CRC_TABLE[(c ^ buf[i]) & 0xFF] ^ (c >>> 8);
+  return c;
+}
+function crcFinal(c){ return (c ^ 0xFFFFFFFF) >>> 0; }
+function crc32(buf){ return crcFinal(crcUpdate(crcInit(), buf)); }
+
+var TE = new TextEncoder();
+
+function ZipWriter(sink){
+  this.sink = sink;
+  this.offset = 0;
+  this.entries = [];
+  var d = new Date();
+  this.dosTime = ((d.getHours() & 31) << 11) | ((d.getMinutes() & 63) << 5) | ((d.getSeconds() / 2) & 31);
+  this.dosDate = (((d.getFullYear() - 1980) & 127) << 9) | (((d.getMonth() + 1) & 15) << 5) | (d.getDate() & 31);
+}
+ZipWriter.prototype._w = function(u8){
+  this.offset += u8.length;
+  return this.sink.write(u8);
+};
+ZipWriter.prototype._localHeader = function(name, crc, size){
+  var nameBytes = TE.encode(name);
+  var head = new Uint8Array(30 + nameBytes.length);
+  var dv = new DataView(head.buffer);
+  dv.setUint32(0, 0x04034b50, true);
+  dv.setUint16(4, 20, true);
+  dv.setUint16(6, 0x0800, true);      /* UTF-8 filenames */
+  dv.setUint16(8, 0, true);           /* stored */
+  dv.setUint16(10, this.dosTime, true);
+  dv.setUint16(12, this.dosDate, true);
+  dv.setUint32(14, crc, true);
+  dv.setUint32(18, size, true);
+  dv.setUint32(22, size, true);
+  dv.setUint16(26, nameBytes.length, true);
+  dv.setUint16(28, 0, true);
+  head.set(nameBytes, 30);
+  this.entries.push({ name: nameBytes, crc: crc, size: size, offset: this.offset });
+  return head;
+};
+/* small in-memory part: string or Uint8Array */
+ZipWriter.prototype.add = async function(name, data){
+  var body = (typeof data === 'string') ? TE.encode(data) : data;
+  await this._w(this._localHeader(name, crc32(body), body.length));
+  await this._w(body);
+};
+/* large part held as a Blob: two streamed passes, one for the CRC and one for
+   the bytes, so nothing bigger than a read chunk lands on the JS heap */
+ZipWriter.prototype.addBlob = async function(name, blob){
+  var c = crcInit(), rd = blob.stream().getReader(), r;
+  for (;;){ r = await rd.read(); if (r.done) break; c = crcUpdate(c, r.value); }
+  await this._w(this._localHeader(name, crcFinal(c), blob.size));
+  rd = blob.stream().getReader();
+  for (;;){ r = await rd.read(); if (r.done) break; await this._w(r.value); }
+};
+ZipWriter.prototype.finish = async function(){
+  var cdStart = this.offset, i, e, rec, dv;
+  for (i = 0; i < this.entries.length; i++){
+    e = this.entries[i];
+    rec = new Uint8Array(46 + e.name.length);
+    dv = new DataView(rec.buffer);
+    dv.setUint32(0, 0x02014b50, true);
+    dv.setUint16(4, 20, true);
+    dv.setUint16(6, 20, true);
+    dv.setUint16(8, 0x0800, true);
+    dv.setUint16(10, 0, true);
+    dv.setUint16(12, this.dosTime, true);
+    dv.setUint16(14, this.dosDate, true);
+    dv.setUint32(16, e.crc, true);
+    dv.setUint32(20, e.size, true);
+    dv.setUint32(24, e.size, true);
+    dv.setUint16(28, e.name.length, true);
+    dv.setUint32(42, e.offset, true);
+    rec.set(e.name, 46);
+    await this._w(rec);
+  }
+  var cdSize = this.offset - cdStart;
+  var eocd = new Uint8Array(22);
+  var ev = new DataView(eocd.buffer);
+  ev.setUint32(0, 0x06054b50, true);
+  ev.setUint16(8, this.entries.length, true);
+  ev.setUint16(10, this.entries.length, true);
+  ev.setUint32(12, cdSize, true);
+  ev.setUint32(16, cdStart, true);
+  await this._w(eocd);
+  await this.sink.close();
+};
+
+/* sink A: straight to a file on disk, constant memory */
+function fsSink(handle){
+  var stream = null;
+  return {
+    init: async function(){ stream = await handle.createWritable(); },
+    write: function(u8){ return stream.write(u8); },
+    close: function(){ return stream.close(); },
+    result: function(){ return null; }
+  };
+}
+/* sink B: a running Blob. Small writes are batched then handed to the browser,
+   which stores Blob data outside the JS heap and spills to disk if it needs to. */
+function blobSink(){
+  var acc = null, buf = [], bufLen = 0;
+  function flush(){
+    if (!bufLen) return;
+    var chunk = new Blob(buf);
+    acc = acc ? new Blob([acc, chunk]) : chunk;
+    buf = []; bufLen = 0;
+  }
+  return {
+    init: async function(){ acc = null; buf = []; bufLen = 0; },
+    write: function(u8){
+      buf.push(u8); bufLen += u8.length;
+      if (bufLen > 8 * 1024 * 1024) flush();
+      return Promise.resolve();
+    },
+    close: function(){ flush(); return Promise.resolve(); },
+    result: function(){ return acc || new Blob([]); }
+  };
+}
+function downloadBlob(blob, filename){
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 120000);
+}
+
+/* ---------- OOXML ---------- */
+var XMLHDR = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n';
+var NS_P = 'http://schemas.openxmlformats.org/presentationml/2006/main';
+var NS_A = 'http://schemas.openxmlformats.org/drawingml/2006/main';
+var NS_R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+var RT   = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/';
+
+function contentTypes(count, ext){
+  var s = XMLHDR + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+    + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+    + '<Default Extension="xml" ContentType="application/xml"/>'
+    + '<Default Extension="' + ext + '" ContentType="image/' + (ext === 'jpg' ? 'jpeg' : 'png') + '"/>'
+    + '<Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>'
+    + '<Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>'
+    + '<Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>'
+    + '<Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>'
+    + '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>'
+    + '<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>';
+  for (var i = 1; i <= count; i++){
+    s += '<Override PartName="/ppt/slides/slide' + i + '.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>';
+  }
+  return s + '</Types>';
+}
+
+function rootRels(){
+  return XMLHDR + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    + '<Relationship Id="rId1" Type="' + RT + 'officeDocument" Target="ppt/presentation.xml"/>'
+    + '<Relationship Id="rId2" Type="' + RT + 'metadata/core-properties" Target="docProps/core.xml"/>'
+    + '<Relationship Id="rId3" Type="' + RT + 'extended-properties" Target="docProps/app.xml"/>'
+    + '</Relationships>';
+}
+
+function coreProps(title){
+  var iso = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
+  return XMLHDR + '<cp:coreProperties'
+    + ' xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties"'
+    + ' xmlns:dc="http://purl.org/dc/elements/1.1/"'
+    + ' xmlns:dcterms="http://purl.org/dc/terms/"'
+    + ' xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
+    + '<dc:title>' + esc(title) + '</dc:title>'
+    + '<dc:creator>slidesize.com</dc:creator>'
+    + '<cp:lastModifiedBy>slidesize.com</cp:lastModifiedBy>'
+    + '<dcterms:created xsi:type="dcterms:W3CDTF">' + iso + '</dcterms:created>'
+    + '<dcterms:modified xsi:type="dcterms:W3CDTF">' + iso + '</dcterms:modified>'
+    + '</cp:coreProperties>';
+}
+
+function appProps(count){
+  return XMLHDR + '<Properties'
+    + ' xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"'
+    + ' xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">'
+    + '<Application>slidesize.com PDF to Slides</Application>'
+    + '<Slides>' + count + '</Slides>'
+    + '<ScaleCrop>false</ScaleCrop>'
+    + '</Properties>';
+}
+
+function presentationXml(count, cx, cy){
+  var ids = '';
+  for (var i = 1; i <= count; i++) ids += '<p:sldId id="' + (255 + i) + '" r:id="rId' + (i + 1) + '"/>';
+  var notesCx = cy, notesCy = cx;   /* portrait notes page derived from slide */
+  if (cx > cy) { notesCx = 6858000; notesCy = 9144000; }
+  return XMLHDR + '<p:presentation xmlns:a="' + NS_A + '" xmlns:r="' + NS_R + '" xmlns:p="' + NS_P + '" saveSubsetFonts="1">'
+    + '<p:sldMasterIdLst><p:sldMasterId id="2147483648" r:id="rId1"/></p:sldMasterIdLst>'
+    + '<p:sldIdLst>' + ids + '</p:sldIdLst>'
+    + '<p:sldSz cx="' + cx + '" cy="' + cy + '"/>'
+    + '<p:notesSz cx="' + notesCx + '" cy="' + notesCy + '"/>'
+    + '</p:presentation>';
+}
+
+function presentationRels(count){
+  var s = XMLHDR + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    + '<Relationship Id="rId1" Type="' + RT + 'slideMaster" Target="slideMasters/slideMaster1.xml"/>';
+  for (var i = 1; i <= count; i++){
+    s += '<Relationship Id="rId' + (i + 1) + '" Type="' + RT + 'slide" Target="slides/slide' + i + '.xml"/>';
+  }
+  s += '<Relationship Id="rId' + (count + 2) + '" Type="' + RT + 'theme" Target="theme/theme1.xml"/>';
+  return s + '</Relationships>';
+}
+
+function emptySpTree(){
+  return '<p:spTree>'
+    + '<p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>'
+    + '<p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/>'
+    + '<a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>';
+}
+
+function slideMasterXml(){
+  return XMLHDR + '<p:sldMaster xmlns:a="' + NS_A + '" xmlns:r="' + NS_R + '" xmlns:p="' + NS_P + '">'
+    + '<p:cSld><p:bg><p:bgPr><a:solidFill><a:schemeClr val="bg1"/></a:solidFill><a:effectLst/></p:bgPr></p:bg>'
+    + emptySpTree() + '</p:spTree></p:cSld>'
+    + '<p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2"'
+    + ' accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6"'
+    + ' hlink="hlink" folHlink="folHlink"/>'
+    + '<p:sldLayoutIdLst><p:sldLayoutId id="2147483649" r:id="rId1"/></p:sldLayoutIdLst>'
+    + '<p:txStyles><p:titleStyle/><p:bodyStyle/><p:otherStyle/></p:txStyles>'
+    + '</p:sldMaster>';
+}
+
+function slideMasterRels(){
+  return XMLHDR + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    + '<Relationship Id="rId1" Type="' + RT + 'slideLayout" Target="../slideLayouts/slideLayout1.xml"/>'
+    + '<Relationship Id="rId2" Type="' + RT + 'theme" Target="../theme/theme1.xml"/>'
+    + '</Relationships>';
+}
+
+function slideLayoutXml(){
+  return XMLHDR + '<p:sldLayout xmlns:a="' + NS_A + '" xmlns:r="' + NS_R + '" xmlns:p="' + NS_P + '" type="blank" preserve="1">'
+    + '<p:cSld name="Blank">' + emptySpTree() + '</p:spTree></p:cSld>'
+    + '<p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>'
+    + '</p:sldLayout>';
+}
+
+function slideLayoutRels(){
+  return XMLHDR + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    + '<Relationship Id="rId1" Type="' + RT + 'slideMaster" Target="../slideMasters/slideMaster1.xml"/>'
+    + '</Relationships>';
+}
+
+function slideXml(pageNo, x, y, cx, cy, fade){
+  var trans = fade ? '<p:transition spd="med"><p:fade/></p:transition>' : '';
+  return XMLHDR + '<p:sld xmlns:a="' + NS_A + '" xmlns:r="' + NS_R + '" xmlns:p="' + NS_P + '">'
+    + '<p:cSld>' + emptySpTree()
+    + '<p:pic>'
+    + '<p:nvPicPr><p:cNvPr id="2" name="Page ' + pageNo + '"/>'
+    + '<p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr/></p:nvPicPr>'
+    + '<p:blipFill><a:blip r:embed="rId2"/><a:stretch><a:fillRect/></a:stretch></p:blipFill>'
+    + '<p:spPr><a:xfrm><a:off x="' + x + '" y="' + y + '"/><a:ext cx="' + cx + '" cy="' + cy + '"/></a:xfrm>'
+    + '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr>'
+    + '</p:pic>'
+    + '</p:spTree></p:cSld>'
+    + '<p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>'
+    + trans
+    + '</p:sld>';
+}
+
+function slideRels(i, ext){
+  return XMLHDR + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    + '<Relationship Id="rId1" Type="' + RT + 'slideLayout" Target="../slideLayouts/slideLayout1.xml"/>'
+    + '<Relationship Id="rId2" Type="' + RT + 'image" Target="../media/image' + i + '.' + ext + '"/>'
+    + '</Relationships>';
+}
+
+function themeXml(){
+  function dk(v){ return '<a:srgbClr val="' + v + '"/>'; }
+  var scheme = '<a:clrScheme name="Office">'
+    + '<a:dk1><a:sysClr val="windowText" lastClr="000000"/></a:dk1>'
+    + '<a:lt1><a:sysClr val="window" lastClr="FFFFFF"/></a:lt1>'
+    + '<a:dk2>' + dk('44546A') + '</a:dk2><a:lt2>' + dk('E7E6E6') + '</a:lt2>'
+    + '<a:accent1>' + dk('4472C4') + '</a:accent1><a:accent2>' + dk('ED7D31') + '</a:accent2>'
+    + '<a:accent3>' + dk('A5A5A5') + '</a:accent3><a:accent4>' + dk('FFC000') + '</a:accent4>'
+    + '<a:accent5>' + dk('5B9BD5') + '</a:accent5><a:accent6>' + dk('70AD47') + '</a:accent6>'
+    + '<a:hlink>' + dk('0563C1') + '</a:hlink><a:folHlink>' + dk('954F72') + '</a:folHlink>'
+    + '</a:clrScheme>';
+  var fonts = '<a:fontScheme name="Office">'
+    + '<a:majorFont><a:latin typeface="Calibri Light"/><a:ea typeface=""/><a:cs typeface=""/></a:majorFont>'
+    + '<a:minorFont><a:latin typeface="Calibri"/><a:ea typeface=""/><a:cs typeface=""/></a:minorFont>'
+    + '</a:fontScheme>';
+  var fill  = '<a:solidFill><a:schemeClr val="phClr"/></a:solidFill>';
+  var line  = '<a:ln w="6350" cap="flat" cmpd="sng" algn="ctr">'
+            + '<a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:prstDash val="solid"/></a:ln>';
+  var fmt = '<a:fmtScheme name="Office">'
+    + '<a:fillStyleLst>' + fill + fill + fill + '</a:fillStyleLst>'
+    + '<a:lnStyleLst>' + line + line + line + '</a:lnStyleLst>'
+    + '<a:effectStyleLst>'
+    + '<a:effectStyle><a:effectLst/></a:effectStyle>'
+    + '<a:effectStyle><a:effectLst/></a:effectStyle>'
+    + '<a:effectStyle><a:effectLst/></a:effectStyle>'
+    + '</a:effectStyleLst>'
+    + '<a:bgFillStyleLst>' + fill + fill + fill + '</a:bgFillStyleLst>'
+    + '</a:fmtScheme>';
+  return XMLHDR + '<a:theme xmlns:a="' + NS_A + '" name="Office Theme">'
+    + '<a:themeElements>' + scheme + fonts + fmt + '</a:themeElements>'
+    + '<a:objectDefaults/><a:extraClrSchemeLst/></a:theme>';
+}
+
+/* ---------- geometry ---------- */
+function modalPageSize(pages){
+  var buckets = {}, best = null, bestN = 0;
+  pages.forEach(function(p){
+    var k = Math.round(p.wPt * 10) + 'x' + Math.round(p.hPt * 10);
+    buckets[k] = buckets[k] || { wPt: p.wPt, hPt: p.hPt, n: 0 };
+    buckets[k].n++;
+  });
+  Object.keys(buckets).forEach(function(k){
+    if (buckets[k].n > bestN){ bestN = buckets[k].n; best = buckets[k]; }
+  });
+  return { wPt: best.wPt, hPt: best.hPt, uniform: Object.keys(buckets).length === 1, variants: Object.keys(buckets).length };
+}
+
+function computeFrame(){
+  var m = modalPageSize(S.pages);
+  var wPt = m.wPt, hPt = m.hPt;
+
+  if (S.fit !== 'source'){
+    /* keep the long edge, force the short one to 16:9 */
+    if (wPt >= hPt) hPt = wPt * 9 / 16;
+    else            wPt = hPt * 9 / 16;
+  }
+
+  /* PowerPoint clamps at 56in. Scale the slide down, pixels are unaffected. */
+  var over = Math.max(wPt * EMU_PER_PT / PPT_MAX_EMU, hPt * EMU_PER_PT / PPT_MAX_EMU);
+  var clamped = false;
+  if (over > 1){ wPt /= over; hPt /= over; clamped = true; }
+  var under = Math.min(wPt * EMU_PER_PT / PPT_MIN_EMU, hPt * EMU_PER_PT / PPT_MIN_EMU);
+  if (under < 1){ wPt /= under; hPt /= under; clamped = true; }
+
+  var aspect = wPt / hPt;
+  var pxW, pxH;
+  if (aspect >= 1){ pxW = S.longEdge; pxH = Math.max(1, Math.round(S.longEdge / aspect)); }
+  else            { pxH = S.longEdge; pxW = Math.max(1, Math.round(S.longEdge * aspect)); }
+  /* even dimensions keep encoders and LED processors happy */
+  if (pxW % 2) pxW++;
+  if (pxH % 2) pxH++;
+
+  return {
+    wPt: wPt, hPt: hPt, pxW: pxW, pxH: pxH,
+    uniform: m.uniform, variants: m.variants,
+    srcWPt: m.wPt, srcHPt: m.hPt, clamped: clamped
+  };
+}
+
+/* ---------- pdf.js ---------- */
+var pdfjsReady = null;
+function ensurePdfjs(){
+  if (pdfjsReady) return pdfjsReady;
+  pdfjsReady = loadScript(PDFJS_SRC).then(function(){
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WK;
+  });
+  return pdfjsReady;
+}
+
+/* pdf.js exposes its parsed Font objects on page.commonObjs once the page has
+   been touched. missingFile is set when the PDF never carried the font program,
+   which is exactly when the render silently substitutes something else. */
+function readFonts(page, into){
+  var objs = page.commonObjs && page.commonObjs._objs;
+  if (!objs) return;
+  Object.keys(objs).forEach(function(k){
+    var entry = objs[k];
+    var d = entry && (entry.data !== undefined ? entry.data : entry);
+    if (!d || typeof d !== 'object') return;
+    if (!d.loadedName && !d.name) return;
+    if (d.isType3Font === undefined && d.missingFile === undefined && !d.mimetype) return;
+    var name = String(d.name || d.loadedName).replace(/^[A-Z]{6}\+/, '');
+    if (into.seen[name]) return;
+    into.seen[name] = true;
+    into.list.push({
+      name: name,
+      type3: !!d.isType3Font,
+      missing: d.missingFile === true,
+      fallback: d.fallbackName || null
+    });
+  });
+}
+
+/* ---------- rendering ---------- */
+var workCanvas = document.createElement('canvas');
+var frameCanvas = document.createElement('canvas');
+
+async function renderPage(page, frame){
+  var base = page.getViewport({ scale: 1 });
+  var sx = frame.pxW / base.width, sy = frame.pxH / base.height;
+  var mode = S.fit === 'fill169' ? Math.max(sx, sy) : Math.min(sx, sy);
+  var exact = Math.abs(sx - sy) < 0.0005;
+
+  var scale = exact ? sx : mode;
+  var vp = page.getViewport({ scale: scale });
+  var rw = Math.max(1, Math.round(vp.width)), rh = Math.max(1, Math.round(vp.height));
+
+  workCanvas.width = rw; workCanvas.height = rh;
+  var wctx = workCanvas.getContext('2d', { alpha: false });
+  wctx.fillStyle = '#ffffff';
+  wctx.fillRect(0, 0, rw, rh);
+  await page.render({ canvasContext: wctx, viewport: vp }).promise;
+
+  if (rw === frame.pxW && rh === frame.pxH) return workCanvas;
+
+  frameCanvas.width = frame.pxW; frameCanvas.height = frame.pxH;
+  var fctx = frameCanvas.getContext('2d', { alpha: false });
+  fctx.fillStyle = S.pad;
+  fctx.fillRect(0, 0, frame.pxW, frame.pxH);
+  fctx.drawImage(workCanvas, Math.round((frame.pxW - rw) / 2), Math.round((frame.pxH - rh) / 2));
+  return frameCanvas;
+}
+
+function canvasBytes(canvas){
+  return new Promise(function(res, rej){
+    canvas.toBlob(function(b){
+      if (!b) return rej(new Error('Canvas export failed. The page may be too large for this browser.'));
+      b.arrayBuffer().then(function(ab){ res(new Uint8Array(ab)); }, rej);
+    }, S.fmt === 'jpg' ? 'image/jpeg' : 'image/png', S.fmt === 'jpg' ? 0.92 : undefined);
+  });
+}
+
+/* ---------- UI ---------- */
+function iconWarn(){ return '<svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>'; }
+function iconOk(){ return '<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>'; }
+
+function flag(kind, title, body, sub){
+  return '<div class="flag ' + kind + '">' + (kind === 'ok' ? iconOk() : iconWarn())
+    + '<div><b>' + esc(title) + '</b>' + body + (sub ? '<span class="sub">' + sub + '</span>' : '') + '</div></div>';
+}
+
+function optionsMarkup(){
+  return ''
+  + '<div class="opt-grid">'
+  +   '<div><label class="fld" for="res">Resolution (long edge)</label>'
+  +   '<select id="res">'
+  +     '<option value="1280">1280 px</option>'
+  +     '<option value="1920" selected>1920 px</option>'
+  +     '<option value="2560">2560 px</option>'
+  +     '<option value="3840">3840 px</option>'
+  +     '<option value="5120">5120 px</option>'
+  +   '</select></div>'
+  +   '<div><label class="fld" for="fit">Slide shape</label>'
+  +   '<select id="fit">'
+  +     '<option value="source" selected>Match the PDF</option>'
+  +     '<option value="fit169">Force 16:9, letterbox</option>'
+  +     '<option value="fill169">Force 16:9, crop</option>'
+  +   '</select></div>'
+  + '</div>'
+  + '<div class="opt-grid">'
+  +   '<div><label class="fld">Image format</label>'
+  +   '<div class="seg" id="seg-fmt">'
+  +     '<button type="button" data-v="png" class="active">PNG</button>'
+  +     '<button type="button" data-v="jpg">JPEG</button>'
+  +   '</div></div>'
+  +   '<div><label class="fld">Padding colour</label>'
+  +   '<div class="seg" id="seg-pad">'
+  +     '<button type="button" data-v="#ffffff" class="active">White</button>'
+  +     '<button type="button" data-v="#000000">Black</button>'
+  +   '</div></div>'
+  + '</div>'
+  + '<label class="check"><input type="checkbox" id="fade">'
+  +   '<span class="check-txt">Fade transition between slides'
+  +   '<em>Leave off if the deck is going into a playback system.</em></span></label>';
+}
+
+function renderPreflight(){
+  var f = S.frame;
+  var est = S.bytesPerPage * S.pages.length;
+  var missing = S.fonts.filter(function(x){ return x.missing; });
+  var type3   = S.fonts.filter(function(x){ return x.type3; });
+  var canStream = typeof window.showDirectoryPicker === 'function';
+
+  var flags = '';
+
+  if (missing.length){
+    var names = missing.slice(0, 6).map(function(x){ return esc(x.name); }).join(', ');
+    if (missing.length > 6) names += ', and ' + (missing.length - 6) + ' more';
+    flags += flag('bad', missing.length + ' font' + (missing.length > 1 ? 's are' : ' is') + ' not embedded',
+      'The PDF references ' + names + ' without carrying the font itself, so a substitute is drawn instead. '
+      + 'Expect line breaks and spacing to shift. Ask for a PDF exported with fonts embedded, or outline the text before export.');
+  }
+  if (type3.length){
+    flags += flag('warn', type3.length + ' Type 3 font' + (type3.length > 1 ? 's' : ''),
+      'Type 3 fonts are drawn as raw glyph procedures and often rasterise badly. Check those pages before you send the deck.');
+  }
+  if (!missing.length && !type3.length && S.fonts.length){
+    flags += flag('ok', 'Fonts all embedded',
+      S.fonts.length + ' font' + (S.fonts.length > 1 ? 's' : '') + ' found, every one carried inside the PDF. What you see is what the author saw.');
+  }
+  if (!f.uniform){
+    flags += flag('warn', 'Mixed page sizes',
+      'This PDF has ' + f.variants + ' different page sizes but a PowerPoint file only has one. '
+      + 'The most common size wins and the odd pages are centred inside it with padding.');
+  }
+  if (f.clamped){
+    flags += flag('warn', 'Slide size clamped',
+      'The PDF page is outside what PowerPoint allows, so the slide has been scaled to fit inside 56 inches. '
+      + 'The aspect ratio and the image resolution are unchanged.');
+  }
+  if (est > SOFT_LIMIT && !canStream){
+    flags += flag('bad', 'Output is too big for this browser',
+      'Around ' + fmtBytes(est) + ' has to be assembled in this tab, which may not survive it.',
+      'Chrome and Edge can write straight into a folder instead. Otherwise switch to JPEG or drop the resolution.');
+  } else if (est > SOFT_LIMIT){
+    flags += flag('warn', 'Large output',
+      'Around ' + fmtBytes(est) + '. Each page is written into the folder as it is rendered, so memory is fine, but leave it time.');
+  }
+
+  stage.innerHTML =
+    '<div class="panel-in">'
+  +   '<div class="kv">'
+  +     '<div class="erow"><span>File</span><span>' + esc(S.file.name) + '</span></div>'
+  +     '<div class="erow"><span>Pages</span><span>' + S.pages.length + '</span></div>'
+  +     '<div class="erow"><span>PDF page</span><span>' + ptToCm(f.srcWPt).toFixed(2) + ' x ' + ptToCm(f.srcHPt).toFixed(2) + ' cm &middot; ' + aspectLabel(f.srcWPt, f.srcHPt) + '</span></div>'
+  +     '<div class="erow"><span>Slide size</span><span>' + ptToCm(f.wPt).toFixed(2) + ' x ' + ptToCm(f.hPt).toFixed(2) + ' cm &middot; ' + aspectLabel(f.wPt, f.hPt) + '</span></div>'
+  +     '<div class="erow"><span>Image size</span><span>' + f.pxW + ' x ' + f.pxH + ' px</span></div>'
+  +     '<div class="erow"><span>Estimated</span><span>' + fmtBytes(est) + ' total</span></div>'
+  +   '</div>'
+  +   (S.thumbs ? '<div class="hairline"></div><div class="thumbs">' + S.thumbs + '</div>' : '')
+  + '</div>'
+  + '<div class="panel-in">' + optionsMarkup() + '</div>'
+  + (flags ? '<div class="panel-in" id="flags">' + flags + '</div>' : '')
+  + '<div style="margin-top:2px">'
+  +   '<button class="emf-btn primary" id="go" style="width:100%">Create PNGs and deck</button>'
+  +   '<div class="emf-dz-small" style="text-align:center;margin-top:9px">'
+  +     (canStream ? 'Writes a folder to disk, one page at a time' : 'Assembled in the browser, then downloaded as a zip')
+  +   '</div>'
+  + '</div>';
+
+  wireOptions();
+  $('go').addEventListener('click', build);
+}
+
+function wireOptions(){
+  $('res').value = String(S.longEdge);
+  $('fit').value = S.fit;
+  $('fade').checked = S.fade;
+
+  $('res').addEventListener('change', function(){ S.longEdge = parseInt(this.value, 10); refresh(); });
+  $('fit').addEventListener('change', function(){ S.fit = this.value; refresh(); });
+  $('fade').addEventListener('change', function(){ S.fade = this.checked; });
+
+  [['seg-fmt','fmt'], ['seg-pad','pad']].forEach(function(pair){
+    var el = $(pair[0]);
+    el.addEventListener('click', function(e){
+      var b = e.target.closest('button'); if (!b) return;
+      Array.prototype.forEach.call(el.children, function(c){ c.classList.remove('active'); });
+      b.classList.add('active');
+      S[pair[1]] = b.dataset.v;
+      if (pair[1] === 'fmt') refresh();
+    });
+  });
+}
+
+/* recompute frame and re-measure page 1 so the size estimate stays honest */
+async function refresh(){
+  if (S.busy) return;
+  S.busy = true;
+  S.frame = computeFrame();
+  try {
+    var page = await S.pdf.getPage(1);
+    var canvas = await renderPage(page, S.frame);
+    var bytes = await canvasBytes(canvas);
+    S.bytesPerPage = bytes.length;
+    page.cleanup();
+  } catch (e) { /* keep the previous estimate */ }
+  S.busy = false;
+  renderPreflight();
+}
+
+/* ---------- preflight ---------- */
+async function analyse(file){
+  S.file = file;
+  S.name = file.name.replace(/\.pdf$/i, '').replace(/[\\/:*?"<>|]+/g, '_') || 'slides';
+
+  stage.innerHTML = '<div class="panel-in"><div class="bar-label"><span><span class="spinner"></span>Reading PDF</span><b id="pfn">0%</b></div>'
+    + '<div class="bar-outer"><div class="bar-inner" id="pfb"></div></div></div>';
+
+  await ensurePdfjs();
+  var buf = await file.arrayBuffer();
+  var task = window.pdfjsLib.getDocument({
+    data: buf,
+    cMapUrl: CMAPS, cMapPacked: true,
+    standardFontDataUrl: STDFONTS
+  });
+  S.pdf = await task.promise;
+
+  var n = S.pdf.numPages, i, page, vp;
+  S.pages = []; S.fonts = [];
+  var acc = { seen: {}, list: [] };
+  var thumbs = [];
+
+  for (i = 1; i <= n; i++){
+    page = await S.pdf.getPage(i);
+    vp = page.getViewport({ scale: 1 });
+    S.pages.push({ n: i, wPt: vp.width, hPt: vp.height });
+    /* getOperatorList populates commonObjs, which is where the font records live */
+    try { await page.getOperatorList(); readFonts(page, acc); } catch (e) {}
+    if (i <= 4){
+      var t = document.createElement('canvas');
+      var s = 124 / Math.max(vp.width, vp.height);
+      var tv = page.getViewport({ scale: s });
+      t.width = Math.round(tv.width); t.height = Math.round(tv.height);
+      var tc = t.getContext('2d'); tc.fillStyle = '#fff'; tc.fillRect(0, 0, t.width, t.height);
+      await page.render({ canvasContext: tc, viewport: tv }).promise;
+      thumbs.push('<img alt="Page ' + i + '" src="' + t.toDataURL('image/jpeg', 0.7) + '">');
+    }
+    page.cleanup();
+    var pct = Math.round(i / n * 100);
+    if ($('pfb')) { $('pfb').style.width = pct + '%'; $('pfn').textContent = pct + '%'; }
+    if (i % 5 === 0) await nextFrame();
+  }
+
+  S.fonts = acc.list;
+  S.thumbs = thumbs.join('');
+  await refresh();
+}
+
+/* ---------- build ----------
+   Two output shapes. Where the File System Access API exists we make a real
+   folder on disk holding the deck and a png subfolder, and every page is
+   written out as it is rendered, so memory stays flat. Everywhere else we fall
+   back to a single zip assembled through Blobs. */
+async function build(){
+  var go = $('go');
+  var count = S.pages.length;
+  var ext = S.fmt === 'jpg' ? 'jpg' : 'png';
+  var f = S.frame;
+  var cx = Math.round(f.wPt * EMU_PER_PT);
+  var cy = Math.round(f.hPt * EMU_PER_PT);
+
+  var toDisk = typeof window.showDirectoryPicker === 'function';
+  var pngDir = null, pptHandle = null, root = null;
+
+  if (toDisk){
+    try {
+      var chosen = await window.showDirectoryPicker({ mode: 'readwrite' });
+      root      = await chosen.getDirectoryHandle(S.name, { create: true });
+      pngDir    = await root.getDirectoryHandle('png', { create: true });
+      pptHandle = await root.getFileHandle(S.name + '.pptx', { create: true });
+    } catch (e){
+      if (e && e.name === 'AbortError') return;
+      toDisk = false;   /* permission refused, fall back to the zip */
+    }
+  }
+
+  go.disabled = true;
+  var locks = ['res','fit','fade'].map($).filter(Boolean)
+    .concat(Array.prototype.slice.call(document.querySelectorAll('.seg button')));
+  locks.forEach(function(el){ el.disabled = true; });
+  var status = document.createElement('div');
+  status.className = 'panel-in';
+  status.style.marginTop = '12px';
+  status.innerHTML =
+      '<div class="bar-label"><span><span class="spinner"></span><span id="bs">Starting</span></span>'
+    + '<b id="bn">0 / ' + count + '</b></div>'
+    + '<div class="bar-outer"><div class="bar-inner" id="bb"></div></div>'
+    + '<div class="emf-dz-small" id="bw">' + (toDisk ? 'Writing to the folder you picked' : 'Assembling a zip') + '</div>';
+  go.parentNode.appendChild(status);
+
+  var pngBlobs = [];     /* only used on the fallback path */
+  var written = 0;
+
+  function tick(i, label){
+    var pct = Math.round(i / count * 100);
+    $('bb').style.width = pct + '%';
+    $('bn').textContent = i + ' / ' + count;
+    $('bs').textContent = label;
+    $('bw').textContent = (toDisk ? 'Written: ' : 'Held: ') + fmtBytes(written);
+  }
+
+  try {
+    var sink = toDisk ? fsSink(pptHandle) : blobSink();
+    await sink.init();
+    var zip = new ZipWriter(sink);
+
+    /* everything that does not depend on a rendered page goes out first, which
+       keeps the package in the order a streaming reader expects */
+    await zip.add('[Content_Types].xml', contentTypes(count, ext));
+    await zip.add('_rels/.rels', rootRels());
+    await zip.add('docProps/core.xml', coreProps(S.name));
+    await zip.add('docProps/app.xml', appProps(count));
+    await zip.add('ppt/presentation.xml', presentationXml(count, cx, cy));
+    await zip.add('ppt/_rels/presentation.xml.rels', presentationRels(count));
+    await zip.add('ppt/theme/theme1.xml', themeXml());
+    await zip.add('ppt/slideMasters/slideMaster1.xml', slideMasterXml());
+    await zip.add('ppt/slideMasters/_rels/slideMaster1.xml.rels', slideMasterRels());
+    await zip.add('ppt/slideLayouts/slideLayout1.xml', slideLayoutXml());
+    await zip.add('ppt/slideLayouts/_rels/slideLayout1.xml.rels', slideLayoutRels());
+
+    for (var i = 1; i <= count; i++){
+      $('bs').textContent = 'Rendering page ' + i;
+      var page = await S.pdf.getPage(i);
+      var canvas = await renderPage(page, f);
+      var bytes = await canvasBytes(canvas);
+      page.cleanup();
+
+      await zip.add('ppt/media/image' + i + '.' + ext, bytes);
+      await zip.add('ppt/slides/slide' + i + '.xml', slideXml(i, 0, 0, cx, cy, S.fade));
+      await zip.add('ppt/slides/_rels/slide' + i + '.xml.rels', slideRels(i, ext));
+
+      /* the same bytes again as a loose file next to the deck */
+      var loose = pad4(i) + '.' + ext;
+      if (toDisk){
+        var fh = await pngDir.getFileHandle(loose, { create: true });
+        var ws = await fh.createWritable();
+        await ws.write(bytes);
+        await ws.close();
+      } else {
+        pngBlobs.push(new Blob([bytes]));
+      }
+
+      written += bytes.length * 2;
+      bytes = null;
+      tick(i, 'Rendering page ' + i);
+      await nextFrame();
+    }
+
+    $('bs').textContent = 'Writing the deck';
+    await zip.finish();
+
+    if (!toDisk){
+      /* wrap the deck and the loose images into one archive, reading each blob
+         back a chunk at a time so the heap never holds a whole page */
+      var pptxBlob = sink.result();
+      var outSink = blobSink();
+      await outSink.init();
+      var outer = new ZipWriter(outSink);
+      await outer.addBlob(S.name + '/' + S.name + '.pptx', pptxBlob);
+      pptxBlob = null;
+      for (var j = 0; j < pngBlobs.length; j++){
+        $('bs').textContent = 'Packing image ' + (j + 1);
+        await outer.addBlob(S.name + '/png/' + pad4(j + 1) + '.' + ext, pngBlobs[j]);
+        pngBlobs[j] = null;
+        if (j % 4 === 0) await nextFrame();
+      }
+      await outer.finish();
+      downloadBlob(outSink.result(), S.name + '.zip');
+    }
+
+    status.innerHTML = flag('ok', 'Done',
+      count + ' page' + (count > 1 ? 's' : '') + ' at ' + f.pxW + ' x ' + f.pxH + ' px.',
+      toDisk
+        ? 'In the folder you picked: <code>' + esc(S.name) + '/' + esc(S.name) + '.pptx</code> and <code>'
+          + esc(S.name) + '/png/</code> with the numbered ' + ext.toUpperCase() + ' files.'
+        : 'Downloaded <code>' + esc(S.name) + '.zip</code> containing the deck and a <code>png/</code> folder.');
+  } catch (err) {
+    status.innerHTML = flag('bad', 'Could not finish',
+      esc(err && err.message ? err.message : String(err)),
+      'Try a lower resolution or JPEG, then run it again.');
+  } finally {
+    pngBlobs.length = 0;
+    locks.forEach(function(el){ el.disabled = false; });
+    go.disabled = false;
+  }
+}
+
+/* ---------- wiring ---------- */
+var drop = $('drop'), fileInput = $('file');
+
+function handleFile(f){
+  if (!f) return;
+  if (!/\.pdf$/i.test(f.name) && f.type !== 'application/pdf'){
+    stage.innerHTML = '<div class="panel-in">' + flag('bad', 'Not a PDF', 'This tool takes PDF files. Drop one of those instead.') + '</div>';
+    return;
+  }
+  analyse(f).catch(function(e){
+    stage.innerHTML = '<div class="panel-in">' + flag('bad', 'Could not read the PDF',
+      esc(e && e.message ? e.message : String(e)),
+      'If the file is password protected, remove the password first.') + '</div>';
+  });
+}
+
+fileInput.addEventListener('change', function(){ handleFile(this.files[0]); this.value = ''; });
+['dragenter','dragover'].forEach(function(ev){
+  drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.add('drag'); });
+});
+['dragleave','drop'].forEach(function(ev){
+  drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.remove('drag'); });
+});
+drop.addEventListener('drop', function(e){
+  if (e.dataTransfer && e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+
+})();
+</script>
+</body>
+</html>
