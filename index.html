@@ -1375,6 +1375,23 @@ document.head.appendChild(sc);
 return emfJszipReady;
 }
 
+/* Media Inspector engine: separate file, injected on demand like JSZip.
+   91 KB, so it must not sit in this page. Only fetched when a dropped deck
+   actually contains embedded video. */
+var RP_MI_SRC = 'media-inspect.js';
+var rpMiReady = null;
+function rpLoadMI() {
+if (rpMiReady) return rpMiReady;
+rpMiReady = new Promise(function(res, rej) {
+var sc = document.createElement('script');
+sc.src = RP_MI_SRC;
+sc.onload = function() { window.MI ? res(window.MI) : rej(new Error('Media Inspector not available')); };
+sc.onerror = function() { rej(new Error('Media Inspector failed to load')); };
+document.head.appendChild(sc);
+});
+return rpMiReady;
+}
+
 function emfFmtBytes(n) {
 if (n < 1024) return n + ' B';
 if (n < 1048576) return (n / 1024).toFixed(1) + ' KB';
@@ -2055,7 +2072,9 @@ emfLoadJSZip().then(function(JSZip) {
 return file.arrayBuffer().then(function(ab) { return JSZip.loadAsync(ab); });
 }).then(function(zip) {
 return rpAnalyse(zip, file).then(function(report) {
+return rpInspectVideos(zip, report, results).then(function() {
 rpRender(report, file);
+});
 });
 }).catch(function(e) {
 results.innerHTML = '<div class="report-note" style="padding:8px 0;color:var(--red)">Could not analyse this deck. ' + (e && e.message ? '(' + e.message + ')' : '') + '</div>';
@@ -2261,13 +2280,21 @@ var relProm = zip.file(relPath)
 var rdoc = rpXml(rxml);
 var rels = rpEls(rdoc, 'Relationship');
 var hasVideo = false, hasAudio = false, linked = false;
+slide.videoRefs = [];
 rels.forEach(function(rel) {
 var type = rpAttr(rel, 'Type') || '';
 var mode = rpAttr(rel, 'TargetMode') || '';
 var target = rpAttr(rel, 'Target') || '';
 if (/video/i.test(type) || /\.(mp4|mov|avi|wmv|m4v|mkv)$/i.test(target)) {
 hasVideo = true;
-if (/external/i.test(mode)) linked = true;
+var ext = /external/i.test(mode);
+if (ext) linked = true;
+/* keep the resolved package path so the media can be inspected later */
+slide.videoRefs.push({
+target: target,
+linked: ext,
+path: ext ? null : ('ppt/slides/' + target).replace(/[^\/]+\/\.\.\//g, '')
+});
 }
 if (/audio/i.test(type) || /\.(mp3|wav|m4a|wma|aac)$/i.test(target)) {
 hasAudio = true;
@@ -2385,6 +2412,7 @@ L.push('Embedded media: ' + (R.mediaCount - R.linkedMediaCount));
 L.push('Linked media: ' + R.linkedMediaCount);
 if (st.linkedSlides.length) L.push('⚠ Linked video on slide ' + st.linkedSlides.join(', ') + ' — not embedded, will fail if missing');
 L.push('');
+rpInspectionLines(R).forEach(function(x) { L.push(x); });
 L.push('PLAYBACK');
 L.push('Transitions: ' + st.trans.length);
 L.push('Animations: ' + st.anims.length);
@@ -2424,6 +2452,124 @@ L.push('External links: ' + R.externalLinks);
 return L.join('\n');
 }
 
+/* ------------------------------------------------------------
+   Video inspection. Runs after rpAnalyse, only when the deck
+   actually has embedded video, and never blocks the report:
+   if the engine will not load, the rest still renders.
+   ------------------------------------------------------------ */
+var RP_MI_TARGET = 'powerpoint-win';
+var RP_MI_FPS = null;          /* set to 25/30/50/60 to also check rate mismatch */
+
+function rpInspectVideos(zip, R, statusEl) {
+R.inspection = null;
+var jobs = [];
+R.slides.forEach(function(s) {
+(s.videoRefs || []).forEach(function(ref) { jobs.push({ slide: s.no, ref: ref }); });
+});
+if (!jobs.length) return Promise.resolve();
+var embedded = jobs.filter(function(j) { return j.ref.path && zip.file(j.ref.path); });
+
+if (statusEl && embedded.length) statusEl.innerHTML = '<div class="report-note" style="padding:8px 0"><span class="report-spinner"></span>Inspecting ' + embedded.length + ' video' + (embedded.length > 1 ? 's' : '') + '&hellip;</div>';
+
+return rpLoadMI().then(function(MI) {
+var cache = {};
+var seq = Promise.resolve();
+var rows = [];
+
+jobs.forEach(function(j) {
+seq = seq.then(function() {
+if (j.ref.linked || !j.ref.path || !zip.file(j.ref.path)) {
+var risk0 = MI.assess({ ok: true, name: j.ref.target, video: [], audio: [], warnings: [] },
+{ target: RP_MI_TARGET, linked: true });
+rows.push({ slide: j.slide, file: j.ref.target, linked: true, spec: null,
+verdict: risk0.verdict, summary: risk0.summary, findings: risk0.findings });
+return;
+}
+var p = j.ref.path;
+var pending = cache[p] || (cache[p] = zip.file(p).async('uint8array').then(function(bytes) {
+return MI.inspectBytes(bytes, p.split('/').pop()).then(function(info) {
+info.__bytes = bytes.length; return info;
+});
+}).catch(function(e) {
+return { ok: false, name: p.split('/').pop(), error: e.message, video: [], audio: [], warnings: [] };
+}));
+return pending.then(function(info) {
+var risk = MI.assess(info, { target: RP_MI_TARGET, projectFrameRate: RP_MI_FPS || undefined });
+var v = info.video && info.video[0];
+rows.push({
+slide: j.slide, file: info.name, linked: false, bytes: info.__bytes,
+spec: v ? rpMiSpec(MI, info, v) : (info.error || 'not inspectable'),
+verdict: risk.verdict, summary: risk.summary, findings: risk.findings
+});
+});
+});
+});
+
+return seq.then(function() {
+rows.sort(function(a, b) { return (a.slide || 0) - (b.slide || 0); });
+var reds = rows.filter(function(r) { return r.verdict === 'red'; }).length;
+var ambers = rows.filter(function(r) { return r.verdict === 'amber'; }).length;
+R.inspection = {
+rows: rows, target: MI.TARGETS[RP_MI_TARGET].label,
+verdict: reds ? 'red' : ambers ? 'amber' : 'green',
+counts: { red: reds, amber: ambers, green: rows.length - reds - ambers }
+};
+rows.forEach(function(r) {
+for (var i = 0; i < R.slides.length; i++) {
+if (R.slides[i].no === r.slide) {
+if (R.slides[i].videoVerdict !== 'red') R.slides[i].videoVerdict = r.verdict;
+break;
+}
+}
+});
+});
+}).catch(function(e) {
+R.inspectionError = e && e.message ? e.message : 'engine unavailable';
+});
+}
+
+/* One-line technical spec for a video track. */
+function rpMiSpec(MI, info, v) {
+var bits = [];
+bits.push(v.codec.name.replace(' / AVC', '').replace(' / H.265', ''));
+if (v.profile) bits.push(v.profile + (v.level ? ' L' + v.level : ''));
+bits.push(v.cropped ? v.cropped.width + 'x' + v.cropped.height : v.coded.width + 'x' + v.coded.height);
+if (v.bitDepth) bits.push(v.bitDepth + '-bit' + (v.chroma ? ' ' + v.chroma : ''));
+bits.push(MI.fmtFps(v.frameRate.nominalFps || v.frameRate.fps) + (v.frameRate.mode !== 'CFR' ? ' ' + v.frameRate.mode : ''));
+if (v.interlaced && v.interlaced.flag) bits.push('interlaced');
+bits.push(MI.fmtBitrate(v.bitrate));
+bits.push(MI.fmtDuration(info.duration));
+return bits.join(' \u00b7 ');
+}
+
+/* Report lines for the inspection block. */
+function rpInspectionLines(R) {
+var L = [];
+if (R.inspectionError) {
+L.push('MEDIA INSPECTION');
+L.push('Not run: ' + R.inspectionError);
+L.push('');
+return L;
+}
+if (!R.inspection || !R.inspection.rows.length) return L;
+var I = R.inspection;
+L.push('MEDIA INSPECTION  (target: ' + I.target + ')');
+L.push('Clips inspected: ' + I.rows.length + '   OK: ' + I.counts.green + '   Warn: ' + I.counts.amber + '   Fail: ' + I.counts.red);
+L.push('');
+I.rows.forEach(function(r) {
+var tag = r.verdict === 'red' ? 'FAIL' : r.verdict === 'amber' ? 'WARN' : 'OK';
+L.push('Slide ' + r.slide + '  [' + tag + ']  ' + r.file);
+if (r.spec) L.push('    ' + r.spec);
+r.findings.filter(function(f) { return f.severity !== 'info'; }).forEach(function(f) {
+L.push('    ' + (f.severity === 'red' ? 'x' : '!') + ' ' + f.title);
+if (f.detail) L.push('        ' + f.detail);
+if (f.fix) L.push('        fix: ' + f.fix);
+});
+L.push('');
+});
+return L;
+}
+
 /* Full downloadable .txt — lean summary + the detailed per-slide table. */
 function rpBuildText(R) {
 var st = rpStats(R);
@@ -2436,6 +2582,8 @@ R.slides.forEach(function(s) {
 var vstr = '-';
 if (s.video) {
 vstr = (s.video.mode==='fullscreen' ? 'FS' : 'PIP') + (s.video.mute ? '/mute' : '') + (s.video.linked ? '⚠link' : '');
+if (s.videoVerdict === 'red') vstr += ' FAIL';
+else if (s.videoVerdict === 'amber') vstr += ' WARN';
 }
 var nstr = s.notesWords ? (s.notesWords >= 150 ? 'LONG(' + s.notesWords + 'w)' : s.notesWords + 'w') : '-';
 var tstr = s.transition ? s.transition.type : '-';
@@ -2448,7 +2596,9 @@ return L.join('\n');
 }
 
 function rpBuildCsv(R) {
-var rows = [['slide','hidden','video_present','video_mode','video_muted','video_linked','audio_present','clicks','animation_objects','transition','transition_ms','notes_words']];
+var miBy = {};
+if (R.inspection) R.inspection.rows.forEach(function(r) { if (!miBy[r.slide]) miBy[r.slide] = r; });
+var rows = [['slide','hidden','video_present','video_mode','video_muted','video_linked','video_verdict','video_spec','video_issues','audio_present','clicks','animation_objects','transition','transition_ms','notes_words']];
 R.slides.forEach(function(s) {
 rows.push([
 s.no,
@@ -2457,6 +2607,9 @@ s.video ? 'yes' : 'no',
 s.video ? (s.video.mode==='fullscreen' ? 'FS' : 'PIP') : '',
 s.video ? (s.video.mute ? 'yes' : 'no') : '',
 s.video ? (s.video.linked ? 'yes' : 'no') : '',
+miBy[s.no] ? miBy[s.no].verdict : '',
+miBy[s.no] && miBy[s.no].spec ? miBy[s.no].spec : '',
+miBy[s.no] ? miBy[s.no].findings.filter(function(f){return f.severity!=='info';}).map(function(f){return f.title;}).join('; ') : '',
 s.audio ? 'yes' : 'no',
 s.clicks,
 s.animObjects,
