@@ -875,6 +875,111 @@ border-top-color: var(--rp); border-radius: 50%;
 animation: emfspin 0.7s linear infinite; display: inline-block; vertical-align: -2px; margin-right: 5px;
 }
 
+/* ===== VT Inspector (violet accent) =====
+   Reuses .report-summary / .report-btn / .report-note by redefining --rp
+   locally, so there is one set of report styles rather than two. */
+.vt-tool { --rp: #9B7BD4; --rp2: #b295e0; --rp-dim: rgba(155,123,212,0.12); }
+.vt-tool { border-top-color: var(--rp) !important; }
+.vt-tool .emf-tool-title .emf-chip { color: var(--rp); border-color: var(--rp); }
+.vt-tool .emf-drop:hover { border-color: var(--rp); }
+.vt-tool .emf-drop.drag { border-color: var(--rp); background: var(--rp-dim); }
+.vt-tool .emf-drop svg.emf-dz-icon { stroke: var(--rp); }
+.vt-tool .emf-privacy { color: var(--rp); }
+.vt-tool .emf-privacy svg { stroke: var(--rp); }
+
+.vt-controls { display: flex; flex-wrap: wrap; gap: 10px; margin: 2px 0 10px; }
+.vt-field { display: flex; flex-direction: column; gap: 4px; flex: 1 1 150px; }
+.vt-field label {
+font-family: var(--sans); font-size: 10px; font-weight: 600; letter-spacing: 1px;
+text-transform: uppercase; color: var(--muted);
+}
+.vt-field select {
+background: var(--bg); color: var(--text);
+border: 1px solid var(--border2); border-radius: 2px;
+font-family: var(--mono); font-size: 12px; padding: 9px 10px; width: 100%;
+appearance: none; cursor: pointer;
+}
+.vt-field select:focus { outline: none; border-color: var(--rp); }
+
+.vt-verdict {
+display: inline-block; font-family: var(--sans); font-size: 10px; font-weight: 700;
+letter-spacing: 1px; text-transform: uppercase; padding: 3px 8px; border-radius: 2px;
+border: 1px solid currentColor; margin-right: 8px; vertical-align: 1px;
+}
+.vt-v-green { color: var(--green); }
+.vt-v-amber { color: #E0A020; }
+.vt-v-red   { color: var(--red); }
+
+.vt-file { margin-top: 10px; }
+.vt-file-head {
+font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--text);
+margin-bottom: 6px; word-break: break-all;
+}
+.vt-spec {
+font-family: var(--mono); font-size: 11px; color: var(--muted);
+margin-bottom: 8px; line-height: 1.6; word-break: break-word;
+}
+.vt-grid {
+display: grid; grid-template-columns: auto 1fr; gap: 3px 14px;
+margin-bottom: 11px; font-family: var(--mono); font-size: 11.5px; line-height: 1.55;
+}
+.vt-grid dt {
+color: var(--muted); white-space: nowrap;
+font-family: var(--sans); font-size: 10px; font-weight: 600;
+letter-spacing: 0.6px; text-transform: uppercase; padding-top: 2px;
+}
+.vt-grid dd { margin: 0; color: var(--label); word-break: break-word; }
+.vt-grid dd .vt-q { color: var(--muted); }
+.vt-grid dd .vt-q::before {
+content: '\00b7'; color: var(--border2); margin: 0 6px 0 7px;
+}
+.vt-grid dd.flag-amber .vt-pri { color: #E0A020; }
+.vt-grid dd.flag-red .vt-pri { color: var(--red); }
+.vt-more {
+font-family: var(--sans); font-size: 10px; font-weight: 600; letter-spacing: 1px;
+text-transform: uppercase; color: var(--rp); background: none; border: 0;
+padding: 0 0 9px; cursor: pointer;
+}
+.vt-more:hover { text-decoration: underline; }
+.vt-find { border-left: 2px solid var(--border2); padding: 6px 0 6px 11px; margin-bottom: 7px; }
+.vt-find.sev-red   { border-left-color: var(--red); }
+.vt-find.sev-amber { border-left-color: #E0A020; }
+.vt-find-title { font-family: var(--sans); font-size: 12px; font-weight: 600; color: var(--label); }
+.vt-find-detail { font-family: var(--sans); font-size: 11px; line-height: 1.55; color: var(--muted); margin-top: 3px; }
+.vt-fix {
+font-family: var(--mono); font-size: 10.5px; color: var(--label);
+background: var(--bg); border: 1px solid var(--border); border-radius: 2px;
+padding: 7px 9px; margin-top: 6px; white-space: pre-wrap; word-break: break-all; cursor: pointer;
+}
+.vt-fix:hover { border-color: var(--rp); }
+.vt-note {
+font-family: var(--sans); font-size: 11px; line-height: 1.5; color: var(--muted);
+margin-top: 6px; padding-left: 13px; position: relative;
+}
+.vt-note::before { content: '\2192'; position: absolute; left: 0; color: var(--rp); }
+.vt-act {
+display: inline-flex; align-items: center; gap: 7px;
+font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: 0.6px;
+color: var(--bg); background: var(--rp); border: 0; border-radius: 2px;
+padding: 8px 13px; margin-top: 9px; cursor: pointer;
+}
+.vt-act:hover { background: var(--rp2); }
+.vt-act:disabled { opacity: 0.5; cursor: default; }
+.vt-act svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; }
+.vt-act-sub {
+font-family: var(--sans); font-size: 10.5px; color: var(--muted);
+margin-top: 5px; line-height: 1.5;
+}
+.vt-note code {
+font-family: var(--mono); font-size: 10.5px; color: var(--label);
+background: var(--bg); border: 1px solid var(--border); border-radius: 2px;
+padding: 1px 4px; white-space: nowrap;
+}
+.vt-fix::before {
+content: 'click to copy'; display: block; font-family: var(--sans); font-size: 9px;
+letter-spacing: 1px; text-transform: uppercase; color: var(--rp); margin-bottom: 4px;
+}
+
 .emf-tool.tool-link {
 text-decoration: none;
 transition: border-color 0.15s, background 0.15s;
@@ -1062,9 +1167,11 @@ before it starts. Opens in its own page so this one stays quick to load.
 <div class="emf-tool report-tool">
 <div class="emf-tool-title">PPT Report <span class="emf-chip">PPTX &rarr; Pre-flight</span></div>
 <p class="emf-intro">
-A pre-flight summary for graphics ops &mdash; slide count, hidden slides, videos (full-screen vs framed,
-muted vs audio), audio, embedded fonts, transitions, animation click-counts, speaker notes and more.
-Drop a <strong>.pptx</strong> to generate a report you can send to the breakout room.
+A pre-flight summary for graphics ops &mdash; slide count, hidden slides, audio, embedded fonts,
+transitions, animation click-counts, speaker notes and more. Every embedded video is inspected
+down to the bitstream: codec, profile and level, resolution, pixel aspect, frame rate, interlacing
+and colour, then flagged for anything that will stutter, stretch or fail to play on a Windows
+show machine. Drop a <strong>.pptx</strong> to generate a report you can send to the breakout room.
 </p>
 <label class="emf-drop" id="report-drop" for="report-file">
 <svg class="emf-dz-icon" viewBox="0 0 24 24"><path d="M14 3v4a1 1 0 001 1h4M5 3h9l5 5v11a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/><path d="M9 13h6M9 17h6"/></svg>
@@ -1077,6 +1184,52 @@ Processed in your browser &middot; nothing uploaded
 </div>
 </label>
 <div id="report-results"></div>
+</div>
+
+<div class="emf-tool vt-tool">
+<div class="emf-tool-title">VT Inspector <span class="emf-chip">Video &rarr; Playback check</span></div>
+<p class="emf-intro">
+Drop a <strong>.mp4</strong> or <strong>.mov</strong> to read what is actually inside it &mdash; codec,
+profile and level, resolution, pixel aspect, frame rate, interlacing, colour and keyframe spacing &mdash;
+then get told what will stutter, stretch or refuse to play, and the ffmpeg line that fixes it.
+Same engine the PPT Report uses on embedded video. Drop several at once to check a whole VT folder.
+</p>
+<div class="vt-controls">
+<div class="vt-field">
+<label for="vt-target">Playback target</label>
+<select id="vt-target">
+<option value="powerpoint-win" selected>PowerPoint on Windows</option>
+<option value="powerpoint-mac">PowerPoint on macOS</option>
+<option value="media-server">Media server</option>
+<option value="web">Browser / web</option>
+</select>
+</div>
+<div class="vt-field">
+<label for="vt-fps">Project frame rate</label>
+<select id="vt-fps">
+<option value="" selected>Any</option>
+<option value="23.976">23.98</option>
+<option value="24">24</option>
+<option value="25">25</option>
+<option value="29.97">29.97</option>
+<option value="30">30</option>
+<option value="50">50</option>
+<option value="59.94">59.94</option>
+<option value="60">60</option>
+</select>
+</div>
+</div>
+<label class="emf-drop" id="vt-drop" for="vt-file">
+<svg class="emf-dz-icon" viewBox="0 0 24 24"><path d="M3 6a2 2 0 012-2h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V6z"/><path d="M10 9l5 3-5 3V9z"/></svg>
+<div class="emf-dz-big">Drop video</div>
+<div class="emf-dz-small">or tap to browse &middot; multiple files OK</div>
+<input type="file" id="vt-file" accept="video/*,.mp4,.mov,.m4v" multiple>
+<div class="emf-privacy">
+<svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+Read in your browser &middot; nothing uploaded
+</div>
+</label>
+<div id="vt-results"></div>
 </div>
 
 <div class="emf-tool media-tool">
@@ -1247,8 +1400,9 @@ try { document.execCommand('copy'); } catch(e) {}
 document.body.removeChild(ta);
 showToast();
 }
-function showToast() {
+function showToast(msg) {
 var toast = document.getElementById('share-toast');
+toast.textContent = (typeof msg === 'string' && msg) ? msg : 'Link copied to clipboard';
 toast.classList.add('visible');
 if (toastTimer) clearTimeout(toastTimer);
 toastTimer = setTimeout(function() { toast.classList.remove('visible'); }, 3000);
@@ -2496,10 +2650,14 @@ return { ok: false, name: p.split('/').pop(), error: e.message, video: [], audio
 return pending.then(function(info) {
 var risk = MI.assess(info, { target: RP_MI_TARGET, projectFrameRate: RP_MI_FPS || undefined });
 var v = info.video && info.video[0];
+var fixCmd = null;
+var fixNotes = [];
+try { var fx = MI.buildFixCommand(info, risk, { target: RP_MI_TARGET, projectFrameRate: RP_MI_FPS || undefined });
+if (fx) { fixCmd = fx.command; fixNotes = fx.notes || []; } } catch (err) {}
 rows.push({
 slide: j.slide, file: info.name, linked: false, bytes: info.__bytes,
 spec: v ? rpMiSpec(MI, info, v) : (info.error || 'not inspectable'),
-verdict: risk.verdict, summary: risk.summary, findings: risk.findings
+verdict: risk.verdict, summary: risk.summary, findings: risk.findings, fix: fixCmd, fixNotes: fixNotes
 });
 });
 });
@@ -2563,8 +2721,13 @@ if (r.spec) L.push('    ' + r.spec);
 r.findings.filter(function(f) { return f.severity !== 'info'; }).forEach(function(f) {
 L.push('    ' + (f.severity === 'red' ? 'x' : '!') + ' ' + f.title);
 if (f.detail) L.push('        ' + f.detail);
-if (f.fix) L.push('        fix: ' + f.fix);
 });
+if (r.linked) {
+L.push('    fix: in PowerPoint use Insert > Video > This Device, and choose Insert, not Link to File.');
+} else if (r.fix) {
+L.push('    fix: ' + r.fix);
+(r.fixNotes || []).forEach(function(t) { L.push('         note: ' + t.replace(/`/g, '')); });
+}
 L.push('');
 });
 return L;
@@ -2656,9 +2819,256 @@ emfDownload(new Blob([csv], {type:'text/csv'}), base + '_slides.csv', 'text/csv'
 });
 }
 
+/* ============================================================
+   VT Inspector (Other Tools)
+   Single video files through the same engine PPT Report uses.
+   ============================================================ */
+function vtInit() {
+var drop = document.getElementById('vt-drop');
+var fileInput = document.getElementById('vt-file');
+if (!drop || !fileInput) return;
+['dragenter','dragover'].forEach(function(ev) {
+drop.addEventListener(ev, function(e) { e.preventDefault(); drop.classList.add('drag'); });
+});
+['dragleave','drop'].forEach(function(ev) {
+drop.addEventListener(ev, function(e) { e.preventDefault(); if (ev === 'drop' || e.target === drop) drop.classList.remove('drag'); });
+});
+drop.addEventListener('drop', function(e) {
+e.preventDefault(); drop.classList.remove('drag');
+var fs = e.dataTransfer.files;
+if (fs && fs.length) vtProcess(Array.prototype.slice.call(fs));
+});
+fileInput.addEventListener('change', function() {
+if (fileInput.files && fileInput.files.length) vtProcess(Array.prototype.slice.call(fileInput.files));
+fileInput.value = '';
+});
+/* re-run on a settings change rather than making people drop again */
+['vt-target','vt-fps'].forEach(function(id) {
+var el = document.getElementById(id);
+if (el) el.addEventListener('change', function() { if (vtLast.length) vtProcess(vtLast, true); });
+});
+}
+
+var vtLast = [];
+var vtStash = [];   /* index -> { file, info, level } for the rewrite buttons */
+
+function vtEsc(t) {
+return String(t == null ? '' : t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function vtProcess(files, isRerun) {
+var results = document.getElementById('vt-results');
+var usable = files.filter(function(f) { return /\.(mp4|m4v|mov|m4a)$/i.test(f.name); });
+var skipped = files.filter(function(f) { return usable.indexOf(f) < 0; });
+if (!usable.length) {
+results.innerHTML = '<div class="report-note" style="padding:8px 0;color:var(--red)">Drop an .mp4, .m4v or .mov. Other containers (MKV, AVI, WMV) are not readable in the browser.</div>';
+return;
+}
+vtLast = files;
+if (!isRerun) results.innerHTML = '<div class="report-note" style="padding:8px 0"><span class="report-spinner"></span>Reading ' + usable.length + ' file' + (usable.length > 1 ? 's' : '') + '&hellip;</div>';
+
+vtStash = [];
+var target = (document.getElementById('vt-target') || {}).value || 'powerpoint-win';
+var fpsRaw = (document.getElementById('vt-fps') || {}).value || '';
+var fps = fpsRaw ? parseFloat(fpsRaw) : undefined;
+
+rpLoadMI().then(function(MI) {
+var seq = Promise.resolve();
+var out = [];
+usable.forEach(function(f) {
+seq = seq.then(function() {
+return MI.inspectFile(f).then(function(info) {
+var risk = MI.assess(info, { target: target, projectFrameRate: fps });
+var fix = info.ok ? MI.buildFixCommand(info, risk, { target: target, projectFrameRate: fps }) : null;
+out.push(vtRenderOne(MI, f, info, risk, fix));
+}).catch(function(e) {
+out.push('<div class="vt-file"><div class="vt-file-head"><span class="vt-verdict vt-v-red">Fail</span>' + vtEsc(f.name) + '</div><div class="vt-spec">Could not read this file. ' + vtEsc(e.message || e) + '</div></div>');
+});
+});
+});
+return seq.then(function() {
+if (skipped.length) {
+out.push('<div class="report-note" style="padding:8px 0">Skipped (not an ISO BMFF container): ' + skipped.map(function(f) { return vtEsc(f.name); }).join(', ') + '</div>');
+}
+results.innerHTML = out.join('');
+Array.prototype.forEach.call(results.querySelectorAll('[data-vt-fix]'), function(btn) {
+btn.addEventListener('click', function() {
+var job = vtStash[Number(btn.getAttribute('data-vt-fix'))];
+if (!job) return;
+btn.disabled = true;
+try {
+var out = MI.rewriteLevel(job.file, job.info, job.level);
+if (!out) { btn.disabled = false; showToast('Could not rewrite this file'); return; }
+var url = URL.createObjectURL(out.blob);
+var a = document.createElement('a');
+a.href = url; a.download = out.filename;
+document.body.appendChild(a); a.click(); document.body.removeChild(a);
+setTimeout(function() { URL.revokeObjectURL(url); }, 30000);
+btn.textContent = 'Downloaded ' + out.filename;
+} catch (err) {
+btn.disabled = false;
+showToast('Rewrite failed: ' + (err.message || err));
+}
+});
+});
+Array.prototype.forEach.call(results.querySelectorAll('.vt-fix'), function(el) {
+el.addEventListener('click', function() {
+var t = el.getAttribute('data-cmd');
+if (navigator.clipboard && navigator.clipboard.writeText) {
+navigator.clipboard.writeText(t).then(function() { showToast('Command copied'); }).catch(function() { fallbackCopy(t); });
+} else { fallbackCopy(t); }
+});
+});
+});
+}).catch(function(e) {
+results.innerHTML = '<div class="report-note" style="padding:8px 0;color:var(--red)">Inspector failed to load. ' + vtEsc(e.message || e) + '</div>';
+});
+}
+
+/* Which spec row each finding relates to, so the number that caused a
+   warning is coloured rather than buried in a wall of identical text. */
+var VT_FLAG_MAP = {
+'codec-blocked': 'Codec', 'codec-risky': 'Codec', 'not-intra': 'Codec',
+'level-mismatch': 'Level', 'level-mismatch-info': 'Level', 'level-bitrate': 'Level',
+'bit-depth': 'Depth', 'chroma': 'Depth',
+'vfr': 'Frame rate', 'near-cfr': 'Frame rate', 'framerate-mismatch': 'Frame rate', 'high-framerate': 'Frame rate',
+'oversize': 'Resolution', 'odd-dimensions': 'Resolution', 'unaligned-dimensions': 'Resolution',
+'nonstandard-resolution': 'Resolution', 'upscaled': 'Resolution', 'aspect-distortion': 'Resolution',
+'non-square-pixels': 'Pixel aspect', 'rotation': 'Rotation',
+'interlaced': 'Scan', 'long-gop': 'Keyframes',
+'high-bitrate': 'Bitrate', 'peaky-bitrate': 'Bitrate',
+'hdr': 'Colour', 'colour-mismatch': 'Colour', 'no-colour-tags': 'Colour', 'full-range': 'Colour',
+'edit-list-trim': 'Edit list', 'edit-list-delay': 'Edit list', 'composition-offset': 'Edit list',
+'audio-blocked': 'Audio', 'audio-risky': 'Audio', 'multichannel': 'Audio', 'odd-samplerate': 'Audio', 'no-audio': 'Audio',
+'not-faststart': 'Container', 'fragmented': 'Container', 'mov-container': 'Container'
+};
+
+/* Spec grid. Rows that carry no information (square pixels, no rotation,
+   display size identical to the coded size) are dropped rather than padded
+   out with "none", so what is left is worth reading. */
+function vtGrid(MI, info, risk) {
+var v = info.video[0];
+if (!v) return '';
+var flags = {}, rank = { info: 1, amber: 2, red: 3 };
+risk.findings.forEach(function(f) {
+var row = VT_FLAG_MAP[f.code];
+if (!row) return;
+if (!flags[row] || rank[f.severity] > rank[flags[row]]) flags[row] = f.severity;
+});
+
+var w = v.cropped ? v.cropped.width : v.coded.width;
+var hh = v.cropped ? v.cropped.height : v.coded.height;
+var square = v.squarePixels !== false;
+/* Each row is one primary value plus any number of qualifiers. HTML collapses
+   runs of whitespace, so separation has to come from markup, not spaces. */
+var rows = [];
+var add = function(k, primary) {
+if (!primary) return;
+var row = [k, String(primary)];
+for (var i = 2; i < arguments.length; i++) if (arguments[i]) row.push(String(arguments[i]));
+rows.push(row);
+};
+
+add('Codec', v.codec.name, v.profile, v.codec.string);
+if (v.level) {
+add('Level', v.level, v.levelCheck
+? (v.levelCheck.conformant === false
+? 'needs ' + (v.levelCheck.requiredByThroughput || v.levelCheck.requiredByFrameSize)
+: 'conformant')
+: null);
+}
+add('Resolution', w + '\u00d7' + hh,
+square ? null : 'displays ' + v.display.width + '\u00d7' + v.display.height,
+v.displayAspect);
+if (!square) add('Pixel aspect', v.pixelAspect.h + ':' + v.pixelAspect.v, v.pixelAspect.source);
+if (v.rotation) add('Rotation', v.rotation + '\u00b0');
+add('Depth', v.bitDepth ? v.bitDepth + '-bit' : '?', v.chroma, v.bitDepthInferred ? 'inferred' : null);
+add('Frame rate', MI.fmtFps(v.frameRate.nominalFps || v.frameRate.fps), v.frameRate.mode,
+v.frameRate.mode !== 'CFR' ? MI.fmtFps(v.frameRate.minFps) + ' to ' + MI.fmtFps(v.frameRate.maxFps) : null);
+if (v.interlaced && v.interlaced.flag) add('Scan', 'interlaced', v.interlaced.fieldOrder);
+if (v.keyframes) {
+if (v.keyframes.allIntra) add('Keyframes', 'all-intra');
+else add('Keyframes', 'every ' + v.keyframes.intervalSeconds + 's', v.keyframes.count + ' total');
+}
+add('Bitrate', MI.fmtBitrate(v.bitrate), info.duration ? MI.fmtDuration(info.duration) : null);
+
+var col = v.colour;
+if (col && col.primaries) {
+var same = col.primaries === col.transfer && col.transfer === col.matrix;
+add('Colour', same ? col.primaries : col.primaries + ' / ' + col.transfer + ' / ' + col.matrix,
+col.fullRange ? 'full range' : null);
+} else { add('Colour', 'untagged'); }
+
+if (v.trimmedHeadSeconds) add('Edit list', 'skips first ' + v.trimmedHeadSeconds + 's');
+else if (v.startDelay) add('Edit list', v.startDelay.toFixed(2) + 's empty gap');
+
+var a = info.audio[0];
+if (a) add('Audio', a.codec.name, a.channels + ' ch', a.sampleRate + ' Hz');
+else add('Audio', 'none');
+add('Container', info.container, MI.fmtBytes(info.fileSize), info.faststart === false ? 'not faststart' : null);
+
+var out = '<dl class="vt-grid">';
+rows.forEach(function(r) {
+var cls = flags[r[0]] === 'red' ? ' class="flag-red"' : flags[r[0]] === 'amber' ? ' class="flag-amber"' : '';
+var val = '<span class="vt-pri">' + vtEsc(r[1]) + '</span>';
+for (var i = 2; i < r.length; i++) val += '<span class="vt-q">' + vtEsc(r[i]) + '</span>';
+out += '<dt>' + vtEsc(r[0]) + '</dt><dd' + cls + '>' + val + '</dd>';
+});
+return out + '</dl>';
+}
+
+function vtRenderOne(MI, file, info, risk, fix) {
+var cls = 'vt-v-' + risk.verdict;
+var word = risk.verdict === 'red' ? 'Fail' : risk.verdict === 'amber' ? 'Warn' : 'OK';
+var h = '<div class="vt-file">';
+h += '<div class="vt-file-head"><span class="vt-verdict ' + cls + '">' + word + '</span>' + vtEsc(file.name) + '</div>';
+
+if (info.ok) {
+h += vtGrid(MI, info, risk);
+} else {
+h += '<div class="vt-spec">' + vtEsc(info.error || 'Not readable') + '</div>';
+}
+
+var real = risk.findings.filter(function(f) { return f.severity !== 'info'; });
+real.forEach(function(f) {
+h += '<div class="vt-find sev-' + f.severity + '">';
+h += '<div class="vt-find-title">' + vtEsc(f.title) + '</div>';
+if (f.detail) h += '<div class="vt-find-detail">' + vtEsc(f.detail) + '</div>';
+/* The level is the one finding fixable without re-encoding: it is two bytes
+   in the header, so the browser can do it and hand back a file. */
+if (f.code === 'level-mismatch' && info.ok) {
+var v0 = info.video[0];
+var want = v0 && v0.levelCheck
+? (v0.levelCheck.requiredByThroughput || v0.levelCheck.requiredByFrameSize) : null;
+if (want && MI.buildLevelPatch(info, want)) {
+var idx = vtStash.push({ file: file, info: info, level: want }) - 1;
+h += '<button class="vt-act" data-vt-fix="' + idx + '">'
++ '<svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M4 20h16"/></svg>'
++ 'Rewrite to level ' + vtEsc(want) + ' and download</button>';
+h += '<div class="vt-act-sub">Changes 2 bytes in the header. No re-encode, no quality loss, '
++ 'every frame bit-identical. Done here in the browser.</div>';
+}
+}
+h += '</div>';
+});
+if (!real.length && info.ok) {
+h += '<div class="vt-find"><div class="vt-find-title">Nothing to flag for this target.</div></div>';
+}
+if (fix && risk.verdict !== 'green') {
+h += '<div class="vt-fix" data-cmd="' + vtEsc(fix.command) + '">' + vtEsc(fix.command) + '</div>';
+if (!fix.reencode) h += '<div class="vt-note">Header rewrite only. No re-encode, no quality loss, near instant.</div>';
+(fix.notes || []).forEach(function(t) {
+h += '<div class="vt-note">' + vtEsc(t).replace(/`([^`]+)`/g, '<code>$1</code>') + '</div>';
+});
+}
+h += '</div>';
+return h;
+}
+
 initEMF();
 initMedia();
 rpInit();
+vtInit();
 ['px-w', 'px-h', 'phys-w', 'phys-h'].forEach(function(id) {
 var el = document.getElementById(id);
 if (!el) return;

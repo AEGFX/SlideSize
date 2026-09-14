@@ -1,19 +1,3 @@
-/* ============================================================
-   Media Inspector engine  (mi*)
-   ISO BMFF / H.264 SPS parser + playback risk rules.
-   Folded into PPT Report so a dropped deck gets its videos
-   inspected as part of the pre-flight.
-
-   Source of truth: github.com/AEGFX/media-inspect
-   Kept in modern syntax deliberately: this is a bitstream
-   parser with a test matrix behind it, and a hand rewrite to
-   var/ES5 house style would risk silent numeric bugs for no
-   compatibility gain. Every feature used here is supported in
-   every browser that can already run this page.
-   ============================================================ */
-window.MI = (function () {
-'use strict';
-
 /**
  * mp4-inspect.js
  * ISO BMFF (MP4 / MOV / M4V) container inspector with H.264 SPS and HEVC hvcC decoding.
@@ -37,7 +21,7 @@ window.MI = (function () {
  * Readers                                                             *
  * ------------------------------------------------------------------ */
 
-class BlobReader {
+export class BlobReader {
   constructor(blob) { this.blob = blob; this.size = blob.size; }
   async read(offset, length) {
     if (offset >= this.size) return new Uint8Array(0);
@@ -46,7 +30,7 @@ class BlobReader {
   }
 }
 
-class BytesReader {
+export class BytesReader {
   constructor(bytes) { this.bytes = bytes; this.size = bytes.length; }
   async read(offset, length) {
     if (offset >= this.size) return new Uint8Array(0);
@@ -219,7 +203,7 @@ function skipHrd(r) {
   r.u(5); r.u(5); r.u(5); r.u(5);
 }
 
-function parseSPS(nalWithHeader) {
+export function parseSPS(nalWithHeader) {
   const d = rbsp(nalWithHeader.subarray(1));
   const r = new BitReader(d);
   const sps = {};
@@ -478,7 +462,7 @@ function hevcCodecString(fourcc, c) {
  * ------------------------------------------------------------------ */
 
 // H.264 Table A-1. MaxBR is the Baseline/Main/Extended figure in kbps.
-const H264_LEVELS = [
+export const H264_LEVELS = [
   { level: 1.0, name: '1',   maxMBPS: 1485,     maxFS: 99,     maxDpbMbs: 396,    maxBR: 64 },
   { level: 1.05, name: '1b', maxMBPS: 1485,     maxFS: 99,     maxDpbMbs: 396,    maxBR: 128 },
   { level: 1.1, name: '1.1', maxMBPS: 3000,     maxFS: 396,    maxDpbMbs: 900,    maxBR: 192 },
@@ -502,7 +486,7 @@ const H264_LEVELS = [
 ];
 
 // HEVC Table A.8 MaxLumaPs, and MaxLumaSr from Table A.9.
-const HEVC_LEVELS = [
+export const HEVC_LEVELS = [
   { level: 1.0, name: '1',   maxLumaPs: 36864,    maxLumaSr: 552960 },
   { level: 2.0, name: '2',   maxLumaPs: 122880,   maxLumaSr: 3686400 },
   { level: 2.1, name: '2.1', maxLumaPs: 245760,   maxLumaSr: 7372800 },
@@ -529,7 +513,7 @@ function h264LevelFromIdc(levelIdc, constraintFlags) {
  * This is the check that catches Mac screen recordings that claim level 4.0
  * while carrying a frame that needs level 5.
  */
-function checkH264Level(levelIdc, constraintFlags, macroblocks, fps, bitrateBps, profileIdc) {
+export function checkH264Level(levelIdc, constraintFlags, macroblocks, fps, bitrateBps, profileIdc) {
   const declared = h264LevelFromIdc(levelIdc, constraintFlags);
   const mbps = macroblocks * (fps || 0);
 
@@ -562,7 +546,7 @@ function checkH264Level(levelIdc, constraintFlags, macroblocks, fps, bitrateBps,
   };
 }
 
-function checkHevcLevel(levelIdc, lumaSamples, fps) {
+export function checkHevcLevel(levelIdc, lumaSamples, fps) {
   const v = levelIdc / 30;
   const declared = HEVC_LEVELS.find((l) => Math.abs(l.level - v) < 0.001) || null;
   const sr = lumaSamples * (fps || 0);
@@ -707,7 +691,7 @@ function classifyTiming(stts, timescale) {
 }
 
 /** Snap a measured rate to a broadcast-standard rate if it is within tolerance. */
-function snapFrameRate(fps) {
+export function snapFrameRate(fps) {
   if (!fps) return null;
   const std = [23.976, 24, 25, 29.97, 30, 47.952, 48, 50, 59.94, 60, 100, 119.88, 120];
   for (const s of std) if (Math.abs(fps - s) / s < 0.002) return s;
@@ -1077,7 +1061,7 @@ const BRAND_NAMES = {
  * @param {{read:(o:number,l:number)=>Promise<Uint8Array>, size:number}} reader
  * @param {{name?:string, maxMoovBytes?:number}} opts
  */
-async function inspect(reader, opts = {}) {
+export async function inspect(reader, opts = {}) {
   const maxMoov = opts.maxMoovBytes ?? 64 * 1024 * 1024;
   const result = {
     ok: false,
@@ -1207,12 +1191,12 @@ async function inspect(reader, opts = {}) {
 }
 
 /** Convenience wrapper for a browser File or Blob. */
-async function inspectFile(file, opts = {}) {
+export async function inspectFile(file, opts = {}) {
   return inspect(new BlobReader(file), { name: file.name, ...opts });
 }
 
 /** Convenience wrapper for raw bytes, e.g. a video pulled out of a PPTX. */
-async function inspectBytes(bytes, name, opts = {}) {
+export async function inspectBytes(bytes, name, opts = {}) {
   return inspect(new BytesReader(bytes), { name, ...opts });
 }
 
@@ -1234,7 +1218,7 @@ async function inspectBytes(bytes, name, opts = {}) {
  *
  * @returns {{offset:number, byte:number}[] | null} absolute file offsets
  */
-function buildLevelPatch(info, levelName) {
+export function buildLevelPatch(info, levelName) {
   if (!info || !info.ok || info.moovOffset == null) return null;
   const v = info.video && info.video[0];
   if (!v || !v.levelByteOffsets || !v.levelByteOffsets.length) return null;
@@ -1254,7 +1238,7 @@ function buildLevelPatch(info, levelName) {
  * Blob slices are references, not copies, so a 4 GB source costs a few
  * hundred bytes here and the browser streams it when the download runs.
  */
-function applyPatch(file, patch) {
+export function applyPatch(file, patch) {
   if (!patch || !patch.length) return null;
   const ops = patch.slice().sort((a, b) => a.offset - b.offset);
   const parts = [];
@@ -1270,7 +1254,7 @@ function applyPatch(file, patch) {
 }
 
 /** Convenience: rewrite the level on a File and hand back a download-ready Blob. */
-function rewriteLevel(file, info, levelName) {
+export function rewriteLevel(file, info, levelName) {
   const patch = buildLevelPatch(info, levelName);
   if (!patch) return null;
   const blob = applyPatch(file, patch);
@@ -1279,971 +1263,3 @@ function rewriteLevel(file, info, levelName) {
   const ext = (info.name || 'video.mp4').match(/\.[^.]+$/);
   return { blob, filename: base + '_L' + String(levelName).replace('.', '') + (ext ? ext[0] : '.mp4'), patch };
 }
-
-/**
- * playback-risk.js
- * Turns the output of mp4-inspect.js into a ranked list of playback findings.
- *
- * The rules are deliberately separate from the parser so they can be tuned
- * without touching bitstream code. Everything here is opinion; the parser is fact.
- *
- * AEGFX / SlideSize
- */
-
-const SEVERITY = { RED: 'red', AMBER: 'amber', INFO: 'info' };
-const RANK = { red: 3, amber: 2, info: 1 };
-
-/* ------------------------------------------------------------------ *
- * Target profiles                                                     *
- * ------------------------------------------------------------------ */
-
-const TARGETS = {
-  'powerpoint-win': {
-    label: 'PowerPoint on Windows',
-    note: 'The default show machine. Most conservative.',
-    blockedCodecs: ['apco', 'apcs', 'apcn', 'apch', 'ap4h', 'ap4x', 'icpf', 'AVdn', 'AVdh',
-      'Hap1', 'Hap5', 'HapY', 'HapM', 'HapA', 'CFHD', 'rle ', 'v210', 'v410', 'r210', '2vuy',
-      'mjpa', 'mjpb', 'dvh5', 'dvh6', 'vp09', 'vp08', 'av01'],
-    riskyCodecs: ['hvc1', 'hev1', 'mp4v', 'jpeg'],
-    blockedAudio: ['dtsc', 'ec-3'],
-    riskyAudio: ['ac-3', 'lpcm', 'in24', 'in32', 'fl32', 'twos', 'alac', 'Opus'],
-    maxBitDepth: 8,
-    allowedChroma: ['4:2:0'],
-    maxWidth: 3840, maxHeight: 2160,
-    maxBitrate: 60e6,
-    maxGopSeconds: 5,
-    allowVfr: false,
-    requireLevelConformance: true,
-  },
-  'powerpoint-mac': {
-    label: 'PowerPoint on macOS',
-    note: 'VideoToolbox is far more forgiving. Use this only if the deck will never touch Windows.',
-    blockedCodecs: ['Hap1', 'Hap5', 'HapY', 'HapM', 'HapA', 'AVdn', 'AVdh', 'CFHD', 'av01'],
-    riskyCodecs: ['ap4x', 'v410', 'r210', 'vp09'],
-    blockedAudio: ['dtsc'],
-    riskyAudio: ['ec-3'],
-    maxBitDepth: 10,
-    allowedChroma: ['4:2:0', '4:2:2'],
-    maxWidth: 4096, maxHeight: 4096,
-    maxBitrate: 200e6,
-    maxGopSeconds: 10,
-    allowVfr: true,
-    requireLevelConformance: false,
-  },
-  'media-server': {
-    label: 'Media server (disguise / Watchout / Pixera / Resolume)',
-    note: 'Wants all-intra codecs. Long-GOP H.264 is the problem here, not the fix.',
-    blockedCodecs: [],
-    riskyCodecs: ['avc1', 'avc3', 'hvc1', 'hev1', 'vp09', 'av01'],
-    preferIntra: true,
-    blockedAudio: [],
-    riskyAudio: ['Opus'],
-    maxBitDepth: 12,
-    allowedChroma: ['4:2:0', '4:2:2', '4:4:4'],
-    maxWidth: 16384, maxHeight: 16384,
-    maxBitrate: 1200e6,
-    maxGopSeconds: 1,
-    allowVfr: false,
-    requireLevelConformance: false,
-  },
-  'web': {
-    label: 'Browser / web delivery',
-    note: 'Baseline compatibility across Chrome, Safari, Firefox and Edge.',
-    blockedCodecs: ['apco', 'apcs', 'apcn', 'apch', 'ap4h', 'ap4x', 'icpf', 'AVdn', 'AVdh',
-      'Hap1', 'Hap5', 'HapY', 'HapM', 'HapA', 'CFHD', 'rle ', 'v210', 'r210', '2vuy', 'dvh5'],
-    riskyCodecs: ['hvc1', 'hev1', 'av01', 'mp4v'],
-    blockedAudio: ['dtsc', 'lpcm', 'twos', 'in24', 'in32'],
-    riskyAudio: ['ac-3', 'ec-3', 'alac'],
-    maxBitDepth: 8,
-    allowedChroma: ['4:2:0'],
-    maxWidth: 3840, maxHeight: 2160,
-    maxBitrate: 40e6,
-    maxGopSeconds: 5,
-    allowVfr: true,
-    requireLevelConformance: true,
-    requireFaststart: true,
-  },
-};
-
-/* ------------------------------------------------------------------ *
- * Assessment                                                          *
- * ------------------------------------------------------------------ */
-
-/**
- * @param {object} info            result from mp4-inspect.inspect()
- * @param {object} opts
- * @param {string} opts.target     key into TARGETS
- * @param {number} [opts.projectFrameRate]  e.g. 25, 30, 50, 59.94
- * @param {number} [opts.slideWidth]  slide placeholder width in px, for upscale checks
- * @param {number} [opts.slideHeight]
- * @param {boolean} [opts.linked]  true if the PPTX references this as an external file
- */
-function assess(info, opts = {}) {
-  const target = TARGETS[opts.target] || TARGETS['powerpoint-win'];
-  const f = [];
-  const add = (severity, code, title, detail, fix) => f.push({ severity, code, title, detail, fix });
-
-  if (!info.ok) {
-    add(SEVERITY.RED, 'unreadable', 'File could not be parsed',
-      info.error || 'The container structure is not readable.',
-      'Re-export from the source application, or remux with: ffmpeg -i in.mp4 -c copy out.mp4');
-    return finish(f, info, target);
-  }
-
-  if (opts.linked) {
-    add(SEVERITY.RED, 'linked-media', 'Video is linked, not embedded',
-      'PowerPoint holds only a path to this file. It will not travel with the deck and will fail on the show machine.',
-      'In PowerPoint: Insert > Video > This Device, and pick Insert rather than Link to File.');
-  }
-
-  if (!info.video.length && !opts.linked) {
-    add(SEVERITY.AMBER, 'no-video', 'No video track', 'The file contains no video track.', null);
-  }
-
-  for (const v of info.video) {
-    const fourcc = v.codec?.fourcc;
-    const label = v.codec?.name || fourcc;
-
-    /* --- codec acceptance --- */
-    if (target.blockedCodecs.includes(fourcc)) {
-      add(SEVERITY.RED, 'codec-blocked', `${label} will not play`,
-        `${target.label} cannot decode ${label}. This is the single most common cause of a black or missing video at showtime.`,
-        ffmpegTranscode(v, opts));
-    } else if (target.riskyCodecs.includes(fourcc)) {
-      const why = fourcc === 'hvc1' || fourcc === 'hev1'
-        ? 'HEVC needs the paid HEVC Video Extension on Windows, which is often missing on a hired show machine.'
-        : target.preferIntra
-          ? 'Long-GOP codecs decode poorly when a media server is scrubbing, looping or cueing mid-clip.'
-          : 'Support is inconsistent across players and machines.';
-      add(SEVERITY.AMBER, 'codec-risky', `${label} may not play`, why, ffmpegTranscode(v, opts));
-    }
-
-    if (target.preferIntra && v.allIntraCodec === false && !target.riskyCodecs.includes(fourcc)) {
-      add(SEVERITY.INFO, 'not-intra', 'Not an all-intra codec',
-        'Media servers prefer frame-independent codecs for reliable scrubbing.', null);
-    }
-
-    /* --- level conformance: the Mac screen recording bug --- */
-    const lc = v.levelCheck;
-    if (lc && lc.conformant === false && target.requireLevelConformance) {
-      const parts = [];
-      if (lc.frameSizeOk === false) {
-        parts.push(`The frame is ${lc.macroblocks} macroblocks but level ${lc.declared} caps at ${lc.maxFS}. It needs level ${lc.requiredByFrameSize}.`);
-      }
-      if (lc.throughputOk === false) {
-        parts.push(`Throughput is ${lc.macroblocksPerSecond} MB/s against a limit of ${lc.maxMBPS}.`);
-      }
-      add(SEVERITY.AMBER, 'level-mismatch', `Declared level ${lc.declared} is too low for this picture`,
-        `${parts.join(' ')} Apple's decoder ignores this. Windows DXVA2 and D3D11VA size their decode buffers from the declared level, so hardware decode either refuses the stream or under-allocates and starts dropping frames.`,
-        `Header-only fix, no re-encode: ffmpeg -i in.mp4 -c copy -bsf:v h264_metadata=level=${lc.requiredByThroughput || lc.requiredByFrameSize || '5'} out.mp4`);
-    } else if (lc && lc.conformant === false) {
-      add(SEVERITY.INFO, 'level-mismatch-info', `Declared level ${lc.declared} is below what the picture needs`,
-        `Needs level ${lc.requiredByThroughput || lc.requiredByFrameSize}. Harmless on this target but will bite on Windows.`, null);
-    }
-    if (lc && lc.bitrateOk === false) {
-      add(SEVERITY.INFO, 'level-bitrate', 'Bitrate exceeds the declared level',
-        `Peak allowance for level ${lc.declared} is about ${fmtBitrate(lc.maxBitrateBps)}.`, null);
-    }
-
-    /* --- bit depth and chroma --- */
-    if (v.bitDepth && v.bitDepth > target.maxBitDepth) {
-      add(SEVERITY.RED, 'bit-depth', `${v.bitDepth}-bit video`,
-        `${target.label} expects ${target.maxBitDepth}-bit. Deeper bit depths usually drop to software decode or fail outright.`,
-        ffmpegTranscode(v, opts));
-    }
-    if (v.chroma && !target.allowedChroma.includes(v.chroma) && v.chroma !== 'monochrome') {
-      add(SEVERITY.AMBER, 'chroma', `${v.chroma} chroma subsampling`,
-        `${target.label} expects ${target.allowedChroma.join(' or ')}. ${v.chroma} disables hardware decode on most consumer GPUs.`,
-        ffmpegTranscode(v, opts));
-    }
-
-    /* --- frame timing --- */
-    const fr = v.frameRate || {};
-    if (fr.mode === 'VFR' && !target.allowVfr) {
-      add(SEVERITY.AMBER, 'vfr', 'Variable frame rate',
-        `${fr.distinctIntervals} distinct frame intervals, spanning ${fmtFps(fr.minFps)} to ${fmtFps(fr.maxFps)}, with ${(fr.dominantShare * 100).toFixed(1)}% of frames at ${fmtFps(fr.nominalFps)}. Normal for screen recordings and phone footage, but it drifts out of sync in PowerPoint and breaks media server timelines.`,
-        `ffmpeg -i in.mp4 -fps_mode cfr -r ${opts.projectFrameRate || fr.nominalFps || 25} -c:v libx264 -crf 18 -preset medium -pix_fmt yuv420p out.mp4`);
-    } else if (fr.mode === 'near-CFR' && !target.allowVfr) {
-      add(SEVERITY.INFO, 'near-cfr', 'Almost constant frame rate',
-        `${fr.distinctIntervals} distinct frame intervals, but ${(fr.dominantShare * 100).toFixed(1)}% of frames share one. Usually harmless.`, null);
-    }
-
-    const fps = fr.nominalFps || fr.fps || fr.avgFps;
-    if (opts.projectFrameRate && fps) {
-      const ratio = opts.projectFrameRate / fps;
-      const clean = Math.abs(ratio - Math.round(ratio)) < 0.001;
-      if (!clean) {
-        add(SEVERITY.AMBER, 'framerate-mismatch', `${fmtFps(fps)} does not divide into the ${opts.projectFrameRate} fps project rate`,
-          `Every frame will be held for an uneven number of output frames, giving a regular judder that no amount of decoding headroom will fix.`,
-          `ffmpeg -i in.mp4 -r ${opts.projectFrameRate} -c:v libx264 -crf 18 -preset medium -pix_fmt yuv420p out.mp4`);
-      }
-    }
-    if (fps && fps > 60) {
-      add(SEVERITY.INFO, 'high-framerate', `${fmtFps(fps)} frame rate`,
-        'High frame rates raise decode load and rarely survive projection intact.', null);
-    }
-
-    /* --- geometry --- */
-    const w = v.cropped?.width || v.coded?.width;
-    const h = v.cropped?.height || v.coded?.height;
-    if (w && h) {
-      if (w > target.maxWidth || h > target.maxHeight) {
-        add(SEVERITY.AMBER, 'oversize', `${w}x${h} exceeds the ${target.maxWidth}x${target.maxHeight} target`,
-          'Above the resolution the target reliably decodes.', ffmpegTranscode(v, opts));
-      }
-      if (w % 2 || h % 2) {
-        add(SEVERITY.AMBER, 'odd-dimensions', `${w}x${h} has an odd dimension`,
-          'Odd dimensions are illegal for 4:2:0 chroma and break many encoders and decoders.',
-          `ffmpeg -i in.mp4 -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" -c:v libx264 -crf 18 -pix_fmt yuv420p out.mp4`);
-      } else if (h % 16 || w % 16) {
-        add(SEVERITY.INFO, 'unaligned-dimensions', `${w}x${h} is not a multiple of 16`,
-          'Legal, but some hardware decoders take a slower unaligned path. Common in screen recordings.', null);
-      }
-      const standard = ['1920x1080', '1280x720', '3840x2160', '2560x1440', '1080x1920', '720x1280', '1920x1200', '1024x768'];
-      if (!standard.includes(`${w}x${h}`) && !(h % 16) && !(w % 16)) {
-        add(SEVERITY.INFO, 'nonstandard-resolution', `${w}x${h} is a non-standard resolution`,
-          'Not a fault, but worth knowing before it gets scaled onto a screen.', null);
-      }
-    }
-
-    if (v.squarePixels === false && v.pixelAspect) {
-      add(SEVERITY.AMBER, 'non-square-pixels', `Non-square pixels (${v.pixelAspect.h}:${v.pixelAspect.v})`,
-        `Stored at ${w}x${h} but intended to display at ${v.display.width}x${v.display.height}. PowerPoint ignores pixel aspect, so this will show up stretched or squashed.`,
-        `ffmpeg -i in.mp4 -vf "scale=${v.display?.width}:${v.display?.height},setsar=1" -c:v libx264 -crf 18 -pix_fmt yuv420p out.mp4`);
-    }
-
-    if (v.rotation) {
-      add(SEVERITY.AMBER, 'rotation', `Rotation flag of ${v.rotation} degrees`,
-        'The picture is stored rotated and relies on the player honouring the track matrix. PowerPoint does not always, so it can appear sideways.',
-        `ffmpeg -i in.mp4 -vf "transpose=1" -metadata:s:v rotate=0 -c:v libx264 -crf 18 -pix_fmt yuv420p out.mp4`);
-    }
-
-    /* --- edit lists --- */
-    if (v.trimmedHeadSeconds) {
-      add(SEVERITY.AMBER, 'edit-list-trim', `Edit list skips the first ${v.trimmedHeadSeconds}s`,
-        'The container tells the player to start part-way into the media. Players that honour the edit list and players that ignore it will show different first frames, and the clip will look like it starts late on one machine and early on another.',
-        `ffmpeg -i in.mp4 -ignore_editlist 1 -c copy out.mp4    # or bake it in with a re-encode`);
-    }
-    if (v.compositionOffsetSeconds) {
-      add(SEVERITY.INFO, 'composition-offset', `Edit list offset of ${v.compositionOffsetSeconds}s`,
-        'Matches the B-frame reorder delay. Normal, written by most encoders.', null);
-    }
-    if (v.startDelay) {
-      add(SEVERITY.AMBER, 'edit-list-delay', `Edit list holds a ${v.startDelay.toFixed(2)}s empty gap before the video starts`,
-        'An empty edit at the head. Some players show black, some skip it, some drift the audio against it.', null);
-    }
-    if (v.editListRateChange) {
-      add(SEVERITY.INFO, 'edit-list-rate', 'Edit list changes playback rate',
-        'A non-unity rate in the edit list. Rarely honoured consistently.', null);
-    }
-
-    /* --- interlacing --- */
-    if (v.interlaced?.flag) {
-      add(SEVERITY.AMBER, 'interlaced', `Interlaced (${v.interlaced.fieldOrder})`,
-        'Progressive displays and projectors will show combing on motion unless something deinterlaces it first.',
-        `ffmpeg -i in.mp4 -vf "yadif=1" -c:v libx264 -crf 18 -pix_fmt yuv420p out.mp4`);
-    }
-
-    /* --- GOP structure --- */
-    const kf = v.keyframes;
-    if (kf && !kf.allIntra && kf.intervalSeconds != null && kf.intervalSeconds > target.maxGopSeconds) {
-      add(SEVERITY.AMBER, 'long-gop', `Keyframe every ${kf.intervalSeconds}s`,
-        `Only ${kf.count} keyframes across the clip. Straight playback is fine, but cueing into the middle, scrubbing or looping will hitch while the decoder walks back to the last keyframe.`,
-        `ffmpeg -i in.mp4 -c:v libx264 -crf 18 -preset medium -g ${Math.round((opts.projectFrameRate || fps || 25) * 2)} -keyint_min ${Math.round(opts.projectFrameRate || fps || 25)} -pix_fmt yuv420p out.mp4`);
-    }
-
-    /* --- bitrate --- */
-    if (v.bitrate && v.bitrate > target.maxBitrate) {
-      add(SEVERITY.AMBER, 'high-bitrate', `${fmtBitrate(v.bitrate)} video bitrate`,
-        `Above the ${fmtBitrate(target.maxBitrate)} this target handles comfortably. Playing off a laptop SSD alongside PowerPoint rendering is where this bites.`,
-        `ffmpeg -i in.mp4 -c:v libx264 -crf 20 -preset medium -maxrate 25M -bufsize 50M -pix_fmt yuv420p out.mp4`);
-    }
-    if (v.maxSampleBytes && v.totalBytes && v.sampleCount) {
-      const avgFrame = v.totalBytes / v.sampleCount;
-      if (v.maxSampleBytes > avgFrame * 12) {
-        add(SEVERITY.INFO, 'peaky-bitrate', 'Very uneven frame sizes',
-          `Largest frame is ${(v.maxSampleBytes / 1024).toFixed(0)} KB against an average of ${(avgFrame / 1024).toFixed(1)} KB, a ${(v.maxSampleBytes / avgFrame).toFixed(0)}x peak. Usually just a keyframe, but big spikes can stall a decoder even when the average looks safe.`, null);
-      }
-    }
-
-    /* --- colour --- */
-    if (v.colour?.transferIdc === 16 || v.colour?.transferIdc === 18) {
-      add(SEVERITY.RED, 'hdr', `HDR content (${v.colour.transfer})`,
-        'On an SDR projector or LED wall this comes out washed out and grey. PowerPoint does no tone mapping.',
-        `ffmpeg -i in.mp4 -vf "zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=hable,zscale=t=bt709:m=bt709:r=tv,format=yuv420p" -c:v libx264 -crf 18 out.mp4`);
-    } else if (!v.colour) {
-      add(SEVERITY.INFO, 'no-colour-tags', 'No colour signalling',
-        'No primaries, transfer or matrix tagged. Players will assume BT.709, which is usually right for HD but can shift colour on SD-sized material.', null);
-    } else if (v.colour.matrixIdc === 6 || v.colour.matrixIdc === 5) {
-      if (h && h > 576) {
-        add(SEVERITY.AMBER, 'colour-mismatch', 'BT.601 matrix on an HD picture',
-          'HD content tagged as standard definition. Expect a visible shift in saturation between players.',
-          `ffmpeg -i in.mp4 -c copy -bsf:v h264_metadata=matrix_coefficients=1:colour_primaries=1:transfer_characteristics=1 out.mp4`);
-      }
-    }
-    if (v.colour?.fullRange === true) {
-      add(SEVERITY.INFO, 'full-range', 'Full range (0-255) levels',
-        'Common in screen recordings. Some players clamp to 16-235, which crushes blacks and clips whites.', null);
-    }
-
-    /* --- upscale on the slide --- */
-    if (opts.slideWidth && opts.slideHeight && w && h) {
-      const scale = Math.max(opts.slideWidth / w, opts.slideHeight / h);
-      if (scale > 1.35) {
-        add(SEVERITY.AMBER, 'upscaled', `Scaled ${scale.toFixed(1)}x on the slide`,
-          `A ${w}x${h} source placed in a ${Math.round(opts.slideWidth)}x${Math.round(opts.slideHeight)} frame. It will look soft on a big screen.`, null);
-      }
-    }
-  }
-
-  /* --- audio --- */
-  for (const a of info.audio) {
-    const fourcc = a.codec?.fourcc;
-    if (target.blockedAudio.includes(fourcc)) {
-      add(SEVERITY.RED, 'audio-blocked', `${a.codec.name} audio will not play`,
-        `${target.label} cannot decode this. Video may play silently, or the whole file may fail.`,
-        `ffmpeg -i in.mp4 -c:v copy -c:a aac -b:a 192k out.mp4`);
-    } else if (target.riskyAudio.includes(fourcc)) {
-      add(SEVERITY.AMBER, 'audio-risky', `${a.codec.name} audio may not play`,
-        'Support varies by machine and codec pack.', `ffmpeg -i in.mp4 -c:v copy -c:a aac -b:a 192k out.mp4`);
-    }
-    if (a.channels > 2) {
-      add(SEVERITY.INFO, 'multichannel', `${a.channels} channel audio`,
-        'Will be downmixed, or partly lost, on a stereo PA feed.', null);
-    }
-    if (a.sampleRate && ![44100, 48000, 96000].includes(a.sampleRate)) {
-      add(SEVERITY.INFO, 'odd-samplerate', `${a.sampleRate} Hz sample rate`,
-        'Non-standard. Resampling on the fly can glitch on some machines.', null);
-    }
-  }
-  if (info.video.length && !info.audio.length) {
-    add(SEVERITY.INFO, 'no-audio', 'No audio track', 'Silent clip. Worth confirming that is intentional.', null);
-  }
-
-  /* --- container --- */
-  if (target.requireFaststart && info.faststart === false) {
-    add(SEVERITY.AMBER, 'not-faststart', 'moov atom is at the end of the file',
-      'Playback cannot start until the whole file has downloaded.',
-      `ffmpeg -i in.mp4 -c copy -movflags +faststart out.mp4`);
-  }
-  if (info.fragmented) {
-    add(SEVERITY.AMBER, 'fragmented', 'Fragmented MP4, inspection incomplete',
-      'Sample tables live in the fragments rather than the header, so frame rate, frame count, keyframe spacing and true bitrate could not be read. Some desktop players and editing tools also handle these badly. Remux before trusting any of the timing figures above.',
-      `ffmpeg -i in.mp4 -c copy -movflags +faststart out.mp4`);
-  }
-  if (info.brands?.major === 'qt' && opts.target === 'powerpoint-win') {
-    add(SEVERITY.INFO, 'mov-container', 'QuickTime MOV container',
-      'Modern PowerPoint reads MOV, but an MP4 wrapper removes one variable.',
-      `ffmpeg -i in.mov -c copy -movflags +faststart out.mp4`);
-  }
-
-  for (const w of info.warnings) add(SEVERITY.INFO, 'parser-warning', w, '', null);
-  for (const v of info.video) for (const w of (v.warnings || [])) add(SEVERITY.INFO, 'track-warning', w, '', null);
-
-  return finish(f, info, target);
-}
-
-function finish(findings, info, target) {
-  findings.sort((a, b) => RANK[b.severity] - RANK[a.severity]);
-  const reds = findings.filter((x) => x.severity === SEVERITY.RED).length;
-  const ambers = findings.filter((x) => x.severity === SEVERITY.AMBER).length;
-  const verdict = reds ? SEVERITY.RED : ambers ? SEVERITY.AMBER : 'green';
-  const summary = reds
-    ? `Will not play reliably on ${target.label}.`
-    : ambers
-      ? `Should play, but ${ambers} thing${ambers > 1 ? 's' : ''} could bite.`
-      : `No problems found for ${target.label}.`;
-  return { verdict, summary, target: target.label, counts: { red: reds, amber: ambers, info: findings.length - reds - ambers }, findings };
-}
-
-/* ------------------------------------------------------------------ *
- * Fix suggestions                                                     *
- * ------------------------------------------------------------------ */
-
-function ffmpegTranscode(v, opts) {
-  const fps = opts.projectFrameRate ? ` -r ${opts.projectFrameRate}` : '';
-  return `ffmpeg -i in.mp4 -c:v libx264 -profile:v high -crf 18 -preset medium${fps} -g ${Math.round((opts.projectFrameRate || 50))} -pix_fmt yuv420p -c:a aac -b:a 192k -movflags +faststart out.mp4`;
-}
-
-/**
- * Build a single conforming command for a file, folding every fix into one pass.
- * Preferred over stacking the per-finding suggestions, which would re-encode repeatedly.
- */
-function buildFixCommand(info, assessment, opts = {}) {
-  const v = info.video[0];
-  if (!v) return null;
-  const real = assessment.findings.filter((x) => x.severity !== SEVERITY.INFO);
-  if (!real.length) return null;                 // nothing to fix
-  const codes = new Set(real.map((x) => x.code));
-  const target = TARGETS[opts.target] || TARGETS['powerpoint-win'];
-  const name = info.name || 'video.mp4';
-
-  // A misdeclared level on its own needs a header rewrite, not a re-encode.
-  if (real.every((x) => x.code === 'level-mismatch') && v.levelCheck) {
-    const lvl = v.levelCheck.requiredByThroughput || v.levelCheck.requiredByFrameSize || '5';
-    return {
-      reencode: false,
-      level: lvl,
-      notes: [],
-      command: `ffmpeg -i "${name}" -c copy -bsf:v h264_metadata=level=${lvl} -movflags +faststart "fixed_${name}"`,
-    };
-  }
-
-  const srcW = v.cropped?.width || v.coded?.width;
-  const srcH = v.cropped?.height || v.coded?.height;
-  let outW = srcW, outH = srcH;
-  const filters = [];
-
-  if (v.interlaced?.flag) filters.push('yadif=1');
-
-  // Non-square pixels: resample to the intended display geometry.
-  if (codes.has('non-square-pixels') && v.display) {
-    outW = Math.round(v.display.width / 2) * 2;
-    outH = Math.round(v.display.height / 2) * 2;
-    filters.push(`scale=${outW}:${outH}:flags=lanczos`);
-  }
-
-  // Only resize when the assessment actually said the picture is too big,
-  // and then against the target's own limits rather than a hardcoded 1080.
-  if (codes.has('oversize')) {
-    const maxW = opts.maxWidth || target.maxWidth;
-    const maxH = opts.maxHeight || target.maxHeight;
-    const k = Math.min(maxW / outW, maxH / outH, 1);
-    if (k < 1) {
-      outW = Math.round((outW * k) / 2) * 2;
-      outH = Math.round((outH * k) / 2) * 2;
-      filters.push(`scale=${outW}:${outH}:flags=lanczos`);
-    }
-  }
-
-  // 4:2:0 cannot carry odd dimensions.
-  if (outW % 2 || outH % 2) {
-    outW -= outW % 2; outH -= outH % 2;
-    filters.push('crop=trunc(iw/2)*2:trunc(ih/2)*2');
-  }
-  if (v.squarePixels === false) filters.push('setsar=1');
-
-  const fps = opts.projectFrameRate || v.frameRate?.nominalFps || v.frameRate?.fps || 25;
-  const gop = Math.max(2, Math.round(fps * 2));
-
-  // Pick the level the OUTPUT actually needs. Hardcoding one is how files end
-  // up misdeclared in the first place, which is the bug this tool exists to find.
-  const mbs = Math.ceil(outW / 16) * Math.ceil(outH / 16);
-  const lvlEntry = H264_LEVELS.find((l) => l.level >= 3 && mbs <= l.maxFS && mbs * fps <= l.maxMBPS)
-    || H264_LEVELS[H264_LEVELS.length - 1];
-
-  const parts = [`ffmpeg -i "${name}"`];
-  if (filters.length) parts.push(`-vf "${filters.join(',')}"`);
-  parts.push(`-c:v libx264 -profile:v high -level ${lvlEntry.name} -crf 18 -preset medium`);
-  parts.push(`-r ${fps} -fps_mode cfr -g ${gop} -keyint_min ${Math.round(fps)}`);
-  parts.push('-pix_fmt yuv420p');
-
-  // Only retag colour when it is missing or wrong; never claim a conversion
-  // that these flags do not perform.
-  if (codes.has('colour-mismatch') || !v.colour || !v.colour.primaries) {
-    parts.push('-colorspace bt709 -color_primaries bt709 -color_trc bt709');
-  }
-
-  parts.push(info.audio.length ? '-c:a aac -b:a 192k -ar 48000 -ac 2' : '-an');
-  parts.push(`-movflags +faststart "fixed_${name.replace(/\.[^.]+$/, '')}.mp4"`);
-
-  // Consequences of this command that are not obvious from reading it.
-  const notes = [];
-  if (codes.has('edit-list-trim') && v.trimmedHeadSeconds) {
-    notes.push(`ffmpeg honours the edit list, so this bakes the trim in and discards the first `
-      + `${v.trimmedHeadSeconds}s permanently. That is usually what you want. To keep those frames `
-      + 'instead, add `-ignore_editlist 1` before `-i`.');
-  }
-  if (v.bitrate && v.bitrate < 5e6) {
-    notes.push(`CRF 18 is visually lossless and will likely make the file larger than the `
-      + `${fmtBitrate(v.bitrate)} source. If size matters more than fidelity, raise it to \`-crf 22\`.`);
-  }
-  if (codes.has('vfr')) {
-    notes.push('Converting variable to constant frame rate duplicates or drops frames to fill the gaps. '
-      + 'Motion in the sparse sections will look slightly different.');
-  }
-
-  return { reencode: true, level: lvlEntry.name, outWidth: outW, outHeight: outH,
-    notes: notes, command: parts.join(' ') };
-}
-
-/* ------------------------------------------------------------------ *
- * Formatting helpers                                                  *
- * ------------------------------------------------------------------ */
-
-function fmtBitrate(bps) {
-  if (!bps) return 'unknown';
-  if (bps >= 1e6) return `${(bps / 1e6).toFixed(2)} Mbps`;
-  return `${Math.round(bps / 1000)} kbps`;
-}
-
-function fmtFps(fps) {
-  if (!fps) return 'unknown';
-  return `${Number(fps.toFixed(3))} fps`;
-}
-
-function fmtDuration(seconds) {
-  if (seconds == null) return 'unknown';
-  const s = Math.floor(seconds % 60), m = Math.floor((seconds / 60) % 60), h = Math.floor(seconds / 3600);
-  const frac = (seconds % 1).toFixed(2).slice(1);
-  return h ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}` : `${m}:${String(s).padStart(2, '0')}${frac}`;
-}
-
-function fmtBytes(n) {
-  if (n == null) return 'unknown';
-  const u = ['B', 'KB', 'MB', 'GB', 'TB'];
-  let i = 0;
-  while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
-  return `${n.toFixed(i ? 1 : 0)} ${u[i]}`;
-}
-
-/** Flat key/value summary, handy for a report table or a CSV export. */
-function summarise(info) {
-  const v = info.video[0];
-  const a = info.audio[0];
-  return {
-    File: info.name,
-    Size: fmtBytes(info.fileSize),
-    Container: info.container,
-    Brands: info.brands ? [info.brands.major, ...info.brands.compatible].filter(Boolean).join(' ') : null,
-    Duration: fmtDuration(info.duration),
-    'Overall bitrate': fmtBitrate(info.overallBitrate),
-    Faststart: info.faststart == null ? 'n/a' : info.faststart ? 'yes' : 'no',
-    'Video codec': v ? `${v.codec.name} (${v.codec.fourcc})` : 'none',
-    'Codec string': v?.codec?.string || null,
-    Profile: v?.profile || null,
-    Level: v?.level || null,
-    'Level conformant': v?.levelCheck ? (v.levelCheck.conformant ? 'yes' : `no, needs ${v.levelCheck.requiredByThroughput || v.levelCheck.requiredByFrameSize}`) : null,
-    Resolution: v ? `${v.cropped?.width || v.coded.width}x${v.cropped?.height || v.coded.height}` : null,
-    'Display size': v ? `${v.display.width}x${v.display.height}` : null,
-    'Pixel aspect': v?.pixelAspect ? `${v.pixelAspect.h}:${v.pixelAspect.v} (${v.pixelAspect.source})` : '1:1 (square)',
-    'Display aspect': v?.displayAspect || null,
-    Rotation: v?.rotation ? `${v.rotation} degrees` : 'none',
-    'Bit depth': v?.bitDepth ? `${v.bitDepth}-bit${v.bitDepthInferred ? ' (inferred)' : ''}` : null,
-    Chroma: v?.chroma || null,
-    'Frame rate': v ? `${fmtFps(v.frameRate.nominalFps || v.frameRate.fps)} ${v.frameRate.mode}${v.frameRate.mode !== 'CFR' ? ` (${fmtFps(v.frameRate.minFps)} to ${fmtFps(v.frameRate.maxFps)}, avg ${fmtFps(v.frameRate.avgFps)})` : ''}` : null,
-    Frames: v?.sampleCount || null,
-    Scan: v?.interlaced ? (v.interlaced.flag ? `interlaced, ${v.interlaced.fieldOrder}` : 'progressive') : 'progressive',
-    'B-frames': v ? (v.hasBFrames ? 'yes' : 'no') : null,
-    Keyframes: v?.keyframes ? (v.keyframes.allIntra ? 'all-intra' : `${v.keyframes.count}, every ${v.keyframes.intervalSeconds}s`) : null,
-    'Video bitrate': v ? fmtBitrate(v.bitrate) : null,
-    'Media duration': v && Math.abs((v.duration || 0) - (info.duration || 0)) > 0.05 ? `${fmtDuration(v.duration)} (container presents ${fmtDuration(info.duration)})` : null,
-    'Edit list': v?.trimmedHeadSeconds ? `skips first ${v.trimmedHeadSeconds}s` : (v?.startDelay ? `${v.startDelay.toFixed(2)}s empty gap` : (v?.editList?.length ? 'present, no offset' : 'none')),
-    Colour: v?.colour ? `${v.colour.primaries} / ${v.colour.transfer} / ${v.colour.matrix}${v.colour.fullRange ? ' full range' : ''}` : 'untagged',
-    'Audio codec': a ? `${a.codec.name} (${a.codec.fourcc})` : 'none',
-    Audio: a ? `${a.channels} ch, ${a.sampleRate} Hz` : null,
-  };
-}
-
-/**
- * pptx-media.js
- * Pulls every video and audio reference out of a PPTX and reports how it is
- * attached: embedded, linked, or orphaned. Feeds each embedded file straight
- * into mp4-inspect.js.
- *
- * Zip-library agnostic. Supply an adapter with:
- *   { list(): string[], read(path): Promise<Uint8Array>, readText(path): Promise<string> }
- * Adapters for JSZip and zip.js are at the bottom.
- *
- * XML handling is a deliberate block-scan rather than a DOM parse. PPTX XML is
- * machine generated by PowerPoint, so the structure is predictable, and this
- * keeps the module dependency-free and identical in Node and the browser.
- *
- * AEGFX / SlideSize
- */
-
-
-const EMU_PER_INCH = 914400;
-const VIDEO_EXT = /\.(mp4|m4v|mov|avi|wmv|mkv|webm|mpg|mpeg|m2v|mts|m2ts|flv|3gp|ogv)$/i;
-const AUDIO_EXT = /\.(mp3|m4a|wav|aiff?|wma|aac|flac|ogg|oga|mid|midi)$/i;
-const INSPECTABLE = /\.(mp4|m4v|mov|m4a)$/i;
-
-/* ------------------------------------------------------------------ *
- * Tiny XML helpers                                                    *
- * ------------------------------------------------------------------ */
-
-function attrs(tagText) {
-  const out = {};
-  const re = /([\w:.-]+)\s*=\s*"([^"]*)"/g;
-  let m;
-  while ((m = re.exec(tagText))) out[m[1]] = decodeEntities(m[2]);
-  return out;
-}
-
-function decodeEntities(s) {
-  return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'").replace(/&#(\d+);/g, (_, d) => String.fromCharCode(+d))
-    .replace(/&amp;/g, '&');
-}
-
-/** All self-closing or opening tags of a given name, as attribute objects. */
-function findTags(xml, name) {
-  const re = new RegExp(`<${name}\\b([^>]*?)/?>`, 'g');
-  const out = [];
-  let m;
-  while ((m = re.exec(xml))) out.push(attrs(m[1]));
-  return out;
-}
-
-/** Text of each <name>...</name> block, nesting-aware for one level of the same tag. */
-function findBlocks(xml, name) {
-  const out = [];
-  const open = new RegExp(`<${name}(\\s[^>]*)?>`, 'g');
-  let m;
-  while ((m = open.exec(xml))) {
-    const start = m.index;
-    let depth = 1;
-    const scan = new RegExp(`<(/?)${name}(?:\\s[^>]*)?(/?)>`, 'g');
-    scan.lastIndex = open.lastIndex;
-    let s;
-    while (depth > 0 && (s = scan.exec(xml))) {
-      if (s[2] === '/') continue;
-      depth += s[1] === '/' ? -1 : 1;
-    }
-    const end = depth === 0 && s ? s.index + s[0].length : xml.length;
-    out.push(xml.slice(start, end));
-    open.lastIndex = end;
-  }
-  return out;
-}
-
-/* ------------------------------------------------------------------ *
- * Relationship handling                                               *
- * ------------------------------------------------------------------ */
-
-function relsPathFor(partPath) {
-  const i = partPath.lastIndexOf('/');
-  return `${partPath.slice(0, i)}/_rels/${partPath.slice(i + 1)}.rels`;
-}
-
-/** Resolve a relationship Target against the part that declared it. */
-function resolveTarget(partPath, target) {
-  if (/^[a-zA-Z]+:/.test(target) || target.startsWith('\\\\') || target.startsWith('/')) return target;
-  const base = partPath.slice(0, partPath.lastIndexOf('/')).split('/');
-  for (const seg of target.split('/')) {
-    if (seg === '.') continue;
-    else if (seg === '..') base.pop();
-    else base.push(seg);
-  }
-  return base.join('/');
-}
-
-async function loadRels(zip, partPath) {
-  const p = relsPathFor(partPath);
-  const map = new Map();
-  if (!zip.list().includes(p)) return map;
-  const xml = await zip.readText(p);
-  for (const r of findTags(xml, 'Relationship')) {
-    map.set(r.Id, {
-      id: r.Id,
-      type: r.Type || '',
-      target: r.Target || '',
-      external: (r.TargetMode || '') === 'External',
-      resolved: (r.TargetMode || '') === 'External' ? r.Target : resolveTarget(partPath, r.Target || ''),
-    });
-  }
-  return map;
-}
-
-/* ------------------------------------------------------------------ *
- * Slide scanning                                                      *
- * ------------------------------------------------------------------ */
-
-/** Pull the media references out of one slide's XML. */
-function scanSlide(xml, rels, slideNumber, partPath) {
-  const items = [];
-
-  for (const pic of [...findBlocks(xml, 'p:pic'), ...findBlocks(xml, 'p:graphicFrame')]) {
-    const nv = findTags(pic, 'p:cNvPr')[0] || {};
-    const videoFile = findTags(pic, 'a:videoFile')[0];
-    const audioFile = findTags(pic, 'a:audioFile')[0];
-    const media = findTags(pic, 'p14:media')[0];
-    const ref = videoFile || audioFile || media;
-    if (!ref) continue;
-
-    const rid = ref['r:link'] || ref['r:embed'] || ref['r:id'];
-    const rel = rid ? rels.get(rid) : null;
-
-    const ext = findTags(pic, 'a:ext').find((e) => e.cx && e.cy);
-    const off = findTags(pic, 'a:off')[0];
-    const xfrm = findTags(pic, 'a:xfrm')[0] || {};
-
-    const trim = findTags(pic, 'p14:trim')[0];
-    const nvPr = findTags(pic, 'p:nvPr')[0] || {};
-    const hasPoster = /<a:blip\b/.test(pic);
-
-    items.push({
-      slide: slideNumber,
-      part: partPath,
-      name: nv.name || null,
-      kind: audioFile ? 'audio' : 'video',
-      relId: rid || null,
-      linked: rel ? rel.external : null,
-      target: rel ? rel.target : null,
-      path: rel && !rel.external ? rel.resolved : null,
-      displayEmu: ext ? { cx: Number(ext.cx), cy: Number(ext.cy) } : null,
-      positionEmu: off ? { x: Number(off.x), y: Number(off.y) } : null,
-      rotationDeg: xfrm.rot ? Number(xfrm.rot) / 60000 : 0,
-      flipH: xfrm.flipH === '1',
-      flipV: xfrm.flipV === '1',
-      trimmed: trim ? { start: trim.st || null, end: trim.end || null } : null,
-      posterFrame: hasPoster,
-      loop: /\bloop="1"|<p:cMediaNode[^>]*\bloop="1"/.test(pic) || /playLst/.test(pic),
-      hidden: nvPr.isPhoto === '1' ? false : undefined,
-    });
-  }
-
-  return items;
-}
-
-/* ------------------------------------------------------------------ *
- * Main entry point                                                    *
- * ------------------------------------------------------------------ */
-
-/**
- * @param {{list:()=>string[], read:(p:string)=>Promise<Uint8Array>, readText:(p:string)=>Promise<string>}} zip
- * @param {{inspect?:boolean, slidePixelWidth?:number, maxInspectBytes?:number}} opts
- */
-async function scanPptx(zip, opts = {}) {
-  const doInspect = opts.inspect !== false;
-  const slidePx = opts.slidePixelWidth || 1920;
-  const names = zip.list();
-
-  const result = {
-    slideCount: 0,
-    slideSizeEmu: null,
-    slideSizeInches: null,
-    slideAspect: null,
-    media: [],
-    orphans: [],
-    mediaPartCount: 0,
-    mediaBytes: 0,
-    totalBytes: names.reduce((a, n) => a + (zip.sizeOf ? zip.sizeOf(n) || 0 : 0), 0) || null,
-    warnings: [],
-  };
-
-  // Slide dimensions, for the upscale check
-  if (names.includes('ppt/presentation.xml')) {
-    const pres = await zip.readText('ppt/presentation.xml');
-    const sz = findTags(pres, 'p:sldSz')[0];
-    if (sz) {
-      const cx = Number(sz.cx), cy = Number(sz.cy);
-      result.slideSizeEmu = { cx, cy };
-      result.slideSizeInches = { w: +(cx / EMU_PER_INCH).toFixed(2), h: +(cy / EMU_PER_INCH).toFixed(2) };
-      result.slideAspect = +(cx / cy).toFixed(4);
-    }
-  } else {
-    result.warnings.push('No ppt/presentation.xml: this may not be a PPTX');
-  }
-
-  // Slides in presentation order where possible, numeric order otherwise
-  const slideParts = names.filter((n) => /^ppt\/slides\/slide\d+\.xml$/.test(n))
-    .sort((a, b) => Number(a.match(/(\d+)/)[1]) - Number(b.match(/(\d+)/)[1]));
-  result.slideCount = slideParts.length;
-
-  const otherParts = names.filter((n) =>
-    /^ppt\/(notesSlides\/notesSlide\d+|slideLayouts\/slideLayout\d+|slideMasters\/slideMaster\d+)\.xml$/.test(n));
-
-  const referenced = new Set();
-
-  for (const part of [...slideParts, ...otherParts]) {
-    const num = /slides\/slide(\d+)/.test(part) ? Number(part.match(/slide(\d+)/)[1]) : null;
-    const xml = await zip.readText(part);
-    if (!/(a:videoFile|a:audioFile|p14:media)/.test(xml)) continue;
-    const rels = await loadRels(zip, part);
-    for (const item of scanSlide(xml, rels, num, part)) {
-      if (item.path) referenced.add(item.path);
-      result.media.push(item);
-    }
-  }
-
-  // Anything in ppt/media that is a video or audio file
-  const mediaParts = names.filter((n) => n.startsWith('ppt/media/'));
-  for (const p of mediaParts) {
-    if (!VIDEO_EXT.test(p) && !AUDIO_EXT.test(p)) continue;
-    result.mediaPartCount++;
-    if (zip.sizeOf) result.mediaBytes += zip.sizeOf(p) || 0;
-    if (!referenced.has(p)) {
-      result.orphans.push({ path: p, bytes: zip.sizeOf ? zip.sizeOf(p) : null });
-    }
-  }
-
-  // Deduplicate: one media part can be placed on several slides
-  const byPath = new Map();
-  for (const item of result.media) {
-    if (!item.path) continue;
-    if (!byPath.has(item.path)) byPath.set(item.path, []);
-    byPath.get(item.path).push(item);
-  }
-
-  // Inspect each distinct embedded file once, then attach the result to every placement
-  if (doInspect) {
-    for (const [path, items] of byPath) {
-      const filename = path.split('/').pop();
-      if (!INSPECTABLE.test(path)) {
-        for (const it of items) {
-          it.inspection = { ok: false, name: filename, error: `${filename.split('.').pop().toUpperCase()} is not an ISO BMFF container, so it cannot be inspected in the browser` };
-        }
-        continue;
-      }
-      let bytes;
-      try {
-        bytes = await zip.read(path);
-      } catch (e) {
-        for (const it of items) it.inspection = { ok: false, name: filename, error: `Could not read from the archive: ${e.message}` };
-        continue;
-      }
-      let info;
-      try {
-        info = await inspectBytes(bytes, filename);
-      } catch (e) {
-        info = { ok: false, name: filename, error: `Parse failed: ${e.message}` };
-      }
-      for (const it of items) {
-        it.inspection = info;
-        it.bytes = bytes.length;
-        // Native size against the size it is placed at on the slide
-        const v = info.video && info.video[0];
-        if (v && it.displayEmu && result.slideSizeEmu) {
-          const pxPerEmu = slidePx / result.slideSizeEmu.cx;
-          it.slidePx = {
-            width: Math.round(it.displayEmu.cx * pxPerEmu),
-            height: Math.round(it.displayEmu.cy * pxPerEmu),
-          };
-          const w = v.cropped?.width || v.coded?.width;
-          const h = v.cropped?.height || v.coded?.height;
-          if (w && h) {
-            it.scaleFactor = +Math.max(it.slidePx.width / w, it.slidePx.height / h).toFixed(2);
-            const srcAspect = w / h;
-            const boxAspect = it.displayEmu.cx / it.displayEmu.cy;
-            if (Math.abs(srcAspect - boxAspect) / srcAspect > 0.02) {
-              it.aspectDistortion = +(boxAspect / srcAspect).toFixed(3);
-            }
-          }
-        }
-      }
-    }
-  }
-
-  const linked = result.media.filter((m) => m.linked);
-  if (linked.length) {
-    result.warnings.push(`${linked.length} media reference${linked.length > 1 ? 's are' : ' is'} linked rather than embedded and will not travel with the deck`);
-  }
-
-  return result;
-}
-
-/* ------------------------------------------------------------------ *
- * Deck-level report                                                   *
- * ------------------------------------------------------------------ */
-
-/**
- * Run the risk rules over every item in a scan and roll it up.
- * Pass the `assess` function from playback-risk.js so this module stays
- * independent of the rule set.
- */
-function reportPptx(scan, assess, opts = {}) {
-  const rows = [];
-  for (const item of scan.media) {
-    const risk = item.inspection
-      ? assess(item.inspection, {
-        ...opts,
-        linked: item.linked === true,
-        slideWidth: item.slidePx?.width,
-        slideHeight: item.slidePx?.height,
-      })
-      : assess({ ok: true, name: item.target || item.name, video: [], audio: [], warnings: [], fileSize: null, faststart: null },
-        { ...opts, linked: item.linked === true });
-
-    if (item.aspectDistortion) {
-      risk.findings.unshift({
-        severity: 'amber',
-        code: 'aspect-distortion',
-        title: `Stretched ${item.aspectDistortion > 1 ? 'wider' : 'taller'} on the slide`,
-        detail: `The placeholder is ${Math.abs((item.aspectDistortion - 1) * 100).toFixed(0)}% off the source aspect ratio, so the picture is distorted.`,
-        fix: 'In PowerPoint, right-click the video, Size and Position, and reset the aspect ratio.',
-      });
-      if (risk.verdict === 'green') risk.verdict = 'amber';
-    }
-
-    rows.push({
-      slide: item.slide,
-      name: item.name,
-      file: item.path ? item.path.split('/').pop() : item.target,
-      linked: item.linked,
-      bytes: item.bytes ?? null,
-      scaleFactor: item.scaleFactor ?? null,
-      posterFrame: item.posterFrame,
-      trimmed: item.trimmed,
-      verdict: risk.verdict,
-      summary: risk.summary,
-      findings: risk.findings,
-    });
-  }
-
-  rows.sort((a, b) => (a.slide ?? 999) - (b.slide ?? 999));
-
-  const reds = rows.filter((r) => r.verdict === 'red').length;
-  const ambers = rows.filter((r) => r.verdict === 'amber').length;
-
-  return {
-    verdict: reds ? 'red' : ambers ? 'amber' : 'green',
-    slideCount: scan.slideCount,
-    mediaCount: rows.length,
-    linkedCount: rows.filter((r) => r.linked).length,
-    orphans: scan.orphans,
-    orphanBytes: scan.orphans.reduce((a, o) => a + (o.bytes || 0), 0),
-    counts: { red: reds, amber: ambers, green: rows.length - reds - ambers },
-    summary: reds
-      ? `${reds} of ${rows.length} clips will not play reliably.`
-      : ambers
-        ? `All ${rows.length} clips should play, but ${ambers} need a look.`
-        : `All ${rows.length} clips look fine.`,
-    rows,
-    warnings: scan.warnings,
-  };
-}
-
-/* ------------------------------------------------------------------ *
- * Zip adapters                                                        *
- * ------------------------------------------------------------------ */
-
-/** JSZip. Simple, but loads the whole archive into memory. Fine under ~200 MB. */
-function jszipAdapter(zip) {
-  return {
-    list: () => Object.keys(zip.files).filter((n) => !zip.files[n].dir),
-    sizeOf: (p) => zip.files[p]?._data?.uncompressedSize ?? null,
-    read: (p) => zip.file(p).async('uint8array'),
-    readText: (p) => zip.file(p).async('string'),
-  };
-}
-
-/**
- * zip.js. Reads from a Blob via the central directory, so a 2 GB deck full of
- * video does not have to sit in memory. Preferred for this tool.
- *
- *   const reader = new zip.ZipReader(new zip.BlobReader(file));
- *   const adapter = await zipjsAdapter(reader, zip);
- */
-async function zipjsAdapter(zipReader, zipNS) {
-  const entries = await zipReader.getEntries();
-  const byName = new Map(entries.map((e) => [e.filename, e]));
-  return {
-    list: () => [...byName.keys()],
-    sizeOf: (p) => byName.get(p)?.uncompressedSize ?? null,
-    read: async (p) => new Uint8Array(await byName.get(p).getData(new zipNS.Uint8ArrayWriter())),
-    readText: async (p) => byName.get(p).getData(new zipNS.TextWriter()),
-  };
-}
-
-return {
-  inspect: inspect, inspectFile: inspectFile, inspectBytes: inspectBytes,
-  BlobReader: BlobReader, BytesReader: BytesReader,
-  assess: assess, summarise: summarise, buildFixCommand: buildFixCommand,
-  fmtBitrate: fmtBitrate, fmtFps: fmtFps, fmtDuration: fmtDuration, fmtBytes: fmtBytes,
-  buildLevelPatch: buildLevelPatch, applyPatch: applyPatch, rewriteLevel: rewriteLevel,
-  scanPptx: scanPptx, reportPptx: reportPptx,
-  jszipAdapter: jszipAdapter, zipjsAdapter: zipjsAdapter,
-  TARGETS: TARGETS, H264_LEVELS: H264_LEVELS, checkH264Level: checkH264Level
-};
-})();
