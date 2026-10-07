@@ -1,0 +1,7 @@
+# The Windows launcher needs CRLF line endings wherever it is checked out.
+helper/*.cmd text eol=crlf
+# The Mac helper is run by sh and must stay LF.
+helper/*.command text eol=lf
+helper/*.ps1 text eol=lf
+*.pptx binary
+*.ppt binary

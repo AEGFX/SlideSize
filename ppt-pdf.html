@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PowerPoint to PDF &middot; SlideSize</title>
+<meta name="description" content="Batch convert PowerPoint files to PDF with the PowerPoint installed on your own computer. Checks every deck first, checks every PDF afterwards and reports what it could not verify. Nothing is uploaded.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23E7302A'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+--bg: #1a1a1a;
+--panel: #262626;
+--border: #333333;
+--border2: #3d3d3d;
+--accent: #E7302A;
+--accent2: #ff4f49;
+--green: #4caf82;
+--red: #E7302A;
+--amber: #d8a657;
+--muted: #888888;
+--text: #F2F2F2;
+--label: #D9D9D9;
+--mono: 'Share Tech Mono', monospace;
+--sans: 'DM Sans', sans-serif;
+--pp: #E86FA6;          /* rose, not used by any other SlideSize tool */
+--pp2: #f595bf;
+--pp-dim: rgba(232,111,166,0.12);
+--pp-ink: #2a0d1b;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+background: var(--bg);
+color: var(--text);
+font-family: var(--sans);
+min-height: 100vh;
+display: flex;
+flex-direction: column;
+align-items: center;
+}
+[hidden] { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ===== header, same parts as the other SlideSize pages ===== */
+header {
+width: 100%;
+background: var(--panel);
+border-bottom: 1px solid var(--border2);
+padding: 13px 24px;
+display: flex;
+align-items: center;
+gap: 14px;
+}
+.logo-mark {
+height: 24px; width: 42px; flex-shrink: 0;
+border: 2px solid var(--accent);
+position: relative; background: transparent;
+}
+.logo-mark::after { content: ''; position: absolute; inset: 3px; background: var(--accent); opacity: 0.2; }
+.logo-text {
+font-family: var(--sans); font-weight: 700; font-size: 16px;
+letter-spacing: 3px; color: #fff; text-transform: uppercase;
+}
+.logo-text span { color: var(--accent); }
+.header-by {
+margin-left: auto;
+font-family: var(--sans); font-size: 11px; font-weight: 500;
+color: var(--muted); letter-spacing: 1px; text-transform: uppercase;
+}
+.header-by a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
+.header-by a:hover { color: var(--accent); }
+@media (max-width: 560px) { header { flex-wrap: wrap; } .header-by { margin-left: 0; width: 100%; } }
+
+.app {
+width: 100%; max-width: 1180px;
+padding: 16px 20px 40px;
+display: flex; flex-direction: column; gap: 16px;
+}
+
+.panel {
+background: var(--panel);
+border: 1px solid var(--border2);
+border-top: 2px solid var(--pp);
+border-radius: 2px;
+padding: 16px;
+display: flex; flex-direction: column; gap: 12px;
+min-width: 0;
+}
+.panel.idle { border-top-color: var(--border2); }
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.panel-title {
+font-family: var(--sans); font-size: 13px; font-weight: 700;
+letter-spacing: 1px; text-transform: uppercase; color: #fff;
+display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
+}
+.chip {
+font-family: var(--mono); font-size: 10px; font-weight: 400; letter-spacing: 0.5px;
+color: var(--pp); border: 1px solid var(--pp); border-radius: 2px;
+padding: 2px 6px; text-transform: uppercase; white-space: nowrap;
+}
+.chip.dim { color: var(--muted); border-color: var(--border2); }
+.chip.warn { color: var(--amber); border-color: rgba(216,166,87,0.5); }
+.chip.bad { color: #ff6b66; border-color: rgba(231,48,42,0.5); }
+.chip.good { color: var(--green); border-color: rgba(76,175,130,0.5); }
+.step {
+font-family: var(--mono); font-size: 11px; color: var(--pp-ink); background: var(--pp);
+width: 18px; height: 18px; border-radius: 2px; display: inline-flex; align-items: center; justify-content: center;
+}
+.panel.idle .step { background: var(--border2); color: var(--label); }
+.intro { font-family: var(--sans); font-size: 13px; color: var(--muted); line-height: 1.6; max-width: 880px; }
+.intro strong { color: var(--label); font-weight: 600; }
+
+/* ===== fields ===== */
+label.fld, .fld {
+font-family: var(--sans); font-size: 10px; font-weight: 600; letter-spacing: 1px;
+color: var(--muted); text-transform: uppercase; display: block; margin-bottom: 5px;
+}
+.field { display: flex; flex-direction: column; min-width: 0; }
+select, input[type="text"], input[type="number"] {
+width: 100%; background: var(--bg); border: 1px solid var(--border2); color: var(--text);
+font-family: var(--sans); font-size: 13px; font-weight: 500;
+padding: 9px 10px; border-radius: 2px; outline: none;
+transition: border-color 0.15s;
+}
+input[type="text"].num, input[type="number"] { font-family: var(--mono); font-size: 15px; }
+select { cursor: pointer; }
+select:focus, input[type="text"]:focus, input[type="number"]:focus { border-color: var(--pp); }
+select option { background: #1e1e1e; }
+select:disabled, input:disabled { opacity: 0.45; cursor: not-allowed; }
+input.bad { border-color: var(--red); color: #ff6b66; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+@media (max-width: 760px) { .grid3, .grid4 { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 460px) { .grid2, .grid3, .grid4 { grid-template-columns: 1fr; } }
+
+.seg { display: flex; border: 1px solid var(--border2); border-radius: 2px; overflow: hidden; flex-wrap: wrap; }
+.seg button {
+flex: 1; background: transparent; border: none; border-right: 1px solid var(--border2);
+color: var(--muted); font-family: var(--sans); font-size: 11px; font-weight: 600;
+letter-spacing: 1px; padding: 9px 8px; cursor: pointer; transition: all 0.15s;
+text-transform: uppercase; white-space: nowrap;
+}
+.seg button:last-child { border-right: none; }
+.seg button.active { background: var(--pp-dim); color: var(--pp); }
+.seg button:not(.active):hover:not(:disabled) { color: var(--text); background: var(--border); }
+.seg button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.check { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; padding: 2px 0; }
+.check input { width: 15px; height: 15px; accent-color: var(--pp); margin-top: 2px; flex-shrink: 0; cursor: pointer; }
+.check-txt { font-family: var(--sans); font-size: 12.5px; color: var(--label); line-height: 1.45; }
+.check-txt em { font-style: normal; color: var(--muted); font-size: 11px; display: block; margin-top: 2px; }
+.check.off { cursor: not-allowed; }
+.check.off .check-txt { color: var(--muted); }
+.check.off input { cursor: not-allowed; }
+.why { font-family: var(--sans); font-size: 11px; color: var(--amber); line-height: 1.45; margin-top: 3px; display: block; }
+
+.btn {
+background: transparent; border: 1px solid var(--border2); color: var(--label);
+font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: 1px;
+text-transform: uppercase; padding: 9px 12px; border-radius: 2px; cursor: pointer;
+transition: all 0.15s; white-space: nowrap; display: inline-flex; align-items: center; gap: 7px;
+text-decoration: none;
+}
+.btn:hover:not(:disabled) { border-color: var(--pp); color: var(--pp); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn.solid { background: var(--pp); border-color: var(--pp); color: var(--pp-ink); }
+.btn.solid:hover:not(:disabled) { background: var(--pp2); border-color: var(--pp2); color: var(--pp-ink); }
+.btn.small { padding: 5px 8px; font-size: 10px; }
+.btn.big { width: 100%; justify-content: center; font-size: 14px; font-weight: 700; letter-spacing: 3px; padding: 16px; }
+.btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; flex-shrink: 0; }
+.btn-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+
+.hint { font-family: var(--sans); font-size: 11.5px; color: var(--muted); line-height: 1.55; }
+.hint b, .hint strong { color: var(--label); font-weight: 600; }
+.hint code, .flag code, .setup code { font-family: var(--mono); font-size: 12px; color: var(--label); background: var(--bg); border: 1px solid var(--border); border-radius: 2px; padding: 0 4px; }
+.mono { font-family: var(--mono); }
+
+.flag {
+display: flex; gap: 10px; align-items: flex-start;
+border-radius: 2px; padding: 10px 12px;
+font-family: var(--sans); font-size: 12px; line-height: 1.5;
+}
+.flag::before { content: ''; width: 6px; height: 6px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; background: currentColor; }
+.flag b { font-weight: 700; }
+.flag.warn { background: rgba(216,166,87,0.09); border: 1px solid rgba(216,166,87,0.4); color: var(--amber); }
+.flag.bad { background: rgba(231,48,42,0.08); border: 1px solid rgba(231,48,42,0.4); color: #ff6b66; }
+.flag.ok { background: rgba(76,175,130,0.1); border: 1px solid rgba(76,175,130,0.4); color: var(--green); }
+.flag.info { background: var(--bg); border: 1px solid var(--border2); color: var(--label); }
+.flag.info::before { background: var(--muted); }
+.flag .sub { color: var(--muted); font-size: 11px; display: block; margin-top: 3px; }
+.flag .btn-row { margin-top: 8px; }
+.flag > div { min-width: 0; flex: 1; }
+.msgs { display: flex; flex-direction: column; gap: 6px; }
+.msgs:empty { display: none; }
+
+details.adv { border: 1px solid var(--border2); border-radius: 2px; background: var(--bg); }
+details.adv > summary {
+list-style: none; cursor: pointer; padding: 9px 12px;
+font-family: var(--sans); font-size: 10px; font-weight: 700; letter-spacing: 1px;
+text-transform: uppercase; color: var(--muted);
+display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+details.adv > summary::-webkit-details-marker { display: none; }
+details.adv > summary::after { content: '\25BC'; font-size: 9px; transition: transform 0.2s; }
+details.adv[open] > summary::after { transform: rotate(180deg); }
+details.adv > summary:hover { color: var(--pp); }
+details.adv .adv-body { padding: 4px 12px 12px; display: flex; flex-direction: column; gap: 12px; }
+.sub-head {
+font-family: var(--sans); font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+color: var(--pp); display: flex; align-items: center; gap: 10px; margin-top: 4px;
+}
+.sub-head::after { content: ''; flex: 1; height: 1px; background: var(--border2); }
+
+/* ===== drop zone ===== */
+.drop {
+border: 1px dashed var(--border2); border-radius: 2px; background: var(--bg);
+padding: 26px 20px; text-align: center; cursor: pointer; width: 100%;
+transition: border-color 0.15s, background 0.15s; color: inherit; font-family: var(--sans);
+display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.drop:hover, .drop.drag { border-color: var(--pp); }
+.drop.drag { background: var(--pp-dim); }
+.drop svg.dz-icon { stroke: var(--pp); fill: none; stroke-width: 1.5; width: 40px; height: 40px; }
+.dz-big { font-size: 14px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text); }
+.dz-small { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.privacy {
+display: flex; align-items: center; justify-content: center; gap: 7px;
+font-size: 10px; letter-spacing: 0.5px; color: var(--pp); text-transform: uppercase; margin-top: 4px;
+}
+.privacy svg { stroke: var(--pp); fill: none; stroke-width: 2; width: 13px; height: 13px; }
+.spinner {
+width: 12px; height: 12px; border: 2px solid var(--border2);
+border-top-color: var(--pp); border-radius: 50%;
+animation: spin 0.7s linear infinite; display: inline-block; vertical-align: -2px; margin-right: 6px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===== file and result tables ===== */
+.tbl-wrap { overflow-x: auto; border: 1px solid var(--border2); border-radius: 2px; background: var(--bg); max-height: 520px; overflow-y: auto; }
+table.tbl { width: 100%; border-collapse: collapse; font-family: var(--sans); font-size: 12px; }
+.tbl th {
+position: sticky; top: 0; z-index: 1; background: #202020;
+text-align: left; font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted);
+padding: 8px 10px; border-bottom: 1px solid var(--border2); white-space: nowrap;
+}
+.tbl td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; color: var(--label); }
+.tbl tr:last-child td { border-bottom: none; }
+.tbl td.name { color: var(--text); font-family: var(--mono); font-size: 12.5px; word-break: break-word; min-width: 180px; }
+.tbl td.name small { display: block; font-family: var(--sans); font-size: 11px; color: var(--muted); margin-top: 2px; }
+.tbl td.num { font-family: var(--mono); white-space: nowrap; }
+.tbl tr.main { cursor: pointer; }
+.tbl tr.main:hover td { background: #222; }
+.tbl tr.detail td { background: #1e1e1e; padding: 12px; }
+.tbl .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.tbl input[type="checkbox"] { width: 15px; height: 15px; accent-color: var(--pp); cursor: pointer; }
+.empty { padding: 18px; text-align: center; font-family: var(--sans); font-size: 12px; color: var(--muted); }
+
+.issues { display: flex; flex-direction: column; gap: 6px; }
+.issue {
+display: grid; grid-template-columns: 86px 1fr auto; gap: 10px; align-items: start;
+border: 1px solid var(--border2); border-left-width: 2px; border-radius: 2px; background: var(--bg); padding: 9px 11px;
+font-family: var(--sans); font-size: 12px; line-height: 1.5;
+}
+.issue.error { border-left-color: #ff6b66; }
+.issue.warning { border-left-color: var(--amber); }
+.issue.info { border-left-color: var(--muted); }
+.issue.accepted { opacity: 0.7; }
+.issue .where { font-family: var(--mono); font-size: 11px; color: var(--muted); line-height: 1.6; }
+.issue .where b { display: block; font-family: var(--sans); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; font-weight: 700; }
+.issue.error .where b { color: #ff6b66; }
+.issue.warning .where b { color: var(--amber); }
+.issue.info .where b { color: var(--muted); }
+.issue .what { color: var(--text); }
+.issue .more { color: var(--muted); font-size: 11.5px; margin-top: 3px; }
+.issue .more b { color: var(--label); font-weight: 600; }
+@media (max-width: 640px) { .issue { grid-template-columns: 1fr; } }
+
+.st { font-family: var(--sans); font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 3px 7px; border-radius: 2px; border: 1px solid; white-space: nowrap; display: inline-block; }
+.st.completed { color: var(--green); border-color: rgba(76,175,130,0.5); }
+.st.warnings { color: var(--amber); border-color: rgba(216,166,87,0.5); }
+.st.review { color: #ffa24a; border-color: rgba(255,162,74,0.6); background: rgba(255,162,74,0.08); }
+.st.failed { color: #ff6b66; border-color: rgba(231,48,42,0.6); background: rgba(231,48,42,0.08); }
+.st.wait { color: var(--muted); border-color: var(--border2); }
+.st.live { color: var(--pp); border-color: var(--pp); }
+
+/* ===== size preview ===== */
+.size-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; align-items: start; }
+@media (max-width: 860px) { .size-layout { grid-template-columns: 1fr; } }
+.size-prev { background: var(--bg); border: 1px solid var(--border2); border-radius: 2px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.size-prev canvas { width: 100%; height: auto; display: block; background: #111; }
+
+/* ===== helper setup ===== */
+.setup { border: 1px solid var(--border2); border-left: 2px solid var(--pp); background: var(--bg); border-radius: 2px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.setup ol { margin: 0 0 0 18px; display: flex; flex-direction: column; gap: 6px; font-family: var(--sans); font-size: 12.5px; color: var(--label); line-height: 1.55; }
+.setup ol li::marker { color: var(--pp); font-family: var(--mono); }
+.lights { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+@media (max-width: 760px) { .lights { grid-template-columns: 1fr 1fr; } }
+.light { border: 1px solid var(--border2); border-radius: 2px; padding: 8px 10px; font-family: var(--sans); font-size: 11px; color: var(--muted); line-height: 1.4; }
+.light b { display: block; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--label); margin-bottom: 2px; }
+.light.ok { border-color: rgba(76,175,130,0.5); }
+.light.ok b { color: var(--green); }
+.light.bad { border-color: rgba(231,48,42,0.5); }
+.light.bad b { color: #ff6b66; }
+.light.wait b::after { content: ' \2026'; }
+
+/* ===== progress and summary ===== */
+.bar-outer { width: 100%; height: 6px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.bar-inner { height: 100%; width: 0%; background: var(--pp); transition: width 0.2s linear; }
+.bar-label {
+display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+font-family: var(--sans); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px;
+}
+.bar-label b { font-family: var(--mono); font-size: 12px; color: var(--text); font-weight: 400; text-transform: none; letter-spacing: 0; text-align: right; }
+.tiles { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+@media (max-width: 860px) { .tiles { grid-template-columns: repeat(3, 1fr); } }
+.tile { background: var(--bg); border: 1px solid var(--border2); border-radius: 2px; padding: 9px 11px; }
+.tile b { display: block; font-family: var(--mono); font-size: 22px; font-weight: 400; color: var(--text); }
+.tile span { font-family: var(--sans); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+.tile.good b { color: var(--green); }
+.tile.warn b { color: var(--amber); }
+.tile.rev b { color: #ffa24a; }
+.tile.bad b { color: #ff6b66; }
+.now { font-family: var(--mono); font-size: 12px; color: var(--label); line-height: 1.6; word-break: break-word; }
+.kv { font-family: var(--sans); font-size: 12px; display: grid; grid-template-columns: auto 1fr; gap: 5px 12px; align-items: baseline; }
+.kv dt { color: var(--muted); text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; white-space: nowrap; }
+.kv dd { color: var(--text); font-family: var(--mono); font-size: 12.5px; word-break: break-word; }
+
+/* ===== side by side viewer ===== */
+.viewer { position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,0.82); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.viewer-box { background: var(--panel); border: 1px solid var(--border2); border-top: 2px solid var(--pp); border-radius: 2px; width: 100%; max-width: 1500px; max-height: 96vh; overflow: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.viewer-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 980px) { .viewer-grid { grid-template-columns: 1fr; } }
+.viewer-cell { background: var(--bg); border: 1px solid var(--border2); border-radius: 2px; padding: 8px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.viewer-cell canvas { width: 100%; height: auto; display: block; background: #fff; }
+.viewer-cell .none { aspect-ratio: 16 / 9; display: flex; align-items: center; justify-content: center; text-align: center; padding: 14px; font-size: 12px; color: var(--muted); border: 1px dashed var(--border2); line-height: 1.5; }
+
+footer {
+width: 100%; border-top: 1px solid var(--border);
+padding: 14px 24px; font-family: var(--sans); font-size: 11px; color: var(--muted);
+display: flex; flex-direction: column; align-items: center; text-align: center;
+gap: 3px; line-height: 1.6; margin-top: auto;
+}
+footer a { color: var(--accent); text-decoration: none; }
+footer a:hover { color: var(--accent2); }
+.footer-sep { margin: 4px 0; height: 1px; width: 40px; background: var(--border2); }
+
+:focus-visible { outline: 2px solid var(--pp); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+*, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+</style>
+</head>
+<body>
+<header>
+<div class="logo-mark"></div>
+<div class="logo-text">PowerPoint to <span>PDF</span></div>
+<div class="header-by"><a href="/">&larr; Slide Size Calculator</a></div>
+</header>
+
+<input type="file" id="file-input" accept=".ppt,.pptx,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" multiple hidden>
+
+<main class="app">
+
+<section class="panel" aria-label="About this tool">
+<div class="panel-title">PowerPoint to PDF <span class="chip">PPT + PPTX &rarr; PDF, in batches</span></div>
+<p class="intro">
+Converts a folder of presentations to PDF using the <strong>PowerPoint installed on this computer</strong>, so the PDF is drawn by the same program that drew the slides.
+Each deck is checked before conversion and each PDF is checked afterwards. What could not be checked is reported as not checked.
+</p>
+<div class="flag info"><div><b>Microsoft PowerPoint must be installed for PowerPoint-based conversion.</b>
+<span class="sub">A web page cannot start PowerPoint, so a small helper script does it. Nothing is installed. The page writes the helper into the output folder you choose and tells you how to start it. The steps are in section 3.</span></div></div>
+<div class="msgs" id="env-msgs"></div>
+<div class="msgs" id="resume-msgs"></div>
+</section>
+
+<section class="panel" id="p-select" aria-label="Select files">
+<div class="panel-head">
+<div class="panel-title"><span class="step">1</span> Select files</div>
+<div class="btn-row">
+<button type="button" class="btn" id="btn-add-files">Add files</button>
+<button type="button" class="btn" id="btn-add-folder">Add a folder</button>
+<button type="button" class="btn" id="btn-clear" disabled>Clear the list</button>
+</div>
+</div>
+<button type="button" class="drop" id="drop">
+<svg class="dz-icon" viewBox="0 0 24 24"><path d="M14 3v4a1 1 0 001 1h4M5 3h9l5 5v11a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/><path d="M12 11v6M9 14l3 3 3-3"/></svg>
+<span class="dz-big">Drop presentations or folders here</span>
+<span class="dz-small">.pptx and .ppt, a hundred or more at a time. Adding a folder is best for a large batch, because one permission then covers every file if the batch is interrupted and resumed.</span>
+<span class="privacy">
+<svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+Checked and converted on this computer &middot; nothing uploaded
+</span>
+</button>
+<div class="msgs" id="select-msgs"></div>
+</section>
+
+<section class="panel idle" id="p-check" aria-label="Check presentations">
+<div class="panel-head">
+<div class="panel-title"><span class="step">2</span> Check presentations <span class="chip dim" id="check-count">No files yet</span></div>
+<div class="btn-row"><span class="hint" id="check-progress"></span></div>
+</div>
+<div class="tbl-wrap">
+<table class="tbl" id="files">
+<thead><tr><th>File</th><th>Size</th><th>Slides</th><th>Slide size</th><th>Found</th><th>Status</th></tr></thead>
+<tbody id="files-body"><tr><td colspan="6" class="empty">Add presentations and each one is read here. Slide count, slide size, hidden slides, fonts, video, links and anything a PDF cannot show.</td></tr></tbody>
+</table>
+</div>
+<p class="hint">Click a file to see what was found and to give it settings of its own.</p>
+</section>
+
+<section class="panel idle" id="p-settings" aria-label="Settings and destination">
+<div class="panel-head">
+<div class="panel-title"><span class="step">3</span> Settings and destination</div>
+<div class="btn-row">
+<label class="fld" for="preset" style="margin:0">Preset</label>
+<select id="preset" style="width:auto;min-width:190px" aria-label="Preset"></select>
+<button type="button" class="btn small" id="btn-preset-save">Save as preset</button>
+<button type="button" class="btn small" id="btn-preset-delete" disabled>Delete</button>
+</div>
+</div>
+
+<div class="sub-head">Slide size</div>
+<div class="size-layout">
+<div style="display:flex;flex-direction:column;gap:10px;min-width:0">
+<div class="field"><span class="fld">Page size</span>
+<div class="seg" id="seg-size" role="group" aria-label="Page size"></div>
+</div>
+<div id="size-custom" class="grid3" hidden>
+<div class="field"><label class="fld" for="custom-w">Width (cm)</label><input type="text" class="num" id="custom-w" inputmode="decimal" autocomplete="off"></div>
+<div class="field"><label class="fld" for="custom-h">Height (cm)</label><input type="text" class="num" id="custom-h" inputmode="decimal" autocomplete="off"></div>
+<div class="field"><span class="fld">From the calculator</span><span class="hint" id="custom-note">Same units as the Slide Size Calculator result.</span></div>
+</div>
+<div id="size-options" class="grid3" hidden>
+<div class="field"><label class="fld" for="orientation">Orientation</label>
+<select id="orientation"><option value="auto">Match each deck</option><option value="landscape">Landscape</option><option value="portrait">Portrait</option></select></div>
+<div class="field"><span class="fld">When the shape differs</span>
+<div class="seg" id="seg-fit" role="group" aria-label="Fit or fill"><button type="button" data-v="fit">Fit, add margins</button><button type="button" data-v="fill">Fill, crop</button></div></div>
+<div class="field"><span class="fld">Margin colour</span>
+<div class="seg" id="seg-margin" role="group" aria-label="Margin colour"><button type="button" data-v="none">None</button><button type="button" data-v="white">White</button><button type="button" data-v="black">Black</button></div></div>
+</div>
+<p class="hint" id="size-hint">Each PDF keeps the slide size of its deck. Choose a page size to put every deck on the same page.</p>
+</div>
+<div class="size-prev">
+<canvas id="size-canvas" width="560" height="340" aria-label="How a slide sits on the chosen page"></canvas>
+<div class="hint" id="size-readout">Add a presentation to see how its slides sit on the page.</div>
+</div>
+</div>
+
+<div class="sub-head">Slides</div>
+<div class="grid3">
+<label class="check" id="lab-hidden"><input type="checkbox" id="opt-hidden"><span class="check-txt">Include hidden slides<em>Off by default. Hidden slides are left out of the PDF.</em><span class="why" id="why-hidden" hidden></span></span></label>
+<div class="field"><span class="fld">Which slides</span>
+<div class="seg" id="seg-range" role="group" aria-label="Which slides"><button type="button" data-v="all">All slides</button><button type="button" data-v="range">A range</button></div>
+<div class="grid2" id="range-fields" style="margin-top:8px" hidden>
+<div class="field"><label class="fld" for="range-from">First slide</label><input type="number" id="range-from" min="1" step="1" value="1"></div>
+<div class="field"><label class="fld" for="range-to">Last slide</label><input type="number" id="range-to" min="1" step="1" value="1"></div>
+</div>
+<span class="why" id="why-range" hidden></span></div>
+<div class="field"><span class="fld">What goes on each page</span>
+<div class="seg" id="seg-output" role="group" aria-label="Page content"><button type="button" data-v="slides">Slides only</button><button type="button" data-v="notes">Notes pages</button></div>
+<span class="why" id="why-notes" hidden></span></div>
+</div>
+
+<div class="sub-head">PDF</div>
+<div class="grid3">
+<div class="field"><span class="fld">Format</span>
+<div class="seg" id="seg-pdfa" role="group" aria-label="PDF format"><button type="button" data-v="0">Standard PDF</button><button type="button" data-v="1">PDF/A</button></div>
+<span class="why" id="why-pdfa" hidden></span></div>
+<div class="field"><span class="fld">Image quality</span>
+<div class="seg" id="seg-quality" role="group" aria-label="Image quality"><button type="button" data-v="standard">High</button><button type="button" data-v="minimum">Smallest file</button></div>
+<span class="why" id="why-quality" hidden></span>
+<span class="hint" style="margin-top:4px">PowerPoint offers these two. High keeps pictures as they are. Smallest file compresses them for screen reading.</span></div>
+<div class="field"><span class="fld">Fidelity check</span>
+<div class="seg" id="seg-fidelity" role="group" aria-label="Fidelity check"><button type="button" data-v="all">Every slide</button><button type="button" data-v="sample">Sample</button><button type="button" data-v="off">Off</button></div>
+<span class="why" id="why-reference" hidden></span>
+<span class="hint" style="margin-top:4px">PowerPoint also saves a picture of each slide, and each PDF page is compared with it. Slower, and it is evidence, not proof.</span></div>
+</div>
+
+<details class="adv" id="adv">
+<summary>Advanced settings</summary>
+<div class="adv-body">
+<div class="grid2">
+<label class="check" id="lab-bitmapText"><input type="checkbox" id="opt-bitmapText"><span class="check-txt">Bitmap text when fonts cannot be embedded<em>Keeps the look of a font whose licence forbids embedding by writing that text as a picture. That text can then not be searched, selected or read by a screen reader. It does not bring back a font that is missing from this computer.</em><span class="why" id="why-bitmapText" hidden></span></span></label>
+<label class="check" id="lab-tags"><input type="checkbox" id="opt-tags"><span class="check-txt">Accessibility tags<em>Structure tags give a screen reader a reading order.</em><span class="why" id="why-tags" hidden></span></span></label>
+<label class="check" id="lab-docProps"><input type="checkbox" id="opt-docProps"><span class="check-txt">Document properties<em>Title, author and the other properties stored in the deck.</em><span class="why" id="why-docProps" hidden></span></span></label>
+<label class="check" id="lab-markup"><input type="checkbox" id="opt-markup"><span class="check-txt">Comments and ink<em>Off by default. PowerPoint treats the two as one setting.</em><span class="why" id="why-markup" hidden></span></span></label>
+<label class="check" id="lab-links"><input type="checkbox" id="opt-links"><span class="check-txt">Keep hyperlinks<em>PowerPoint always writes them. Turning this off removes them from the finished PDF.</em></span></label>
+<label class="check" id="lab-metadata"><input type="checkbox" id="opt-metadata"><span class="check-txt">Strip metadata afterwards<em>Removes title, author, dates and the XMP block from the finished PDF.</em><span class="why" id="why-metadata" hidden></span></span></label>
+<label class="check" id="lab-placeholders"><input type="checkbox" id="opt-placeholders"><span class="check-txt">Mark videos that have no usable poster frame<em>Draws a labelled placeholder over the video in the PDF, so a black box is not mistaken for content.</em><span class="why" id="why-placeholders" hidden></span></span></label>
+<label class="check" id="lab-remote"><input type="checkbox" id="opt-remote"><span class="check-txt">Allow linked files from the network<em>Off by default. A deck that links to pictures on the internet or a network share is held back, because PowerPoint fetches them as soon as it opens the deck.</em></span></label>
+<label class="check" id="lab-keeprefs"><input type="checkbox" id="opt-keeprefs"><span class="check-txt">Keep every reference picture<em>Off by default. Only pictures of slides with a suspected difference are kept.</em></span></label>
+</div>
+<div class="grid3">
+<div class="field"><label class="fld" for="sensitivity">Fidelity check sensitivity</label>
+<select id="sensitivity"><option value="low">Low, obvious differences only</option><option value="normal">Normal</option><option value="high">High, flags small differences</option></select></div>
+<div class="field"><label class="fld" for="timeout">Time limit per file (minutes)</label><input type="number" id="timeout" min="1" max="120" step="1" value="10"></div>
+<div class="field"><span class="fld">Explained</span><span class="hint">A file that passes the time limit is recorded as failed and the batch carries on.</span></div>
+</div>
+</div>
+</details>
+<div class="msgs" id="setting-notes"></div>
+
+<div class="sub-head">Output folder and helper</div>
+<div class="btn-row">
+<button type="button" class="btn solid" id="btn-folder">Choose the output folder</button>
+<button type="button" class="btn" id="btn-open-batch">Open a folder with an unfinished batch</button>
+<span class="hint mono" id="folder-name"></span>
+</div>
+<p class="hint">PDFs and reports are written straight into this folder, one file at a time. Use a folder of its own, not Documents, Desktop or Downloads themselves, which the browser will not open.</p>
+<div class="setup" id="setup" hidden>
+<div class="lights">
+<div class="light" id="light-folder"><b>Folder</b><span></span></div>
+<div class="light" id="light-files"><b>Helper files</b><span></span></div>
+<div class="light" id="light-helper"><b>Helper running</b><span></span></div>
+<div class="light" id="light-ppt"><b>PowerPoint</b><span></span></div>
+</div>
+<div id="setup-steps"></div>
+<div class="btn-row">
+<button type="button" class="btn small" id="btn-write-helper">Write the helper files again</button>
+<a class="btn small" id="btn-dl-helper" href="/helper/" download>Download the helper</a>
+<button type="button" class="btn small" id="btn-helper-retry" hidden>Retry</button>
+<button type="button" class="btn small" id="btn-helper-stop" hidden>Stop the helper</button>
+</div>
+<div class="msgs" id="helper-msgs"></div>
+</div>
+
+<div class="sub-head">What will be made</div>
+<div class="tbl-wrap">
+<table class="tbl" id="plan">
+<thead><tr><th>File</th><th>Output PDF</th><th>Pages</th><th>Page size</th><th>Orientation</th><th>Notes</th></tr></thead>
+<tbody id="plan-body"><tr><td colspan="6" class="empty">Nothing to convert yet.</td></tr></tbody>
+</table>
+</div>
+</section>
+
+<section class="panel idle" id="p-convert" aria-label="Convert">
+<div class="panel-title"><span class="step">4</span> Convert</div>
+<div class="msgs" id="start-msgs"></div>
+<button type="button" class="btn solid big" id="btn-start" disabled>Convert</button>
+<div id="progress" hidden>
+<div class="bar-label"><span id="progress-stage">Waiting</span><b id="progress-detail"></b></div>
+<div class="bar-outer"><div class="bar-inner" id="progress-fill"></div></div>
+<div class="now" id="progress-now" style="margin-top:8px"></div>
+<div class="btn-row" style="margin-top:10px">
+<button type="button" class="btn" id="btn-stop">Stop after this file</button>
+<button type="button" class="btn" id="btn-skip">Skip this file</button>
+</div>
+<p class="hint" style="margin-top:8px">Keep this tab open. It can sit in the background. Every finished PDF is already in the output folder and progress is saved after each file, so a closed tab or a restart loses nothing that is done.</p>
+</div>
+</section>
+
+<section class="panel idle" id="p-results" aria-label="Review results">
+<div class="panel-head">
+<div class="panel-title"><span class="step">5</span> Review results and warnings</div>
+<div class="btn-row">
+<div class="seg" id="seg-filter" role="group" aria-label="Show">
+<button type="button" data-v="all" class="active">All</button><button type="button" data-v="review">Needs review</button><button type="button" data-v="warnings">Warnings</button><button type="button" data-v="failed">Failed</button><button type="button" data-v="completed">Completed</button>
+</div>
+<select id="sev-filter" style="width:auto" aria-label="Issues to show"><option value="all">All issues</option><option value="warning">Warnings and errors</option><option value="error">Errors only</option></select>
+</div>
+</div>
+<div class="tiles" id="tiles"></div>
+<div class="tbl-wrap">
+<table class="tbl" id="results">
+<thead><tr><th><input type="checkbox" id="res-all" aria-label="Select all results"></th><th>File</th><th>Result</th><th>Pages</th><th>Issues</th><th>Time</th><th></th></tr></thead>
+<tbody id="results-body"><tr><td colspan="7" class="empty">Results appear here as each file finishes.</td></tr></tbody>
+</table>
+</div>
+<div class="btn-row">
+<button type="button" class="btn" id="btn-retry" disabled>Retry selected</button>
+<span class="hint">To retry with different settings, open the file in section 2, give it settings of its own, then retry it. A PDF with warnings can always be opened and saved. The warning stays with it.</span>
+</div>
+<p class="hint">A completed conversion, a matching page count and a clean comparison are evidence. None of them is a guarantee that the PDF looks exactly like the deck.</p>
+</section>
+
+<section class="panel idle" id="p-save" aria-label="Save and reports">
+<div class="panel-title"><span class="step">6</span> Save or open PDFs and reports</div>
+<p class="hint" id="save-where">Finished PDFs are written into the output folder as they are made. The report files are rewritten there after every file.</p>
+<div class="btn-row">
+<button type="button" class="btn" id="btn-report-open" disabled>Open the report</button>
+<button type="button" class="btn" id="btn-report-html" disabled>Download report (.html)</button>
+<button type="button" class="btn" id="btn-report-csv" disabled>Download issues (.csv)</button>
+<button type="button" class="btn" id="btn-report-json" disabled>Download data (.json)</button>
+<button type="button" class="btn" id="btn-zip" disabled>Save everything as one zip</button>
+</div>
+<div class="btn-row">
+<button type="button" class="btn" id="btn-clear-temp" disabled>Clear temporary files</button>
+<button type="button" class="btn" id="btn-remove-work" disabled>Remove the helper and the batch record</button>
+</div>
+<div class="msgs" id="save-msgs"></div>
+
+<details class="adv">
+<summary>Platform limits</summary>
+<div class="adv-body">
+<dl class="kv" id="limits"></dl>
+</div>
+</details>
+</section>
+
+</main>
+
+<div class="viewer" id="viewer" hidden role="dialog" aria-modal="true" aria-label="Side by side comparison">
+<div class="viewer-box">
+<div class="panel-head">
+<div class="panel-title" id="viewer-title">Compare</div>
+<div class="btn-row">
+<button type="button" class="btn small" id="viewer-prev">Previous page</button>
+<button type="button" class="btn small" id="viewer-next">Next page</button>
+<button type="button" class="btn small" id="viewer-flagged">Next flagged</button>
+<button type="button" class="btn small solid" id="viewer-accept">Mark this slide as reviewed</button>
+<button type="button" class="btn small" id="viewer-close">Close</button>
+</div>
+</div>
+<div class="viewer-grid">
+<div class="viewer-cell"><span class="fld">PowerPoint's picture of the slide</span><div id="viewer-ref"></div></div>
+<div class="viewer-cell"><span class="fld">The PDF page</span><div id="viewer-pdf"></div></div>
+<div class="viewer-cell"><span class="fld">Where they differ</span><div id="viewer-diff"></div></div>
+</div>
+<div class="msgs" id="viewer-msgs"></div>
+<p class="hint">The PDF page is drawn here by the browser and set against the picture PowerPoint saved of the same slide. The two programs smooth edges, gradients and shadows differently, so the comparison ignores small differences and marks blocks that differ a lot. A marked block is a reason to look, not proof of a fault, and a clean result does not prove the page is right.</p>
+</div>
+</div>
+
+<footer>
+<span>Created by Andrew Brandse</span>
+<span><a href="mailto:info@aegfx.com">info@aegfx.com</a></span>
+<span>Built with Claude (Anthropic)</span>
+<div class="footer-sep"></div>
+<span>Presentations are converted by the PowerPoint on this computer. No presentation, font, preview, PDF or report leaves it.</span>
+</footer>
+
+<script src="pptpdf-core.js"></script>
+<script src="pptpdf-inspect.js"></script>
+<script src="pdf-lib.min.js"></script>
+<script src="pptpdf-pdf.js"></script>
+<script src="pptpdf-app.js"></script>
+</body>
+</html>

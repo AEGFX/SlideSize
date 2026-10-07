@@ -994,6 +994,9 @@ text-transform: uppercase; color: var(--emf);
 
 /* ===== Slideshow Builder link (lime accent, matches slideshow.html) ===== */
 .emf-tool.slideshow-link { --emf: #A6CE4E; --emf2: #bfe070; --emf-dim: rgba(166,206,78,0.12); }
+
+/* ===== PowerPoint to PDF link (rose accent, matches ppt-pdf.html) ===== */
+.emf-tool.pptpdf-link { --emf: #E86FA6; --emf2: #f595bf; --emf-dim: rgba(232,111,166,0.12); }
 </style>
 </head>
 <body>
@@ -1156,6 +1159,18 @@ Standard Presets Reference
 </div>
 <div class="other-tools">
 <div class="other-tools-head"><span class="ot-label">Other Tools</span></div>
+<a class="emf-tool tool-link pptpdf-link" href="/ppt-pdf.html" id="pptpdf-link">
+<div class="emf-tool-title">PowerPoint to PDF <span class="emf-chip">PPT + PPTX &rarr; PDF, in batches</span></div>
+<p class="emf-intro">
+Convert a folder of presentations to PDF with the PowerPoint on your own computer, a hundred or more at a time.
+Every deck is checked first for missing fonts, hidden slides, video and anything a PDF cannot show, and every PDF is
+checked afterwards against PowerPoint's own picture of each slide. Needs Microsoft PowerPoint and a small helper script.
+Opens in its own page and picks up the size from the calculator above as a custom page size.
+</p>
+<div class="go-row"><span>Open PowerPoint to PDF</span>
+<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+</a>
+
 <a class="emf-tool tool-link slideshow-link" href="/slideshow.html" id="slideshow-link">
 <div class="emf-tool-title">Slideshow Builder <span class="emf-chip">Photos &rarr; Looping video</span></div>
 <p class="emf-intro">
@@ -1530,6 +1545,19 @@ var w = parseMath(document.getElementById('px-w').value);
 var h = parseMath(document.getElementById('px-h').value);
 if (!(w > 0 && h > 0) || w !== Math.round(w) || h !== Math.round(h)) return;
 link.href = '/slideshow.html?w=' + w + '&h=' + h + '&fps=' + encodeURIComponent(document.getElementById('fps').value);
+});
+})();
+
+/* The same hand-off for PowerPoint to PDF, where the size becomes the custom page size. */
+(function() {
+var link = document.getElementById('pptpdf-link');
+if (!link) return;
+link.addEventListener('click', function() {
+if (mode !== 'pixel') return;
+var w = parseMath(document.getElementById('px-w').value);
+var h = parseMath(document.getElementById('px-h').value);
+if (!(w > 0 && h > 0)) return;
+link.href = '/ppt-pdf.html?w=' + w + '&h=' + h;
 });
 })();
 
