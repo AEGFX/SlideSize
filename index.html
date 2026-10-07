@@ -991,6 +991,9 @@ font-family: var(--sans); font-size: 11px; font-weight: 700; letter-spacing: 2px
 text-transform: uppercase; color: var(--emf);
 }
 .emf-tool.tool-link .go-row svg { width: 15px; height: 15px; stroke: var(--emf); fill: none; stroke-width: 2; }
+
+/* ===== Slideshow Builder link (lime accent, matches slideshow.html) ===== */
+.emf-tool.slideshow-link { --emf: #A6CE4E; --emf2: #bfe070; --emf-dim: rgba(166,206,78,0.12); }
 </style>
 </head>
 <body>
@@ -1153,6 +1156,17 @@ Standard Presets Reference
 </div>
 <div class="other-tools">
 <div class="other-tools-head"><span class="ot-label">Other Tools</span></div>
+<a class="emf-tool tool-link slideshow-link" href="/slideshow.html" id="slideshow-link">
+<div class="emf-tool-title">Slideshow Builder <span class="emf-chip">Photos &rarr; Looping video</span></div>
+<p class="emf-intro">
+Drop a batch of photos and get a finished video for the screen, with slow Ken Burns motion, crossfades,
+exact timing and a loop that joins without a jump. Any pixel size including wide blends, up to 60 fps.
+Opens in its own page and picks up the pixel size from the calculator above if you have entered one.
+</p>
+<div class="go-row"><span>Open Slideshow Builder</span>
+<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+</a>
+
 <a class="emf-tool tool-link" href="/pdf.html">
 <div class="emf-tool-title">PDF to Slides <span class="emf-chip">PDF &rarr; PNG + PPTX</span></div>
 <p class="emf-intro">
@@ -1505,6 +1519,19 @@ if (bitsEl.options[j].value === bits) { bitsEl.selectedIndex = j; break; }
 calculate();
 }
 document.addEventListener('keydown', function(e) { if (e.key === 'Enter') calculate(); });
+
+/* Hand the calculator's pixel size to the Slideshow Builder, the same way a share link carries it. */
+(function() {
+var link = document.getElementById('slideshow-link');
+if (!link) return;
+link.addEventListener('click', function() {
+if (mode !== 'pixel') return;
+var w = parseMath(document.getElementById('px-w').value);
+var h = parseMath(document.getElementById('px-h').value);
+if (!(w > 0 && h > 0) || w !== Math.round(w) || h !== Math.round(h)) return;
+link.href = '/slideshow.html?w=' + w + '&h=' + h + '&fps=' + encodeURIComponent(document.getElementById('fps').value);
+});
+})();
 
 /* ============================================================
    EMF Extractor (Other Tools)
