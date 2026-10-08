@@ -1,6 +1,6 @@
 /* webm-muxer 5.1.4, MIT licence, (c) Vanilagy and contributors.
    https://github.com/Vanilagy/webm-muxer
-   Vendored for the Slideshow Builder so exports do not depend on a CDN.
+   Vendored for Photo Montage so exports do not depend on a CDN.
    One local change, marked SLIDESIZE PATCH: the segment duration now includes the last frame. */
 "use strict";
 var WebMMuxer = (() => {

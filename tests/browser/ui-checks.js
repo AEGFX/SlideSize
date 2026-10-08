@@ -4,6 +4,11 @@ function check(name, ok, detail) { results.push({ name, ok: !!ok, detail: detail
 const only = process.argv[2] ? new RegExp(process.argv[2]) : null;
 const want = n => !only || only.test(n);
 const text = (page, sel) => page.evaluate(s => { const e = document.querySelector(s); return e ? e.textContent : null; }, sel);
+async function previewRgb(page, k, w, h) {
+  await page.evaluate(async (k) => { SlideshowApp.seek(k); for (let i = 0; i < 400 && !SlideshowApp.frameReady(k); i++) await new Promise(r => setTimeout(r, 15)); SlideshowApp.draw(); }, k);
+  const url = await page.evaluate(() => document.getElementById('preview').toDataURL('image/png'));
+  return A.pngToRgb(Buffer.from(url.split(',')[1], 'base64'), w, h);
+}
 const st = (page, fn) => page.evaluate(src => (new Function('s', 'return (' + src + ')(s)'))(SlideshowApp.state()), fn.toString());
 
 (async () => {
@@ -212,12 +217,15 @@ const st = (page, fn) => page.evaluate(src => (new Function('s', 'return (' + sr
     const warn = await text(page, '#export-msgs');
     check('I9 heavy settings raise a practical warning but stay exportable', /This export is demanding, 3840 x 2160 at 60 fps/.test(warn) && /not a prediction/.test(warn) && !(await page.isDisabled('#btn-export')), warn.slice(0, 160));
     await page.screenshot({ path: S + '/shots/I-warning.png' });
-    // advanced validation
-    await page.evaluate(() => { document.getElementById('adv-export').open = true; });
-    await page.fill('#bitrate', '9999'); await page.waitForTimeout(200);
-    check('I10 invalid bitrate is flagged and blocks export', /between 0\.5 and 800/.test(await text(page, '#adv-export-msgs')) && await page.isDisabled('#btn-export'));
-    await page.fill('#bitrate', '25'); await page.waitForTimeout(400);
-    check('I11 a bitrate set by hand is used', (await st(page, s => s.probes.vp9.config.bitrate)) === 25e6 && /25 Mbit\/s set by hand/.test(await text(page, '#format-msgs')));
+    // bitrate slider and presets
+    await L.tweak(page, P => { P.output.w = 1920; P.output.h = 1080; P.output.fps = 30; P.timing.mode = 'perPhoto'; });
+    await page.evaluate(() => { const s = document.getElementById('bitrate-slider'); s.value = 700; s.dispatchEvent(new Event('input', { bubbles: true })); });
+    await page.waitForFunction(() => { const s = SlideshowApp.state(); return !s.probing && s.probes.vp9 && s.probes.vp9.config && s.probes.vp9.config.bitrate === 54e6; }, null, { timeout: 5000 }).catch(() => {});
+    const sl = await st(page, s => ({ m: s.P.exp.bitrateMbps, b: s.probes.vp9.config.bitrate, lit: document.querySelectorAll('#quality button.active').length, val: document.getElementById('bitrate-val').textContent }));
+    check('I10 the bitrate slider sets the rate the encoder is asked for', sl.m === 54 && sl.b === 54e6 && sl.lit === 0 && sl.val === '54 Mbit/s', JSON.stringify(sl));
+    await page.click('#quality button[data-v="standard"]'); await page.waitForTimeout(400);
+    const pre = await st(page, s => ({ m: s.P.exp.bitrateMbps, b: s.probes.vp9.config.bitrate, slider: +document.getElementById('bitrate-slider').value }));
+    check('I11 a preset takes over again and moves the slider', pre.m === null && pre.b === 8e6 && pre.slider === Math.round(1000 * Math.log(8) / Math.log(300)), JSON.stringify(pre));
     check('I12 no console errors', logs.length === 0, logs.join(' | '));
     await browser.close();
   }
@@ -277,7 +285,7 @@ const st = (page, fn) => page.evaluate(src => (new Function('s', 'return (' + sr
       await page.waitForFunction(() => { const d = document.getElementById('checks'); return d && /opens here/i.test(d.textContent); }, null, { timeout: 30000 });
       const res = await text(page, '#result');
       const ext = fmt.split('/')[1];
-      const b64 = await page.evaluate(async (name) => { const root = await navigator.storage.getDirectory(); const f = await (await root.getFileHandle(name)).getFile(); const u = new Uint8Array(await f.arrayBuffer()); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); }, `slideshow_1280x720_30fps_loop.${ext}`);
+      const b64 = await page.evaluate(async (name) => { const root = await navigator.storage.getDirectory(); const f = await (await root.getFileHandle(name)).getFile(); const u = new Uint8Array(await f.arrayBuffer()); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); }, `montage_1280x720_30fps_loop.${ext}`);
       const out = S + '/out/M_disk.' + ext; fs.writeFileSync(out, Buffer.from(b64, 'base64'));
       const pr = A.probe(out);
       const moovFirst = ext !== 'mp4' || fs.readFileSync(out).subarray(0, 4096).includes(Buffer.from('moov'));
@@ -295,23 +303,49 @@ const st = (page, fn) => page.evaluate(src => (new Function('s', 'return (' + sr
   if (want('N')) {
     const { browser, page, logs } = await L.open();
     await page.goto(L.ROOT + '/index.html');
-    const link = page.locator('#slideshow-link');
-    check('N1 homepage has a clearly labelled entry', /Slideshow Builder/.test(await link.textContent()) && (await link.getAttribute('href')) === '/slideshow.html');
+    const link = page.locator('#montage-link');
+    check('N1 homepage has a clearly labelled entry', /Photo Montage/.test(await link.textContent()) && (await link.getAttribute('href')) === '/photo-montage.html');
     await page.screenshot({ path: S + '/shots/N-home.png', fullPage: true });
     await link.click(); await page.waitForFunction(() => window.SlideshowApp);
-    check('N2 the entry opens the builder', /\/slideshow\.html$/.test(page.url()) && (await page.title()).startsWith('Slideshow Builder'));
+    check('N2 the entry opens the builder', /\/photo-montage\.html$/.test(page.url()) && (await page.title()).startsWith('Photo Montage'));
     await page.click('header .header-by a'); await page.waitForLoadState();
     check('N3 the builder links straight back to SlideSize', page.url() === L.ROOT + '/' && /Slide Size Calculator/.test(await page.title()), page.url());
     await page.fill('#px-w', '3840'); await page.fill('#px-h', '1080'); await page.selectOption('#fps', '50'); await page.click('.calc-btn');
-    await page.click('#slideshow-link'); await page.waitForFunction(() => window.SlideshowApp && !SlideshowApp.state().probing);
+    await page.click('#montage-link'); await page.waitForFunction(() => window.SlideshowApp && !SlideshowApp.state().probing);
     const got = await page.evaluate(() => { const o = SlideshowApp.state().P.output; return [o.w, o.h, o.fps, document.getElementById('out-w').value, document.getElementById('preset').value]; });
     check('N4 the calculator hands its size and frame rate over', got.join() === '3840,1080,50,3840,dw1080', page.url() + ' ' + got.join());
-    await page.goto(L.ROOT + '/slideshow.html?w=1024&h=768&fps=23.976'); await page.waitForFunction(() => window.SlideshowApp);
+    await page.goto(L.ROOT + '/photo-montage.html?w=1024&h=768&fps=23.976'); await page.waitForFunction(() => window.SlideshowApp);
     const g2 = await page.evaluate(() => { const o = SlideshowApp.state().P.output; return [o.w, o.h, o.fps]; });
     check('N5 direct links with a size work, unsupported rates fall back to the default', g2.join() === '1024,768,30');
-    await page.goto(L.ROOT + '/slideshow.html?w=abc&h=-1'); await page.waitForFunction(() => window.SlideshowApp);
+    await page.goto(L.ROOT + '/photo-montage.html?w=abc&h=-1'); await page.waitForFunction(() => window.SlideshowApp);
     check('N6 a bad link is ignored, defaults used', (await page.evaluate(() => { const o = SlideshowApp.state().P.output; return [o.w, o.h, o.fps].join(); })) === '1920,1080,30');
     check('N7 no console errors', logs.length === 0, logs.join(' | '));
+    await browser.close();
+  }
+
+  /* ---------- P: Apple ProRes ---------- */
+  if (want('P')) {
+    const { browser, page, logs } = await L.open();
+    await L.addPhotos(page, land.slice(0, 3));
+    await L.tweak(page, P => { P.output.w = 1280; P.output.h = 720; P.timing.perPhoto = 1; P.timing.transition = 0.4; });
+    const opts = await page.evaluate(() => Array.from(document.getElementById('format').options).map(o => o.textContent.trim() + (o.disabled ? ' [off]' : '')));
+    check('P1 ProRes is offered but never picked by default', opts.includes('Apple ProRes in MOV') && (await st(page, s => s.P.exp.format)) !== 'prores/mov', opts.join(' | '));
+    await page.selectOption('#format', 'prores/mov'); await page.waitForTimeout(300);
+    check('P2 choosing ProRes swaps the bitrate slider for the profile choice', await page.isHidden('#rate-block') && await page.isVisible('#prores-block') && await page.isHidden('#wc-adv'));
+    for (const [prof, name, tag] of [['3', 'HQ', 'apch'], ['1', 'LT', 'apcs']]) {
+      await page.click(`#prores-profile button[data-v="${prof}"]`); await page.waitForTimeout(300);
+      const out = S + `/out/P_${name}.mov`; const info = await L.exportTo(page, out);
+      const pr = A.probe(out);
+      const tagOk = require('child_process').execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=codec_tag_string', '-of', 'csv=p=0', out]).toString().trim() === tag;
+      check('P ProRes 422 ' + name + ' export', pr.codec === 'prores' && pr.profile === name && tagOk && pr.w === 1280 && pr.h === 720 && pr.frames === 90 && pr.rate === '30/1' && Math.abs(pr.duration - 3) < 0.002 && pr.matrix === 'bt709' && pr.pix === 'yuv422p10le' && !/does not match/.test(info.result),
+        `${pr.profile} ${pr.w}x${pr.h} ${pr.frames} frames ${pr.duration}s ${pr.pix} ${pr.matrix} ${(pr.size / 1e6).toFixed(1)} MB`);
+    }
+    const f = A.rgbFrames(S + '/out/P_HQ.mov', 320, 180);
+    let pw = 0; for (const k of [0, 25, 44, 70, 89]) pw = Math.max(pw, A.mad(await previewRgb(page, k, 320, 180), f[k]));
+    check('P ProRes picture matches the preview', pw < 3.5, 'largest difference ' + pw.toFixed(2));
+    const d = A.stepDiffs(f);
+    check('P ProRes loop point is continuous', d[89] > 0.02 && d[89] < Math.max(...d) * 0.8, 'wrap step ' + d[89].toFixed(2));
+    check('P no console errors', logs.length === 0, logs.join(' | '));
     await browser.close();
   }
 

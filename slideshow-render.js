@@ -1,5 +1,5 @@
 /* ============================================================
-   Slideshow Builder renderer  (SlideshowRender)
+   Photo Montage renderer  (SlideshowRender)
 
    Draws one frame of a plan onto a 2D canvas context. The preview
    calls it with a small canvas and proxy images, the exporter with

@@ -1,4 +1,4 @@
-/* Browser checks for the Slideshow Builder.
+/* Browser checks for Photo Montage.
 
    These drive the real page in Chromium, export real videos and measure
    them with ffmpeg: frame counts, frame rate, colour tags, the frames

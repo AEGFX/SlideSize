@@ -112,7 +112,7 @@ const want = n => !only || only.test(n);
     check('C6 loop off: the video ends on the last photo with no fade', Math.max(...tail) < m1 * 0.4 && A.mad(g[179], g[165]) < 6 && A.mad(g[179], g[0]) > 15, `largest step in the last second ${fx(Math.max(...tail))}, last vs first frame ${fx(A.mad(g[179], g[0]))}`);
     const p0 = await previewRgb(page, 0, 320, 180), pl = await previewRgb(page, 179, 320, 180);
     check('C7 loop off: first and last frames match the preview', A.mad(p0, g[0]) < 4 && A.mad(pl, g[179]) < 4, `${fx(A.mad(p0, g[0]))} ${fx(A.mad(pl, g[179]))}`);
-    check('C8 loop off: file name says so', (await page.evaluate(() => document.getElementById('download-link').download)) === 'slideshow_1280x720_30fps.webm');
+    check('C8 loop off: file name says so', (await page.evaluate(() => document.getElementById('download-link').download)) === 'montage_1280x720_30fps.webm');
     check('C9 no console errors', logs.length === 0, logs.join(' | '));
     await browser.close();
   }

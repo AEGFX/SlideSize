@@ -1,5 +1,5 @@
 /* ============================================================
-   Slideshow Builder core  (SlideshowCore)
+   Photo Montage core  (SlideshowCore)
    Timeline, motion, crop suitability, ordering and codec maths.
 
    Pure functions with no DOM access, so the same file runs in the
@@ -676,13 +676,29 @@ var CODECS = {
   avc:  { label: 'H.264',        containers: ['mp4'],         evenOnly: true },
   hevc: { label: 'H.265 (HEVC)', containers: ['mp4'],         evenOnly: true },
   vp9:  { label: 'VP9',          containers: ['webm'],        evenOnly: false },
-  av1:  { label: 'AV1',          containers: ['mp4', 'webm'], evenOnly: false }
+  av1:  { label: 'AV1',          containers: ['mp4', 'webm'], evenOnly: false },
+  prores: { label: 'Apple ProRes', containers: ['mov'],       evenOnly: false }
 };
-var CODEC_ORDER = ['avc', 'vp9', 'av1', 'hevc'];
+var CODEC_ORDER = ['avc', 'prores', 'vp9', 'av1', 'hevc'];
 var CONTAINERS = {
   mp4:  { label: 'MP4',  ext: 'mp4',  mime: 'video/mp4' },
-  webm: { label: 'WebM', ext: 'webm', mime: 'video/webm' }
+  webm: { label: 'WebM', ext: 'webm', mime: 'video/webm' },
+  mov:  { label: 'MOV',  ext: 'mov',  mime: 'video/quicktime' }
 };
+
+/* Apple's published data rates at 1920 x 1080, 29.97 fps, in Mbit/s.
+   ProRes has no bitrate setting. Each profile aims at its own rate,
+   which scales with picture size and frame rate. */
+var PRORES_PROFILES = [
+  { id: 0, label: '422 Proxy', fourcc: 'apco', mbps: 45 },
+  { id: 1, label: '422 LT',    fourcc: 'apcs', mbps: 102 },
+  { id: 2, label: '422',       fourcc: 'apcn', mbps: 147 },
+  { id: 3, label: '422 HQ',    fourcc: 'apch', mbps: 220 }
+];
+function proResBitrate(profile, w, h, fps) {
+  var p = PRORES_PROFILES[profile] || PRORES_PROFILES[3];
+  return Math.round(p.mbps * 1e6 * (w * h) / (1920 * 1080) * fps / 29.97);
+}
 
 /* [name, idc, MaxMBPS, MaxFS, MaxBR kbit/s for Baseline and Main] */
 var AVC_LEVELS = [
@@ -815,19 +831,25 @@ function codecCandidates(family, w, h, fps, bitrate) {
   return { list: list, reason: '' };
 }
 
-/* Mbit/s at 1920 x 1080, 30 fps. Scaled for other sizes and rates below. */
+/* Mbit/s at 1920 x 1080, 30 fps. Scaled for other sizes and rates below.
+   Set generously: a crossfade changes every pixel on every frame, and
+   browser encoders, hardware ones especially, show blocking in fades
+   long before they show it in a still. */
 var QUALITY = {
-  standard: { label: 'Standard', avc: 8,  hevc: 5.5, vp9: 5.5, av1: 4.5 },
-  high:     { label: 'High',     avc: 14, hevc: 9,   vp9: 10,  av1: 8 },
-  max:      { label: 'Maximum',  avc: 28, hevc: 18,  vp9: 20,  av1: 16 }
+  standard: { label: 'Standard', avc: 12, hevc: 8,  vp9: 8,  av1: 7 },
+  high:     { label: 'High',     avc: 25, hevc: 16, vp9: 16, av1: 13 },
+  max:      { label: 'Maximum',  avc: 50, hevc: 32, vp9: 32, av1: 26 }
 };
+
+/* The bitrate slider runs on a log scale between these, in Mbit/s. */
+var BITRATE_MIN = 1, BITRATE_MAX = 300;
 
 /* More pixels need more bits, but not in proportion, and doubling the
    frame rate of slow moving stills needs well under double. */
 function suggestBitrate(family, w, h, fps, quality) {
   var q = QUALITY[quality] || QUALITY.high;
   var mbps = (q[family] || q.avc) * Math.pow((w * h) / (1920 * 1080), 0.85) * Math.pow(fps / 30, 0.6);
-  mbps = clamp(mbps, 0.5, 400);
+  mbps = clamp(mbps, BITRATE_MIN, BITRATE_MAX);
   return Math.round(mbps * 10) * 100000;
 }
 
@@ -835,7 +857,7 @@ function estimateBytes(bitrate, seconds) { return bitrate * seconds / 8 * 1.01; 
 
 function outputFilename(plan, containerId) {
   var c = CONTAINERS[containerId] || CONTAINERS.mp4;
-  return 'slideshow_' + plan.W + 'x' + plan.H + '_' + plan.fps + 'fps' + (plan.loop ? '_loop' : '') + '.' + c.ext;
+  return 'montage_' + plan.W + 'x' + plan.H + '_' + plan.fps + 'fps' + (plan.loop ? '_loop' : '') + '.' + c.ext;
 }
 
 /* ------------------------------------------------------------------ *
@@ -887,7 +909,7 @@ function assessResources(o) {
 return {
   FPS_CHOICES: FPS_CHOICES, PRESETS: PRESETS, INTENSITY: INTENSITY, MOTION_STYLES: MOTION_STYLES,
   PHOTO_MOTIONS: PHOTO_MOTIONS, FRAMING_MODES: FRAMING_MODES, CODECS: CODECS, CODEC_ORDER: CODEC_ORDER,
-  CONTAINERS: CONTAINERS, QUALITY: QUALITY, DEFAULT_THRESHOLD: DEFAULT_THRESHOLD, DEFAULT_FOCUS: DEFAULT_FOCUS,
+  CONTAINERS: CONTAINERS, QUALITY: QUALITY, PRORES_PROFILES: PRORES_PROFILES, BITRATE_MIN: BITRATE_MIN, BITRATE_MAX: BITRATE_MAX, DEFAULT_THRESHOLD: DEFAULT_THRESHOLD, DEFAULT_FOCUS: DEFAULT_FOCUS,
   MIN_SLOT_SECONDS: MIN_SLOT_SECONDS, MAX_TRANSITION_SHARE: MAX_TRANSITION_SHARE, MIN_DIM: MIN_DIM, MAX_DIM: MAX_DIM,
   clamp: clamp, lerp: lerp, gcd: gcd, smoothstep: smoothstep, trimNum: trimNum,
   aspectLabel: aspectLabel, shapeOf: shapeOf, formatTime: formatTime, parseDuration: parseDuration, formatBytes: formatBytes,
@@ -899,7 +921,7 @@ return {
   assignMoves: assignMoves, motionRects: motionRects,
   buildPlan: buildPlan, locate: locate, wrapFrame: wrapFrame, stateAt: stateAt, frameOfPhoto: frameOfPhoto,
   avcLevel: avcLevel, hevcLevel: hevcLevel, vp9Level: vp9Level, av1Level: av1Level,
-  codecCandidates: codecCandidates, suggestBitrate: suggestBitrate, estimateBytes: estimateBytes,
+  codecCandidates: codecCandidates, suggestBitrate: suggestBitrate, proResBitrate: proResBitrate, estimateBytes: estimateBytes,
   outputFilename: outputFilename, assessResources: assessResources
 };
 });

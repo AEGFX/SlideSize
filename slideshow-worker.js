@@ -1,5 +1,5 @@
 /* ============================================================
-   Slideshow Builder export worker
+   Photo Montage export worker
 
    Runs the whole render and encode loop off the page so the
    interface stays responsive and a background tab does not slow
@@ -19,7 +19,8 @@ self.onmessage = function (ev) {
 
   var canDraw = false;
   try { canDraw = typeof OffscreenCanvas !== 'undefined' && !!new OffscreenCanvas(2, 2).getContext('2d'); } catch (e) {}
-  if (typeof VideoEncoder === 'undefined' || typeof VideoFrame === 'undefined' || !canDraw) {
+  var needsEncoder = !m.job || m.job.family !== 'prores';
+  if ((needsEncoder && (typeof VideoEncoder === 'undefined' || typeof VideoFrame === 'undefined')) || !canDraw) {
     self.postMessage({ type: 'unsupported' });
     return;
   }

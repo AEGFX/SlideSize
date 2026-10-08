@@ -1,5 +1,5 @@
 /* ============================================================
-   Slideshow Builder page logic
+   Photo Montage page logic
 
    Holds the project, turns it into a plan with SlideshowCore,
    draws the preview with SlideshowRender and hands exports to
@@ -36,7 +36,7 @@ var P = {
   timing: { mode: 'perPhoto', perPhoto: 5, total: 60, transition: 1, transitionType: 'crossfade' },
   motion: { enabled: true, style: 'mixed', intensity: 'gentle', variation: true, seed: Core.newSeed() },
   framing: { exclude: true, threshold: Core.DEFAULT_THRESHOLD, mode: 'fill', bg: '#000000' },
-  exp: { format: '', userPicked: false, autoNote: '', quality: 'high', bitrateMbps: null, bitrateBad: false,
+  exp: { format: '', userPicked: false, autoNote: '', quality: 'high', bitrateMbps: null, proresProfile: 3,
          bitrateMode: 'variable', keySeconds: 2, keyBad: false, hw: 'no-preference', toDisk: 'auto' }
 };
 
@@ -1353,8 +1353,22 @@ var PLAYBACK_NOTE = {
   avc: 'Plays in PowerPoint, Keynote, QLab, VLC and most show playback software.',
   vp9: 'Plays in browsers and VLC. PowerPoint on Windows and most show playback software will not play it.',
   av1: 'Needs a recent player. PowerPoint and most show playback software will not play it.',
-  hevc: 'Playback is patchy on Windows show machines. Test it on the machine that will run the show.'
+  hevc: 'Playback is patchy on Windows show machines. Test it on the machine that will run the show.',
+  prores: 'For QLab, Resolume, Millumin, disguise, Watchout and editing. PowerPoint and browsers will not play it.'
 };
+/* What the page picks when nothing has been chosen yet. ProRes is never the
+   default: it is slow to make and very large. */
+var DEFAULT_FORMATS = ['avc/mp4', 'vp9/webm', 'av1/mp4', 'hevc/mp4'];
+
+/* Slider position 0 to 1000 on a log scale of Mbit/s. */
+function sliderToMbps(v) {
+  var m = Core.BITRATE_MIN * Math.pow(Core.BITRATE_MAX / Core.BITRATE_MIN, v / 1000);
+  return m < 10 ? Math.round(m * 10) / 10 : Math.round(m);
+}
+function mbpsToSlider(m) {
+  return Math.round(1000 * Math.log(m / Core.BITRATE_MIN) / Math.log(Core.BITRATE_MAX / Core.BITRATE_MIN));
+}
+function fmtMbps(bps) { var m = bps / 1e6; return (m < 10 ? Core.trimNum(m, 1) : Math.round(m)) + ' Mbit/s'; }
 
 function currentFormat() {
   for (var i = 0; i < FORMATS.length; i++) if (FORMATS[i].value === P.exp.format) return FORMATS[i];
@@ -1362,17 +1376,18 @@ function currentFormat() {
 }
 
 function bitrateFor(family) {
+  if (family === 'prores') return Core.proResBitrate(P.exp.proresProfile, P.output.w, P.output.h, P.output.fps);
   if (P.exp.bitrateMbps) return Math.round(P.exp.bitrateMbps * 1e6);
   return Core.suggestBitrate(family, P.output.w, P.output.h, P.output.fps, P.exp.quality);
 }
 
 function probeSettings(family) {
-  return { W: P.output.w, H: P.output.h, fps: P.output.fps, bitrate: bitrateFor(family), bitrateMode: P.exp.bitrateMode, hw: P.exp.hw };
+  return { W: P.output.w, H: P.output.h, fps: P.output.fps, bitrate: bitrateFor(family), bitrateMode: P.exp.bitrateMode, hw: P.exp.hw, proresProfile: P.exp.proresProfile };
 }
 
 /* Re-ask the browser whenever anything that affects the answer changes. */
 function scheduleProbe() {
-  var key = [P.output.w, P.output.h, P.output.fps, P.exp.quality, P.exp.bitrateMbps, P.exp.bitrateMode, P.exp.hw].join('|');
+  var key = [P.output.w, P.output.h, P.output.fps, P.exp.quality, P.exp.bitrateMbps, P.exp.bitrateMode, P.exp.hw, P.exp.proresProfile].join('|');
   if (key === probeKey) return;
   probeKey = key;
   probing = true;
@@ -1403,11 +1418,11 @@ function runProbe() {
    page or by the user, it is never swapped for another behind their back. */
 function pickDefaultFormat() {
   if (P.exp.format) return;
-  for (var i = 0; i < FORMATS.length; i++) {
-    var r = probes[FORMATS[i].family];
+  for (var i = 0; i < DEFAULT_FORMATS.length; i++) {
+    var fam = DEFAULT_FORMATS[i].split('/')[0], r = probes[fam];
     if (r && r.supported) {
-      P.exp.format = FORMATS[i].value;
-      P.exp.autoNote = FORMATS[i].family === 'avc' ? '' : ((probes.avc && probes.avc.reason) || 'H.264 is not available here.');
+      P.exp.format = DEFAULT_FORMATS[i];
+      P.exp.autoNote = fam === 'avc' ? '' : ((probes.avc && probes.avc.reason) || 'H.264 is not available here.');
       return;
     }
   }
@@ -1431,18 +1446,40 @@ function renderFormat() {
     });
     sel.value = fmt ? fmt.value : '';
   }
-  setSeg($('quality'), P.exp.quality);
-  Array.prototype.forEach.call($('quality').querySelectorAll('button'), function (b) { b.disabled = !!P.exp.bitrateMbps; });
+  var isProRes = !!fmt && fmt.family === 'prores';
+  $('rate-block').hidden = isProRes;
+  $('prores-block').hidden = !isProRes;
+  $('wc-adv').hidden = isProRes;
+  /* the preset that matches is lit, none when the slider has been moved by hand */
+  setSeg($('quality'), P.exp.bitrateMbps ? '' : P.exp.quality);
+  setSeg($('prores-profile'), P.exp.proresProfile);
+  var fam0 = fmt && !isProRes ? fmt.family : 'avc';
+  var rate = dimsOk() ? bitrateFor(fam0) : 0;
+  if (rate) {
+    setVal($('bitrate-slider'), mbpsToSlider(rate / 1e6));
+    $('bitrate-val').textContent = fmtMbps(rate) + (P.exp.bitrateMbps ? '' : ', ' + Core.QUALITY[P.exp.quality].label.toLowerCase() + ' preset');
+    var perMin = rate * 60 / 8;
+    $('bitrate-hint').textContent = 'About ' + Core.formatBytes(perMin) + ' a minute. More bits keep crossfades clean, where the encoder works hardest because every pixel changes on every frame. Drag for any rate, or pick a preset to scale with the picture size.';
+  }
+  if (isProRes && dimsOk()) {
+    var prRate = bitrateFor('prores');
+    $('prores-hint').textContent = 'About ' + fmtMbps(prRate) + ', ' + Core.formatBytes(prRate * 60 / 8) + ' a minute at this size and frame rate. ProRes is 10 bit 4:2:2 and every frame stands alone, so there is nothing to tune and nothing to smear in a crossfade. HQ is the usual delivery choice.';
+  }
 
-  if (!env.canEncode) {
-    items.push({ kind: 'bad', text: env.reason });
+  var noEncoder = !env.canEncode && !isProRes;
+  if (noEncoder) {
+    items.push({ kind: 'bad', text: env.reason, sub: probes.prores && probes.prores.supported ? 'Apple ProRes in MOV still works here, because it is encoded without the browser.' : '' });
   } else if (fmt && known) {
     var r = probes[fmt.family];
     if (r && r.supported) {
       if (P.exp.autoNote && !P.exp.userPicked) {
         items.push({ kind: 'warn', text: 'H.264 in MP4 is the usual choice for show playback but this browser cannot encode it here, so ' + fmt.label + ' is selected instead.', sub: P.exp.autoNote });
       }
-      items.push({ kind: 'info', text: r.candidate.label + ', 8 bit 4:2:0, ' + Core.trimNum(r.config.bitrate / 1e6, 1) + ' Mbit/s' + (P.exp.bitrateMbps ? ' set by hand' : '') + '.', sub: PLAYBACK_NOTE[fmt.family] });
+      if (isProRes) {
+        items.push({ kind: 'info', text: r.candidate.label + ', 10 bit 4:2:2. Encoded on this computer in WebAssembly across ' + Math.min(env.cores || 4, 8) + ' threads, so it takes longer than H.264.', sub: PLAYBACK_NOTE.prores });
+      } else {
+        items.push({ kind: 'info', text: r.candidate.label + ', 8 bit 4:2:0, ' + fmtMbps(r.config.bitrate) + (P.exp.bitrateMbps ? ' set by hand' : '') + '.', sub: PLAYBACK_NOTE[fmt.family] });
+      }
       if (fmt.family === 'avc' && r.config.bitrate > 60e6) {
         items.push({ kind: 'warn', text: 'That is above the 60 Mbit/s the VT Inspector flags for PowerPoint on Windows. Fine for a media server, heavy for a laptop.' });
       }
@@ -1454,9 +1491,9 @@ function renderFormat() {
           P.output.w = ew; P.output.h = eh; $('out-w').value = ew; $('out-h').value = eh; P.lockRatio = ew / eh; refresh();
         } });
       }
-      FORMATS.forEach(function (f) {
-        var pr = probes[f.family];
-        if (pr && pr.supported && acts.length < 3) acts.push({ label: 'Use ' + f.label, fn: function () { P.exp.format = f.value; P.exp.userPicked = true; P.exp.autoNote = ''; refresh(); } });
+      DEFAULT_FORMATS.concat(['prores/mov']).forEach(function (v) {
+        var f = FORMATS.filter(function (x) { return x.value === v; })[0], pr = f && probes[f.family];
+        if (f && f.value !== P.exp.format && pr && pr.supported && acts.length < 3) acts.push({ label: 'Use ' + f.label, fn: function () { P.exp.format = f.value; P.exp.userPicked = true; P.exp.autoNote = ''; refresh(); } });
       });
       items.push({ kind: 'bad', text: r.reason, sub: 'Nothing has been changed for you. Pick one of these or adjust the settings.', actions: acts });
     }
@@ -1466,16 +1503,11 @@ function renderFormat() {
   }
   setMsgs($('format-msgs'), items);
 
-  var fam = fmt ? fmt.family : 'avc';
-  $('bitrate').placeholder = dimsOk() ? 'auto ' + Core.trimNum(Core.suggestBitrate(fam, P.output.w, P.output.h, P.output.fps, P.exp.quality) / 1e6, 1) : 'auto';
-  $('bitrate').classList.toggle('bad', P.exp.bitrateBad);
   $('key-secs').classList.toggle('bad', P.exp.keyBad);
   var adv = [];
-  if (P.exp.bitrateMbps) adv.push({ kind: 'info', text: 'A bitrate set by hand replaces the quality preset. Clear the field to go back to the preset.' });
-  if (P.exp.bitrateBad) adv.push({ kind: 'bad', text: 'Enter a bitrate between 0.5 and 800 Mbit/s, or leave it empty.' });
   if (P.exp.keyBad) adv.push({ kind: 'bad', text: 'Enter a key frame spacing between 0.1 and 10 seconds.' });
   if (!env.canStreamToDisk) adv.push({ kind: 'info', text: 'This browser cannot write a file straight to disk, so the video is built in memory and then downloaded. Chrome and Edge on a desktop can.' });
-  adv.push({ kind: 'info', text: 'ProRes, HAP, DNxHR and NotchLC cannot be encoded by a browser. If the media server needs one of them, export H.264 at Maximum and transcode that.' });
+  adv.push({ kind: 'info', text: 'HAP, DNxHR and NotchLC cannot be made in a browser. If the media server needs one of them, export ProRes and transcode that.' });
   setMsgs($('adv-export-msgs'), adv);
   $('to-disk').disabled = !env.canStreamToDisk;
   if (!env.canStreamToDisk) $('to-disk').value = 'off';
@@ -1487,13 +1519,13 @@ function bindFormat() {
     P.exp.format = this.value; P.exp.userPicked = true; P.exp.autoNote = '';
     refresh();
   });
-  bindSeg($('quality'), function (v) { P.exp.quality = v; refresh(); });
-  $('bitrate').addEventListener('input', function () {
-    var raw = this.value.trim(), v = parseNumber(raw);
-    P.exp.bitrateBad = raw !== '' && !(v >= 0.5 && v <= 800);
-    P.exp.bitrateMbps = raw === '' || P.exp.bitrateBad ? null : v;
+  bindSeg($('quality'), function (v) { P.exp.quality = v; P.exp.bitrateMbps = null; refresh(); });
+  $('bitrate-slider').addEventListener('input', function () {
+    P.exp.bitrateMbps = sliderToMbps(parseInt(this.value, 10) || 0);
+    $('bitrate-val').textContent = P.exp.bitrateMbps + ' Mbit/s';
     refreshSoon();
   });
+  bindSeg($('prores-profile'), function (v) { P.exp.proresProfile = parseInt(v, 10); refresh(); });
   $('bitrate-mode').addEventListener('change', function () { P.exp.bitrateMode = this.value; refresh(); });
   $('key-secs').addEventListener('input', function () {
     var v = parseNumber(this.value);
@@ -1525,7 +1557,8 @@ function exportEstimate() {
 
 function exportBlocks() {
   var blocks = [];
-  if (!env.canEncode) { blocks.push(env.reason); return blocks; }
+  var fmt0 = currentFormat();
+  if (!env.canEncode && !(fmt0 && fmt0.family === 'prores')) { blocks.push(env.reason); return blocks; }
   if (imp.running) blocks.push('Still reading photos. Export is available as soon as they are in.');
   plan.errors.forEach(function (e) { blocks.push(e.msg); });
   if (!plan.segs.length) return blocks;
@@ -1533,7 +1566,6 @@ function exportBlocks() {
   if (probing) blocks.push('Checking what this browser can encode at these settings.');
   else if (!fmt) blocks.push('No video format is available in this browser at these settings.');
   else if (!probes[fmt.family] || !probes[fmt.family].supported) blocks.push((probes[fmt.family] && probes[fmt.family].reason) || 'The selected format is not available.');
-  if (P.exp.bitrateBad) blocks.push('The bitrate under Advanced is not valid.');
   if (P.exp.keyBad) blocks.push('The key frame spacing under Advanced is not valid.');
   return blocks;
 }
@@ -1556,9 +1588,9 @@ function renderExport() {
     n ? nf(plan.frames) + ' frames exactly' + (P.loop ? ', seamless loop' : ', plays once') : '');
   var r = fmt && probes[fmt.family];
   addRow(dl, 'Format', fmt ? fmt.label : (probing && env.canEncode ? 'checking' : 'none'),
-    r && r.supported ? r.candidate.label.replace(/^[^ ]+ /, '') + ', ' + Core.trimNum(r.config.bitrate / 1e6, 1) + ' Mbit/s' : '');
+    r && r.supported ? r.candidate.label.replace(/^(Apple ProRes|[^ ]+) /, '') + ', ' + (fmt.family === 'prores' ? 'about ' : '') + fmtMbps(r.config.bitrate) : '');
   if (est && est.supported) {
-    addRow(dl, 'File size', 'about ' + Core.formatBytes(est.bytes), 'if the encoder holds its bitrate. Slideshows often come in smaller.');
+    addRow(dl, 'File size', 'about ' + Core.formatBytes(est.bytes), 'if the encoder holds its bitrate. Montages often come in smaller.');
     addRow(dl, 'Written', est.toDisk ? 'straight to disk' : 'in memory', est.toDisk ? 'you choose where when the export starts' : 'then offered as a download');
     addRow(dl, 'Memory', 'roughly ' + Core.formatBytes(est.res.memBytes), 'working estimate, not a limit');
   }
@@ -1647,6 +1679,7 @@ async function startExport() {
     family: fmt.family, container: fmt.container,
     encoder: probe.config,
     keyFrames: Math.max(1, Math.round(P.exp.keySeconds * plan.fps)),
+    proresProfile: P.exp.proresProfile,
     target: handle ? { kind: 'file', handle: handle } : { kind: 'memory' }
   };
   plan.segs.forEach(function (s) { var p = byId.get(s.id); job.photos[s.id] = { file: p.file, blur: s.mode === 'blur' ? p.blur : null }; });
@@ -1665,7 +1698,7 @@ async function startExport() {
     done: function (result) {
       endExport();
       var file;
-      if (result.kind === 'memory') file = Promise.resolve(new Blob([result.buffer], { type: con.mime }));
+      if (result.kind === 'memory') file = Promise.resolve(result.blob || new Blob([result.buffer], { type: con.mime }));
       else file = handle.getFile();
       file.then(function (blob) { showResult(blob, result, expect, Date.now() - began, !!handle); },
                 function (err) { showFailure(new Error('The file was written but could not be reopened for checking. ' + (err && err.message || ''))); });
@@ -1803,7 +1836,7 @@ async function verifyOutput(blob, result, expect, dl, heading) {
   row('Frames written', nf(result.frames) + ' of ' + nf(expect.frames), result.frames === expect.frames);
   row('Encoder used', (result.codec || 'not reported') + ', ' + result.colour + ' colour', null);
 
-  if (expect.container === 'mp4') {
+  if (expect.container === 'mp4' || expect.container === 'mov') {
     try {
       if (!window.MI) await loadScript(MI_SRC);
       var info = await window.MI.inspectFile(new File([blob], expect.name, { type: expect.mime }));
@@ -1822,7 +1855,7 @@ async function verifyOutput(blob, result, expect, dl, heading) {
         row('Duration', Core.trimNum(dur, 3) + ' s', Math.abs(dur - expect.frames / expect.fps) < 0.5 / expect.fps + 0.002);
         row('Index at front', info.faststart ? 'yes' : 'no', info.faststart ? true : null);
         if (v.colour) row('Colour', v.colour.matrix + ' matrix' + (v.colour.fullRange ? ', full range' : ', video range'), v.colour.matrix === result.colour);
-        try {
+        if (expect.family !== 'prores') try {
           var risk = window.MI.assess(info, { target: 'powerpoint-win' });
           checkRow(dl, 'VT Inspector', risk.summary, risk.verdict === 'green' ? 'good' : (risk.verdict === 'red' ? 'poor' : 'soso'));
         } catch (e) {}

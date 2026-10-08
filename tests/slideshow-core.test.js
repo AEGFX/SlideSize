@@ -1,4 +1,4 @@
-/* Slideshow Builder tests. No dependencies.
+/* Photo Montage tests. No dependencies.
    Run from the repository root with:  node --test                     */
 'use strict';
 const test = require('node:test');
@@ -797,7 +797,10 @@ test('odd sizes are refused for H.264 with the reason, and allowed for VP9 and A
 
 test('suggested bitrate rises with size, rate and quality, and stays sane', () => {
   const b = (w, h, fps, q) => Core.suggestBitrate('avc', w, h, fps, q);
-  assert.equal(b(1920, 1080, 30, 'high'), 14e6);
+  assert.equal(b(1920, 1080, 30, 'high'), 25e6);
+  assert.equal(Core.suggestBitrate('avc', 7680, 4320, 60, 'max'), Core.BITRATE_MAX * 1e6);
+  assert.equal(Core.proResBitrate(3, 1920, 1080, 29.97), 220e6);
+  assert.ok(Math.abs(Core.proResBitrate(3, 3840, 2160, 25) / 1e6 - 220 * 4 * 25 / 29.97) < 1);
   assert.ok(b(3840, 2160, 30, 'high') > b(1920, 1080, 30, 'high') * 3 && b(3840, 2160, 30, 'high') < b(1920, 1080, 30, 'high') * 4);
   assert.ok(b(1920, 1080, 60, 'high') > b(1920, 1080, 30, 'high') && b(1920, 1080, 60, 'high') < b(1920, 1080, 30, 'high') * 2);
   assert.ok(b(1920, 1080, 30, 'standard') < b(1920, 1080, 30, 'high') && b(1920, 1080, 30, 'high') < b(1920, 1080, 30, 'max'));
@@ -860,7 +863,7 @@ test('time and duration text', () => {
   assert.ok(Number.isNaN(Core.parseDuration('')));
   assert.equal(Core.aspectLabel(1920, 1080), '16:9 (1.78:1)');
   assert.equal(Core.aspectLabel(1366, 768), '1.78:1');
-  assert.equal(Core.outputFilename({ W: 1920, H: 1080, fps: 30, loop: true }, 'mp4'), 'slideshow_1920x1080_30fps_loop.mp4');
+  assert.equal(Core.outputFilename({ W: 1920, H: 1080, fps: 30, loop: true }, 'mp4'), 'montage_1920x1080_30fps_loop.mp4');
 });
 
 test('resource warnings are practical and never claim to know the limit', () => {

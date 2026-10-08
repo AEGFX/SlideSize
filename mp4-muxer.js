@@ -1,6 +1,6 @@
 /* mp4-muxer 5.2.2, MIT licence, (c) Vanilagy and contributors.
    https://github.com/Vanilagy/mp4-muxer
-   Unmodified build, vendored for the Slideshow Builder so exports do not depend on a CDN. */
+   Unmodified build, vendored for Photo Montage so exports do not depend on a CDN. */
 "use strict";
 var Mp4Muxer = (() => {
   var __defProp = Object.defineProperty;

@@ -1,5 +1,5 @@
 /* ============================================================
-   Slideshow Builder export  (SlideshowExport)
+   Photo Montage export  (SlideshowExport)
 
    Renders every frame of a plan in order and feeds it to the
    browser's WebCodecs encoder, then muxes the result to MP4 or
@@ -24,7 +24,7 @@
 var MAX_ENCODE_QUEUE = 3;     /* frames waiting in the encoder before we stop feeding it */
 var YIELD_EVERY_MS = 30;      /* let cancel messages and repaints through */
 var PROGRESS_EVERY_MS = 120;
-var LIBS = { mp4: 'mp4-muxer.js', webm: 'webm-muxer.js' };
+var LIBS = { mp4: 'mp4-muxer.js', webm: 'webm-muxer.js', prores: 'prores-encoder-parallel.min.js' };
 
 function inWorker() { return typeof importScripts === 'function' && typeof document === 'undefined'; }
 
@@ -88,6 +88,7 @@ async function firstSupported(family, list, o, hw) {
 async function probe(family, o) {
   var info = Core.CODECS[family];
   var out = { family: family, supported: false, reason: '', config: null, candidate: null, oddDims: false };
+  if (family === 'prores') return probeProRes(o, out);
   var env = environment();
   if (!env.canEncode) { out.reason = env.reason; return out; }
   var cand = Core.codecCandidates(family, o.W, o.H, o.fps, o.bitrate);
@@ -104,6 +105,25 @@ async function probe(family, o) {
     }
   }
   out.reason = info.label + ' cannot be encoded by this browser at ' + o.W + ' x ' + o.H + ', ' + o.fps + ' fps.';
+  return out;
+}
+
+/* ProRes is encoded in WebAssembly rather than by the browser, so the
+   question is only whether WebAssembly and workers are there and the
+   size is within what the encoder handles. */
+function probeProRes(o, out) {
+  if (typeof WebAssembly !== 'object' || typeof Worker === 'undefined') {
+    out.reason = 'ProRes is encoded with WebAssembly in workers, and this browser has neither.';
+    return out;
+  }
+  if (o.W > 8192 || o.H > 8192) {
+    out.reason = 'The ProRes encoder here stops at 8192 px a side.';
+    return out;
+  }
+  var p = Core.PRORES_PROFILES[o.proresProfile == null ? 3 : o.proresProfile];
+  out.supported = true;
+  out.config = { codec: 'prores', bitrate: Core.proResBitrate(p.id, o.W, o.H, o.fps) };
+  out.candidate = { label: 'Apple ProRes ' + p.label, profile: p.id };
   return out;
 }
 
@@ -263,13 +283,134 @@ async function readCanvas(canvas, ctx, W, H, state) {
 }
 
 /* ------------------------------------------------------------------ *
+ * Sinks: where rendered frames go                                     *
+ *                                                                     *
+ * Both take a finished canvas per frame and hand back a result at the *
+ * end. The render loop in run() does not care which one it feeds.     *
+ * ------------------------------------------------------------------ */
+
+/* WebCodecs encoder into mp4-muxer or webm-muxer. */
+async function webCodecsSink(job, W, H, fps, N, stream, state) {
+  if (typeof VideoEncoder === 'undefined') throw new Error('This browser has no WebCodecs video encoder.');
+  var libName = job.container === 'mp4' ? 'Mp4Muxer' : 'WebMMuxer';
+  if (!root[libName]) await loadLib(LIBS[job.container]);
+  var Lib = root[libName];
+  if (!Lib) throw new Error('The ' + job.container.toUpperCase() + ' writer did not load.');
+  var target = stream ? new Lib.FileSystemWritableFileStreamTarget(stream) : new Lib.ArrayBufferTarget();
+  var muxer = job.container === 'mp4'
+    ? new Lib.Muxer({
+        target: target,
+        /* No frameRate here on purpose. The default 57600 timescale divides evenly
+           by every frame rate on offer, so each frame gets the same exact duration. */
+        video: { codec: job.family, width: W, height: H },
+        /* index at the front of the file either way, so players can start at once */
+        fastStart: stream ? { expectedVideoChunks: N + 16 } : 'in-memory',
+        firstTimestampBehavior: 'strict'
+      })
+    : new Lib.Muxer({
+        target: target,
+        video: { codec: job.family === 'av1' ? 'V_AV1' : 'V_VP9', width: W, height: H, frameRate: fps },
+        type: 'webm',
+        firstTimestampBehavior: 'strict'
+      });
+  var chunks = 0, codec = '';
+  var encoder = new VideoEncoder({
+    output: function (chunk, meta) {
+      try {
+        if (meta && meta.decoderConfig && meta.decoderConfig.codec) codec = meta.decoderConfig.codec;
+        muxer.addVideoChunk(chunk, meta);
+        chunks++;
+        state.written += chunk.byteLength;
+      } catch (e) { state.failure = state.failure || e; }
+    },
+    error: function (e) {
+      state.failure = state.failure || new Error('The encoder stopped. ' + (e && e.message ? e.message : e));
+    }
+  });
+  encoder.configure(job.encoder);
+  var frameUs = 1e6 / fps, keyEvery = Math.max(1, job.keyFrames | 0);
+  var yuv = createYuvConverter(W, H), grab = { rgba: null, useImageData: false };
+
+  return {
+    add: async function (canvas, ctx, k) {
+      var px = await readCanvas(canvas, ctx, W, H, grab);
+      state.check();
+      yuv.convert(px.offset ? px.data.subarray(px.offset) : px.data, px.stride, px.bgr);
+      /* Frame k sits at exactly k / fps. Nothing here reads a clock. */
+      var frame = new VideoFrame(yuv.buffer, {
+        format: 'I420', codedWidth: W, codedHeight: H,
+        timestamp: Math.round(k * frameUs), duration: Math.round(frameUs),
+        colorSpace: yuv.colorSpace
+      });
+      try { encoder.encode(frame, { keyFrame: k % keyEvery === 0 }); }
+      finally { frame.close(); }
+      /* Backpressure: never let more than a few frames pile up in the encoder. */
+      while (encoder.encodeQueueSize > MAX_ENCODE_QUEUE) { await waitForEncoder(encoder); state.check(); }
+    },
+    finish: async function () {
+      await encoder.flush();
+      state.check();
+      encoder.close();
+      if (chunks !== N) throw new Error('The encoder returned ' + chunks + ' frames for ' + N + ' sent. The file was not written.');
+      muxer.finalize();
+      var out = { frames: chunks, codec: codec || job.encoder.codec, colour: yuv.hd ? 'BT.709' : 'BT.601', readback: grab.useImageData ? 'canvas' : 'frame copy' };
+      if (!stream) out.buffer = target.buffer;
+      return out;
+    },
+    close: function () { if (encoder.state !== 'closed') { try { encoder.close(); } catch (e) {} } }
+  };
+}
+
+/* Apple ProRes through prores-wasm-encoder. ProRes is intra frame only,
+   so the library spreads frames across its own workers and puts them
+   back in order. Each finished frame becomes a Blob part, which the
+   browser can page out to disk, so a long export never needs one huge
+   buffer. The file is assembled from those parts at the end. */
+async function proResSink(job, W, H, fps, N, stream, state) {
+  if (typeof WebAssembly !== 'object') throw new Error('This browser cannot run WebAssembly, which the ProRes encoder needs.');
+  if (!root.ProResParallel) await loadLib(LIBS.prores);
+  var PR = root.ProResParallel;
+  if (!PR) throw new Error('The ProRes encoder did not load.');
+  var parts = [], frames = 0;
+  var pool = await PR.createProResEncoderPool({
+    width: W, height: H, frameRate: fps, profile: job.proresProfile,
+    onFrameData: function (chunk) {
+      frames++;
+      state.written += chunk.byteLength;
+      parts.push(new Blob([chunk]));
+    }
+  });
+  return {
+    add: async function (canvas) {
+      await pool.addFrameFromCanvas(canvas);
+      state.check();
+    },
+    finish: async function () {
+      var ends = await pool.finalizeStreaming();
+      state.check();
+      if (frames !== N) throw new Error('The ProRes encoder returned ' + frames + ' frames for ' + N + ' sent. The file was not written.');
+      var file = new Blob([ends.header].concat(parts, [ends.moov]), { type: 'video/quicktime' });
+      parts = [];
+      var out = { frames: frames, codec: 'ProRes ' + PRORES_NAMES[job.proresProfile], colour: 'BT.709', readback: 'canvas' };
+      if (stream) await file.stream().pipeTo(stream, { preventClose: true });
+      else out.blob = file;
+      return out;
+    },
+    close: function () { try { pool.destroy(); } catch (e) {} }
+  };
+}
+
+var PRORES_NAMES = ['422 Proxy', '422 LT', '422', '422 HQ'];
+
+/* ------------------------------------------------------------------ *
  * The export                                                          *
  *                                                                     *
  * job = {                                                             *
  *   plan,                      from SlideshowCore.buildPlan           *
  *   photos: { id: { file, blur } },                                   *
- *   family, container,         'avc' | 'hevc' | 'vp9' | 'av1'         *
+ *   family, container,         'avc' 'hevc' 'vp9' 'av1' or 'prores'   *
  *   encoder,                   VideoEncoder config from probe()       *
+ *   proresProfile,             0 to 3, for ProRes                     *
  *   keyFrames,                 key frame every this many frames       *
  *   target: { kind: 'memory' } | { kind: 'file', handle }             *
  * }                                                                   *
@@ -278,16 +419,17 @@ async function readCanvas(canvas, ctx, W, H, state) {
 
 async function run(job, hooks) {
   var plan = job.plan, W = plan.W, H = plan.H, fps = plan.fps, N = plan.frames;
-  var encoder = null, muxer = null, stream = null, target = null;
+  var stream = null, sink = null;
   var canvas = null, ctx = null, scratchCanvas = null, scratchCtx = null;
   var cache = new Map();
-  var failure = null, chunks = 0, payload = 0, actual = { codec: '' };
   var began = Date.now();
-
-  function check() {
-    if (failure) throw failure;
-    if (hooks.isCancelled && hooks.isCancelled()) throw abortError();
-  }
+  var state = {
+    failure: null, written: 0,
+    check: function () {
+      if (state.failure) throw state.failure;
+      if (hooks.isCancelled && hooks.isCancelled()) throw abortError();
+    }
+  };
   function getScratch() {
     if (!scratchCtx) {
       scratchCanvas = Render.makeCanvas(W, H);
@@ -298,63 +440,18 @@ async function run(job, hooks) {
 
   try {
     hooks.progress({ stage: 'prepare' });
-    if (typeof VideoEncoder === 'undefined') throw new Error('This browser has no WebCodecs video encoder.');
     if (!(N > 0)) throw new Error('There is nothing to export.');
-    var libName = job.container === 'mp4' ? 'Mp4Muxer' : 'WebMMuxer';
-    if (!root[libName]) await loadLib(LIBS[job.container]);
-    var Lib = root[libName];
-    if (!Lib) throw new Error('The ' + job.container.toUpperCase() + ' writer did not load.');
-
     canvas = Render.makeCanvas(W, H);
     ctx = canvas.getContext('2d', { alpha: false });
     if (!ctx) throw new Error('The browser could not create a ' + W + ' x ' + H + ' canvas.');
+    if (job.target && job.target.kind === 'file') stream = await job.target.handle.createWritable();
+    sink = job.family === 'prores'
+      ? await proResSink(job, W, H, fps, N, stream, state)
+      : await webCodecsSink(job, W, H, fps, N, stream, state);
 
-    if (job.target && job.target.kind === 'file') {
-      stream = await job.target.handle.createWritable();
-      target = new Lib.FileSystemWritableFileStreamTarget(stream);
-    } else {
-      target = new Lib.ArrayBufferTarget();
-    }
-    if (job.container === 'mp4') {
-      muxer = new Lib.Muxer({
-        target: target,
-        /* No frameRate here on purpose. The default 57600 timescale divides evenly
-           by every frame rate on offer, so each frame gets the same exact duration. */
-        video: { codec: job.family, width: W, height: H },
-        /* index at the front of the file either way, so players can start at once */
-        fastStart: stream ? { expectedVideoChunks: N + 16 } : 'in-memory',
-        firstTimestampBehavior: 'strict'
-      });
-    } else {
-      muxer = new Lib.Muxer({
-        target: target,
-        video: { codec: job.family === 'av1' ? 'V_AV1' : 'V_VP9', width: W, height: H, frameRate: fps },
-        type: 'webm',
-        firstTimestampBehavior: 'strict'
-      });
-    }
-
-    encoder = new VideoEncoder({
-      output: function (chunk, meta) {
-        try {
-          if (meta && meta.decoderConfig && meta.decoderConfig.codec) actual.codec = meta.decoderConfig.codec;
-          muxer.addVideoChunk(chunk, meta);
-          chunks++;
-          payload += chunk.byteLength;
-        } catch (e) { failure = failure || e; }
-      },
-      error: function (e) {
-        failure = failure || new Error('The encoder stopped. ' + (e && e.message ? e.message : e));
-      }
-    });
-    encoder.configure(job.encoder);
-
-    var frameUs = 1e6 / fps, keyEvery = Math.max(1, job.keyFrames | 0);
     var lastYield = Date.now(), lastProgress = 0;
-    var yuv = createYuvConverter(W, H), grab = { rgba: null, useImageData: false };
-
     for (var k = 0; k < N; k++) {
-      check();
+      state.check();
       var layers = Core.stateAt(plan, k), need = {}, i;
       for (i = 0; i < layers.length; i++) need[layers[i].seg.id] = true;
       /* Only the photos on screen right now are held decoded. */
@@ -363,62 +460,36 @@ async function run(job, hooks) {
         var seg = layers[i].seg;
         if (!cache.has(seg.id)) {
           cache.set(seg.id, await decodePhoto(seg, job.photos[seg.id], W));
-          check();
+          state.check();
         }
       }
-
       Render.renderFrame(ctx, W, H, plan, k, function (s) { return cache.get(s.id); }, getScratch);
-
-      var px = await readCanvas(canvas, ctx, W, H, grab);
-      check();
-      yuv.convert(px.offset ? px.data.subarray(px.offset) : px.data, px.stride, px.bgr);
-
-      /* Frame k sits at exactly k / fps. Nothing here reads a clock. */
-      var frame = new VideoFrame(yuv.buffer, {
-        format: 'I420', codedWidth: W, codedHeight: H,
-        timestamp: Math.round(k * frameUs), duration: Math.round(frameUs),
-        colorSpace: yuv.colorSpace
-      });
-      try { encoder.encode(frame, { keyFrame: k % keyEvery === 0 }); }
-      finally { frame.close(); }
-
-      /* Backpressure: never let more than a few frames pile up in the encoder. */
-      while (encoder.encodeQueueSize > MAX_ENCODE_QUEUE) { await waitForEncoder(encoder); check(); }
+      await sink.add(canvas, ctx, k);
 
       var now = Date.now();
       if (now - lastProgress >= PROGRESS_EVERY_MS || k === N - 1) {
         lastProgress = now;
-        hooks.progress({ stage: 'encode', frame: k + 1, frames: N, elapsedMs: now - began, written: payload });
+        hooks.progress({ stage: 'encode', frame: k + 1, frames: N, elapsedMs: now - began, written: state.written });
       }
       if (now - lastYield >= YIELD_EVERY_MS) { await yieldTask(); lastYield = Date.now(); }
     }
 
     hooks.progress({ stage: 'finalize' });
-    await encoder.flush();
-    check();
-    encoder.close();
-    encoder = null;
-    if (chunks !== N) throw new Error('The encoder returned ' + chunks + ' frames for ' + N + ' sent. The file was not written.');
-    muxer.finalize();
-
-    var result = {
-      frames: chunks, codec: actual.codec || job.encoder.codec, elapsedMs: Date.now() - began,
-      colour: yuv.hd ? 'BT.709' : 'BT.601', readback: grab.useImageData ? 'canvas' : 'frame copy'
-    };
+    var result = await sink.finish();
+    result.elapsedMs = Date.now() - began;
     if (stream) {
       await stream.close();
       stream = null;
       result.kind = 'file';
     } else {
       result.kind = 'memory';
-      result.buffer = target.buffer;
     }
     return result;
   } catch (err) {
     if (stream) { try { await stream.abort(); } catch (e) {} stream = null; }
     throw err;
   } finally {
-    if (encoder && encoder.state !== 'closed') { try { encoder.close(); } catch (e) {} }
+    if (sink) sink.close();
     cache.forEach(releaseAsset);
     cache.clear();
     if (canvas) { try { canvas.width = canvas.height = 0; } catch (e) {} }

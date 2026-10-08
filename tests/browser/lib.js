@@ -8,7 +8,7 @@ function need(name) {
 const { chromium } = need('playwright');
 const fs = require('fs'), path = require('path');
 const ROOT = process.env.BASE || 'http://localhost:8912';
-const BASE = ROOT + '/slideshow.html';
+const BASE = ROOT + '/photo-montage.html';
 async function open(opts = {}) {
   const browser = await chromium.launch({ headless: true, args: opts.args || [] });
   const page = await browser.newPage({ viewport: opts.viewport || { width: 1500, height: 950 } });
