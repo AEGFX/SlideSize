@@ -1,0 +1,175 @@
+/* shared.css — site-wide tokens, header, footer and primitives
+ *
+ * Loaded by every page. Each tool page sets its own --accent before
+ * this file loads (via a scoped <style> block in the <head> after
+ * this link), which swaps the logo-mark border, highlighted word in
+ * the logo-text and back-link hover to that tool's colour.
+ *
+ * The calculator (index.html) keeps the site red as --accent. */
+
+:root {
+--bg: #1a1a1a;
+--panel: #262626;
+--panel2: #2d2d2d;
+--border: #333333;
+--border2: #3d3d3d;
+--accent: #E7302A;       /* defaults to brand red, tool pages override */
+--accent2: #ff4f49;
+--brand-red: #E7302A;    /* always the brand red, for footer links etc */
+--brand-red2: #ff4f49;
+--muted: #888888;
+--text: #F2F2F2;
+--label: #D9D9D9;
+--green: #4caf82;
+--warn: #E0A020;
+--red: #E7302A;
+--mono: 'Share Tech Mono', monospace;
+--sans: 'DM Sans', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+background: var(--bg);
+color: var(--text);
+font-family: var(--sans);
+min-height: 100vh;
+display: flex;
+flex-direction: column;
+align-items: center;
+}
+
+/* ============================================================
+   Shared header
+   Markup contract (every page):
+     <header>
+       <a class="home-btn" href="/" title="Slide Size Calculator"><svg>...</svg></a>
+       <div class="logo-mark"></div>
+       <div class="logo-text">Tool <span>Name</span></div>
+       <a class="header-by" href="mailto:slidesize@aegfx.com">By AEGFX LTD</a>
+     </header>
+   The home-btn is omitted on the landing page.
+   ============================================================ */
+
+header {
+width: 100%;
+background: var(--panel);
+border-bottom: 1px solid var(--border2);
+padding: 20px 24px 18px;
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 6px;
+position: relative;
+}
+.home-btn {
+position: absolute;
+left: 20px; top: 50%;
+transform: translateY(-50%);
+width: 36px; height: 36px;
+display: flex; align-items: center; justify-content: center;
+border: 1px solid var(--border2);
+border-radius: 2px;
+color: var(--muted);
+text-decoration: none;
+transition: all 0.15s;
+background: transparent;
+}
+.home-btn:hover { border-color: var(--accent); color: var(--accent); }
+.home-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+.logo-mark {
+height: 24px; width: 42px;
+border: 2px solid var(--accent);
+flex-shrink: 0;
+position: relative;
+background: transparent;
+}
+.logo-mark::after {
+content: '';
+position: absolute;
+inset: 3px;
+background: var(--accent);
+opacity: 0.2;
+}
+.logo-text {
+font-family: var(--sans);
+font-weight: 700;
+font-size: 18px;
+letter-spacing: 3px;
+color: #fff;
+text-transform: uppercase;
+text-align: center;
+}
+.logo-text span { color: var(--accent); }
+.header-by {
+font-family: var(--sans);
+font-size: 11px;
+font-weight: 500;
+color: var(--muted);
+letter-spacing: 1px;
+text-transform: uppercase;
+text-align: center;
+text-decoration: none;
+transition: color 0.15s;
+}
+.header-by:hover { color: var(--accent); }
+
+/* ============================================================
+   Shared footer
+   ============================================================ */
+
+footer {
+width: 100%;
+border-top: 1px solid var(--border);
+padding: 14px 24px 18px;
+font-family: var(--sans);
+font-size: 11px;
+color: var(--muted);
+display: flex;
+flex-direction: column;
+align-items: center;
+text-align: center;
+gap: 3px;
+line-height: 1.6;
+}
+footer a { color: var(--brand-red); text-decoration: none; }
+footer a:hover { color: var(--brand-red2); }
+.footer-sep { margin: 4px 0; height: 1px; width: 40px; background: var(--border2); }
+
+/* ============================================================
+   Shared helpers used across pages
+   ============================================================ */
+
+.intro {
+font-family: var(--sans);
+font-size: 13px;
+line-height: 1.55;
+color: var(--label);
+max-width: 820px;
+margin: 0 auto;
+text-align: center;
+}
+.intro strong { color: var(--text); font-weight: 500; }
+
+.spinner {
+width: 14px; height: 14px;
+border: 2px solid var(--border2);
+border-top-color: var(--accent);
+border-radius: 50%;
+animation: spin 0.8s linear infinite;
+display: inline-block; vertical-align: -2px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Toast, used by tiles for drag-drop feedback and tool pages for copy feedback */
+.toast {
+position: fixed;
+bottom: 32px; left: 50%; transform: translateX(-50%);
+background: var(--accent); color: #1a1026;
+padding: 10px 20px; border-radius: 3px;
+font-family: var(--sans); font-size: 12px; font-weight: 700;
+letter-spacing: 0.5px; text-transform: uppercase;
+opacity: 0; pointer-events: none; transition: opacity 0.2s;
+z-index: 100; box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+}
+.toast.visible { opacity: 1; }
