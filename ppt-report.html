@@ -1,0 +1,1433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PPT Report &middot; SlideSize</title>
+<meta name="description" content="Pre-flight analysis of a PowerPoint deck for graphics ops. Slide count, hidden slides, fonts, video playback, animations, notes, OS fingerprint. Runs entirely in your browser.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23E7302A'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+--bg: #1a1a1a;
+--panel: #262626;
+--panel2: #2d2d2d;
+--border: #333333;
+--border2: #3d3d3d;
+--accent: #E7302A;
+--accent2: #ff4f49;
+--muted: #888888;
+--text: #F2F2F2;
+--label: #D9D9D9;
+--mono: 'Share Tech Mono', monospace;
+--sans: 'DM Sans', sans-serif;
+--rp: #4A78B5;         /* PPT Report slate-blue */
+--rp2: #6a96d0;
+--rp-dim: rgba(74,120,181,0.12);
+--rp-glow: rgba(74,120,181,0.35);
+--warn: #E0A020;
+--warn-dim: rgba(224,160,32,0.14);
+--ok: #4caf82;
+--ok-dim: rgba(76,175,130,0.14);
+--fail: #E7302A;
+--fail-dim: rgba(231,48,42,0.14);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+background: var(--bg);
+color: var(--text);
+font-family: var(--sans);
+min-height: 100vh;
+display: flex;
+flex-direction: column;
+align-items: center;
+}
+header {
+width: 100%;
+background: var(--panel);
+border-bottom: 1px solid var(--border2);
+padding: 20px 24px;
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 6px;
+}
+.logo-mark {
+height: 24px; width: 42px;
+border: 2px solid var(--accent);
+flex-shrink: 0;
+position: relative;
+background: transparent;
+}
+.logo-mark::after { content: ''; position: absolute; inset: 3px; background: var(--accent); opacity: 0.2; }
+.logo-text {
+font-family: var(--sans);
+font-weight: 700;
+font-size: 18px;
+letter-spacing: 3px;
+color: #fff;
+text-transform: uppercase;
+text-align: center;
+}
+.logo-text span { color: var(--rp); }
+.header-by {
+font-family: var(--sans);
+font-size: 11px;
+font-weight: 500;
+color: var(--muted);
+letter-spacing: 1px;
+text-transform: uppercase;
+text-align: center;
+}
+.header-by a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
+.header-by a:hover { color: var(--rp); }
+
+.wrap {
+width: 100%;
+max-width: 1280px;
+padding: 24px 20px 48px;
+display: flex;
+flex-direction: column;
+gap: 18px;
+}
+
+.intro {
+font-family: var(--sans);
+font-size: 13px;
+line-height: 1.55;
+color: var(--label);
+max-width: 820px;
+}
+.intro strong { color: var(--text); font-weight: 500; }
+
+/* Drop zone */
+.drop {
+border: 1px dashed var(--border2);
+border-radius: 3px;
+background: var(--panel);
+padding: 28px 20px;
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 7px;
+cursor: pointer;
+transition: all 0.15s;
+position: relative;
+}
+.drop:hover { border-color: var(--rp); background: var(--panel2); }
+.drop.drag { border-color: var(--rp); background: var(--rp-dim); box-shadow: 0 0 0 3px var(--rp-glow); }
+.drop svg.dz-icon { width: 34px; height: 34px; stroke: var(--rp); fill: none; stroke-width: 1.6; }
+.drop .dz-big { font-size: 14px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--text); }
+.drop .dz-small { font-size: 11px; color: var(--muted); }
+.drop input[type="file"] { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.drop.compact { padding: 14px 18px; flex-direction: row; justify-content: space-between; cursor: default; }
+.drop.compact svg.dz-icon { width: 20px; height: 20px; }
+.drop.compact .dz-big { font-size: 12px; letter-spacing: 0.5px; }
+.drop.compact .dz-small { font-size: 11px; }
+.drop.compact .dz-left { display: flex; align-items: center; gap: 12px; }
+.drop.compact .dz-info { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.drop.compact .replace-btn {
+background: transparent; border: 1px solid var(--border2); color: var(--label);
+font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+text-transform: uppercase; padding: 7px 13px; border-radius: 2px; cursor: pointer;
+transition: all 0.15s;
+}
+.drop.compact .replace-btn:hover { border-color: var(--rp); color: var(--rp); }
+.privacy {
+font-family: var(--sans); font-size: 11px; color: var(--rp);
+display: flex; align-items: center; gap: 5px; margin-top: 4px;
+}
+.privacy svg { width: 11px; height: 11px; stroke: var(--rp); fill: none; stroke-width: 2; }
+
+/* ---------- top strip: title bar with OS pill and warnings ---------- */
+.topstrip {
+background: var(--panel);
+border: 1px solid var(--border2);
+border-left: 2px solid var(--rp);
+border-radius: 2px;
+padding: 14px 18px;
+display: flex;
+flex-direction: column;
+gap: 10px;
+}
+.topstrip-head {
+display: flex; align-items: center; justify-content: space-between;
+gap: 12px; flex-wrap: wrap;
+}
+.topstrip-title {
+font-family: var(--mono); font-size: 14px; color: var(--text);
+word-break: break-all; min-width: 0;
+}
+.topstrip-sub {
+font-family: var(--sans); font-size: 11px; color: var(--muted);
+margin-top: 2px;
+}
+
+.os-pill {
+display: inline-flex; align-items: center; gap: 7px;
+padding: 7px 13px; border-radius: 999px;
+font-family: var(--sans); font-size: 12px; font-weight: 700;
+letter-spacing: 0.5px; white-space: nowrap;
+border: 1px solid; cursor: help; user-select: none;
+}
+.os-pill .os-dot { width: 7px; height: 7px; border-radius: 50%; }
+.os-pill.windows { background: rgba(74,120,181,0.14); color: #8ab4e0; border-color: #4A78B5; }
+.os-pill.windows .os-dot { background: #4A78B5; }
+.os-pill.macos { background: rgba(76,175,130,0.14); color: #7fd8ad; border-color: #4caf82; }
+.os-pill.macos .os-dot { background: #4caf82; }
+.os-pill.mixed { background: var(--warn-dim); color: #e8bc5d; border-color: var(--warn); }
+.os-pill.mixed .os-dot { background: var(--warn); }
+.os-pill.unknown { background: rgba(136,136,136,0.14); color: var(--label); border-color: var(--border2); }
+.os-pill.unknown .os-dot { background: var(--muted); }
+
+.warnings { display: flex; flex-wrap: wrap; gap: 7px; }
+.warn-chip {
+display: inline-flex; align-items: center; gap: 6px;
+padding: 6px 11px; border-radius: 2px;
+font-family: var(--sans); font-size: 11px; font-weight: 600;
+letter-spacing: 0.3px;
+border: 1px solid;
+}
+.warn-chip.red { background: var(--fail-dim); color: #ff8a84; border-color: var(--fail); }
+.warn-chip.amber { background: var(--warn-dim); color: #e8bc5d; border-color: var(--warn); }
+.warn-chip.ok { background: var(--ok-dim); color: #7fd8ad; border-color: var(--ok); }
+.warn-chip svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+/* ---------- actions bar (downloads) ---------- */
+.actions {
+display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+}
+.btn {
+background: transparent;
+border: 1px solid var(--border2);
+color: var(--label);
+font-family: var(--sans);
+font-size: 12px; font-weight: 600; letter-spacing: 0.5px;
+text-transform: uppercase;
+padding: 10px 14px;
+border-radius: 2px;
+cursor: pointer;
+transition: all 0.15s;
+}
+.btn:hover { border-color: var(--rp); color: var(--rp); }
+.btn.primary {
+background: var(--rp); border-color: var(--rp); color: #061321;
+font-weight: 700;
+}
+.btn.primary:hover { background: var(--rp2); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ---------- two-column summary ---------- */
+.summary-grid {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 16px;
+}
+@media (max-width: 820px) { .summary-grid { grid-template-columns: 1fr; } }
+
+.card {
+background: var(--panel);
+border: 1px solid var(--border2);
+border-radius: 2px;
+padding: 14px 18px;
+display: flex;
+flex-direction: column;
+gap: 10px;
+}
+.card-head {
+font-family: var(--sans);
+font-size: 11px; font-weight: 700;
+letter-spacing: 2px;
+text-transform: uppercase;
+color: var(--rp);
+padding-bottom: 8px;
+border-bottom: 1px solid var(--border);
+}
+.row {
+display: grid;
+grid-template-columns: 1fr auto;
+gap: 10px;
+font-family: var(--mono);
+font-size: 12px;
+line-height: 1.5;
+color: var(--label);
+align-items: baseline;
+}
+.row .k { color: var(--muted); font-family: var(--sans); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+.row .v { text-align: right; word-break: break-word; }
+.row.alert .v { color: var(--warn); }
+.row.fail .v { color: var(--fail); }
+.list { display: flex; flex-direction: column; gap: 3px; font-family: var(--mono); font-size: 12px; color: var(--label); padding-left: 2px; }
+.list .list-item { padding-left: 10px; position: relative; }
+.list .list-item::before { content: '-'; position: absolute; left: 0; color: var(--muted); }
+.list-head { font-family: var(--sans); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 6px; }
+
+/* ---------- per-slide table ---------- */
+.table-wrap {
+background: var(--panel);
+border: 1px solid var(--border2);
+border-radius: 2px;
+overflow: hidden;
+}
+.table-head {
+display: flex; align-items: center; justify-content: space-between;
+padding: 12px 18px;
+background: var(--panel2);
+border-bottom: 1px solid var(--border);
+}
+.table-head .table-title {
+font-family: var(--sans); font-size: 11px; font-weight: 700;
+letter-spacing: 2px; text-transform: uppercase; color: var(--rp);
+}
+.table-head .table-note {
+font-family: var(--sans); font-size: 11px; color: var(--muted);
+}
+.table-scroll { overflow-x: auto; }
+table.slides {
+width: 100%;
+border-collapse: collapse;
+font-family: var(--mono);
+font-size: 12px;
+min-width: 820px;
+}
+table.slides th, table.slides td {
+padding: 8px 12px;
+text-align: left;
+border-bottom: 1px solid var(--border);
+white-space: nowrap;
+}
+table.slides thead th {
+font-family: var(--sans); font-size: 10px; font-weight: 700;
+letter-spacing: 1px; text-transform: uppercase; color: var(--muted);
+background: var(--panel);
+cursor: pointer;
+user-select: none;
+border-bottom: 1px solid var(--border2);
+position: sticky; top: 0;
+}
+table.slides thead th:hover { color: var(--rp); }
+table.slides thead th.sorted { color: var(--rp); }
+table.slides thead th .arrow { opacity: 0.5; margin-left: 4px; font-size: 9px; }
+table.slides tbody tr:hover { background: var(--panel2); }
+table.slides tbody tr.hidden-row td { opacity: 0.55; }
+.pill {
+display: inline-block; padding: 1px 7px; border-radius: 2px;
+font-family: var(--sans); font-size: 10px; font-weight: 700;
+letter-spacing: 0.5px; text-transform: uppercase;
+border: 1px solid;
+}
+.pill.fs { color: var(--rp); border-color: var(--rp); background: var(--rp-dim); }
+.pill.pip { color: var(--muted); border-color: var(--border2); }
+.pill.link { color: var(--warn); border-color: var(--warn); background: var(--warn-dim); }
+.pill.mute { color: var(--muted); border-color: var(--border2); }
+.pill.yes { color: var(--ok); border-color: var(--ok); }
+.pill.no { color: var(--muted); border-color: var(--border2); }
+.pill.long { color: var(--warn); border-color: var(--warn); }
+.pill.hidden { color: var(--muted); border-color: var(--border2); }
+.pill.red { color: var(--fail); border-color: var(--fail); background: var(--fail-dim); }
+.pill.amber { color: var(--warn); border-color: var(--warn); background: var(--warn-dim); }
+.cell-dash { color: var(--muted); }
+
+/* ---------- notes / errors ---------- */
+.loading-note {
+background: var(--panel);
+border: 1px solid var(--border2);
+padding: 14px 18px;
+font-family: var(--sans); font-size: 12px;
+color: var(--muted);
+border-radius: 2px;
+display: flex; align-items: center; gap: 10px;
+}
+.err-note {
+background: var(--panel);
+border: 1px solid var(--border2);
+border-left: 2px solid var(--accent);
+padding: 12px 16px;
+font-family: var(--sans); font-size: 12px;
+color: var(--label);
+border-radius: 2px;
+}
+.spinner {
+width: 14px; height: 14px; border: 2px solid var(--border2);
+border-top-color: var(--rp); border-radius: 50%;
+animation: spin 0.8s linear infinite;
+display: inline-block; vertical-align: -2px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+footer {
+width: 100%;
+border-top: 1px solid var(--border);
+padding: 14px 24px;
+font-family: var(--sans);
+font-size: 11px;
+color: var(--muted);
+display: flex;
+flex-direction: column;
+align-items: center;
+text-align: center;
+gap: 3px;
+line-height: 1.6;
+}
+footer a { color: var(--accent); text-decoration: none; }
+footer a:hover { color: var(--accent2); }
+.footer-sep { margin: 4px 0; height: 1px; width: 40px; background: var(--border2); }
+</style>
+</head>
+<body>
+<header>
+<div class="logo-mark"></div>
+<div class="logo-text">PPT <span>Report</span></div>
+<div class="header-by"><a href="/">&larr; Slide Size Calculator</a></div>
+</header>
+
+<div class="wrap">
+
+<p class="intro">
+Drop a <strong>.pptx</strong> for a complete pre-flight breakdown. Slide count, hidden slides, fonts
+(used and embedded), videos (full-screen vs framed, muted vs audio, embedded vs linked), audio,
+transitions, animations, speaker notes, and a sortable per-slide table. Also tells you whether the
+deck was last touched on Windows or macOS, which predicts how it will behave on the show machine.
+Export to TXT, CSV or a printable PDF for the breakout room.
+</p>
+
+<label class="drop" id="drop" for="file">
+<svg class="dz-icon" viewBox="0 0 24 24"><path d="M14 3v4a1 1 0 001 1h4M5 3h9l5 5v11a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/><path d="M9 13h6M9 17h6"/></svg>
+<div class="dz-big">Drop PPTX</div>
+<div class="dz-small">or tap to browse</div>
+<input type="file" id="file" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation">
+<div class="privacy">
+<svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+Processed in your browser &middot; nothing uploaded
+</div>
+</label>
+
+<div id="stage"></div>
+
+</div>
+
+<footer>
+<span>Created by Andrew Brandse</span>
+<span><a href="mailto:info@aegfx.com">info@aegfx.com</a></span>
+<span>Built with Claude (Anthropic)</span>
+<div class="footer-sep"></div>
+<span>Nothing uploaded &middot; everything stays in your browser</span>
+</footer>
+
+<script>
+(function(){
+'use strict';
+
+/* ============================================================
+   Shared helpers
+   ============================================================ */
+
+var JSZIP_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+var JSPDF_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+var jszipReady = null, jspdfReady = null;
+
+function loadJSZip() {
+if (jszipReady) return jszipReady;
+jszipReady = new Promise(function(res, rej){
+var sc = document.createElement('script'); sc.src = JSZIP_SRC;
+sc.onload = function(){ window.JSZip ? res(window.JSZip) : rej(new Error('JSZip not available')); };
+sc.onerror = function(){ rej(new Error('JSZip failed to load')); };
+document.head.appendChild(sc);
+});
+return jszipReady;
+}
+function loadJSPDF() {
+if (jspdfReady) return jspdfReady;
+jspdfReady = new Promise(function(res, rej){
+var sc = document.createElement('script'); sc.src = JSPDF_SRC;
+sc.onload = function(){
+var jp = window.jspdf && window.jspdf.jsPDF;
+jp ? res(jp) : rej(new Error('jsPDF not available'));
+};
+sc.onerror = function(){ rej(new Error('jsPDF failed to load')); };
+document.head.appendChild(sc);
+});
+return jspdfReady;
+}
+
+function fmtBytes(n) {
+if (n < 1024) return n + ' B';
+if (n < 1048576) return (n / 1024).toFixed(1) + ' KB';
+if (n < 1073741824) return (n / 1048576).toFixed(2) + ' MB';
+return (n / 1073741824).toFixed(2) + ' GB';
+}
+function download(blob, filename) {
+var url = URL.createObjectURL(blob);
+var a = document.createElement('a');
+a.href = url; a.download = filename;
+document.body.appendChild(a); a.click(); a.remove();
+setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+}
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+/* Expose fmtBytes under the name the engine code uses */
+var emfFmtBytes = fmtBytes;
+
+/* ============================================================
+   PPT Report engine (copied verbatim from index.html so this
+   page is self-contained — matches the pattern pdf.html and
+   photo-montage.html use).
+   ============================================================ */
+
+function rpXml(str) {
+try { return new DOMParser().parseFromString(str, 'application/xml'); }
+catch (e) { return null; }
+}
+function rpEls(root, localName) {
+if (!root) return [];
+var all = root.getElementsByTagName('*');
+var out = [];
+for (var i = 0; i < all.length; i++) {
+var ln = all[i].localName || all[i].tagName.replace(/^.*:/, '');
+if (ln === localName) out.push(all[i]);
+}
+return out;
+}
+function rpAttr(el, name) {
+if (!el) return null;
+if (el.hasAttribute && el.hasAttribute(name)) return el.getAttribute(name);
+var a = el.attributes;
+if (a) for (var i = 0; i < a.length; i++) {
+var ln = a[i].localName || a[i].name.replace(/^.*:/, '');
+if (ln === name) return a[i].value;
+}
+return null;
+}
+function rpEmuToCm(emu) { return (parseInt(emu, 10) / 360000); }
+function rpEmuToIn(emu) { return (parseInt(emu, 10) / 914400); }
+function rpGcd(a, b) { a = Math.round(a); b = Math.round(b); while (b) { var t = b; b = a % b; a = t; } return a; }
+function rpPad(s, n) { s = String(s); while (s.length < n) s += ' '; return s; }
+function rpWords(t) { t = (t || '').trim(); return t ? t.split(/\s+/).length : 0; }
+
+function rpAnalyse(zip, file) {
+var R = {
+fileName: file.name, fileSize: file.size,
+slideCount: 0, widthEmu: 0, heightEmu: 0,
+fontsEmbedded: false, embeddedFonts: [], usedFonts: [],
+slides: [], totalClicks: 0,
+mediaBytes: 0, largestAsset: null, largestImage: null,
+warnings: [],
+os: 'Unknown', osReasons: [],
+appName: '', appVersion: '',
+customShows: 0, sections: 0,
+masters: 0, layouts: 0,
+images: 0, charts: 0, tables: 0, ole: 0,
+externalLinks: 0,
+hyperlinks: false, autoTiming: false,
+mediaCount: 0, linkedMediaCount: 0,
+hadMacEmf: false
+};
+
+var pApp = zip.file('docProps/app.xml');
+var prom = [];
+prom.push((pApp ? pApp.async('string') : Promise.resolve('')).then(function(xml){
+if (!xml) return;
+var doc = rpXml(xml);
+if (!doc) return;
+var appEl = rpEls(doc, 'Application')[0];
+var verEl = rpEls(doc, 'AppVersion')[0];
+if (appEl) R.appName = (appEl.textContent || '').trim();
+if (verEl) R.appVersion = (verEl.textContent || '').trim();
+}));
+
+var pPres = zip.file('ppt/presentation.xml');
+prom.push((pPres ? pPres.async('string') : Promise.resolve('')).then(function(xml){
+var doc = rpXml(xml);
+if (!doc) return;
+var sz = rpEls(doc, 'sldSz')[0];
+if (sz) { R.widthEmu = parseInt(rpAttr(sz, 'cx') || '0', 10); R.heightEmu = parseInt(rpAttr(sz, 'cy') || '0', 10); }
+var embLst = rpEls(doc, 'embeddedFont');
+if (embLst.length) {
+R.fontsEmbedded = true;
+embLst.forEach(function(ef){
+var fontEl = rpEls(ef, 'font')[0];
+var nm = fontEl ? rpAttr(fontEl, 'typeface') : null;
+if (nm && R.embeddedFonts.indexOf(nm) < 0) R.embeddedFonts.push(nm);
+});
+}
+R.customShows = rpEls(doc, 'custShow').length;
+R.sections = rpEls(doc, 'section').length;
+}));
+
+var imgExt = /\.(png|jpe?g|gif|bmp|tiff?|webp|emf|wmf|svg)$/i;
+zip.forEach(function(path, entry){
+if (entry.dir) return;
+if (/^ppt\/media\//i.test(path)) {
+var nm = path.replace(/^ppt\/media\//i, '');
+prom.push(entry.async('uint8array').then(function(b){
+R.mediaBytes += b.length;
+if (!R.largestAsset || b.length > R.largestAsset.size) R.largestAsset = { name: nm, size: b.length };
+if (imgExt.test(nm)) {
+R.images++;
+if (!R.largestImage || b.length > R.largestImage.size) R.largestImage = { name: nm, size: b.length };
+}
+if (/\.emf$/i.test(nm) && !R.hadMacEmf) {
+for (var i = 0; i < b.length - 4; i++) {
+if (b[i]===0x25 && b[i+1]===0x50 && b[i+2]===0x44 && b[i+3]===0x46) { R.hadMacEmf = true; break; }
+}
+}
+}));
+}
+if (/^ppt\/slideMasters\/slideMaster\d+\.xml$/i.test(path)) R.masters++;
+if (/^ppt\/slideLayouts\/slideLayout\d+\.xml$/i.test(path)) R.layouts++;
+if (/^ppt\/embeddings\//i.test(path)) R.ole++;
+if (/^ppt\/charts\/chart\d+\.xml$/i.test(path)) R.charts++;
+});
+
+return Promise.all(prom).then(function(){
+var slidePaths = [];
+zip.forEach(function(path, entry){
+if (/^ppt\/slides\/slide\d+\.xml$/i.test(path) && !entry.dir) slidePaths.push(path);
+});
+slidePaths.sort(function(a, b){
+function n(p){ var m = p.match(/slide(\d+)\.xml/i); return m ? parseInt(m[1], 10) : 0; }
+return n(a) - n(b);
+});
+R.slideCount = slidePaths.length;
+
+var fontSet = {};
+var slideProms = slidePaths.map(function(sPath, idx){
+var slideNo = idx + 1;
+var relPath = sPath.replace(/slides\/(slide\d+)\.xml$/i, 'slides/_rels/$1.xml.rels');
+return zip.file(sPath).async('string').then(function(sxml){
+var sdoc = rpXml(sxml);
+var slide = {
+no: slideNo, hidden: false,
+video: null, audio: false,
+clicks: 0, animObjects: 0,
+transition: null, notesWords: 0,
+hasHyperlink: false, autoAdvance: false, tables: 0
+};
+var sldEl = rpEls(sdoc, 'sld')[0];
+if (sldEl && rpAttr(sldEl, 'show') === '0') slide.hidden = true;
+
+slide.tables = rpEls(sdoc, 'tbl').length;
+R.tables += slide.tables;
+
+var hlinks = rpEls(sdoc, 'hlinkClick').concat(rpEls(sdoc, 'hlinkHover'));
+if (hlinks.length) { slide.hasHyperlink = true; R.hyperlinks = true; }
+
+['latin','ea','cs'].forEach(function(t){
+rpEls(sdoc, t).forEach(function(el){
+var tf = rpAttr(el, 'typeface');
+if (tf && tf !== '+mn-lt' && tf !== '+mj-lt' && tf.charAt(0) !== '+') fontSet[tf] = true;
+});
+});
+
+var tr = rpEls(sdoc, 'transition')[0];
+if (tr) {
+var durMs = rpAttr(tr, 'dur');
+var advTm = rpAttr(tr, 'advTm');
+var advClick = rpAttr(tr, 'advClick');
+if (advTm != null || advClick === '0') { slide.autoAdvance = true; R.autoTiming = true; }
+var kids = tr.getElementsByTagName('*');
+var ttype = null;
+for (var k = 0; k < kids.length; k++) {
+var ln = kids[k].localName || kids[k].tagName.replace(/^.*:/, '');
+if (ln && ln !== 'transition') { ttype = ln; break; }
+}
+slide.transition = { type: ttype || 'set', durMs: durMs ? parseInt(durMs, 10) : null };
+}
+
+var timing = rpEls(sdoc, 'timing')[0];
+if (timing) {
+var cTns = rpEls(timing, 'cTn');
+var clickEffects = 0, animObjs = 0;
+cTns.forEach(function(c){
+var nt = rpAttr(c, 'nodeType');
+if (nt === 'clickEffect' || nt === 'clickPar') clickEffects++;
+});
+['anim','animEffect','animMotion','animRot','animScale','animClr','set'].forEach(function(a){
+animObjs += rpEls(timing, a).length;
+});
+slide.clicks = clickEffects;
+slide.animObjects = animObjs;
+}
+
+var notesPath = sPath.replace(/slides\/slide(\d+)\.xml$/i, 'notesSlides/notesSlide$1.xml');
+var notesProm = zip.file(notesPath)
+? zip.file(notesPath).async('string').then(function(nxml){
+var ndoc = rpXml(nxml);
+var texts = rpEls(ndoc, 't').map(function(t){ return t.textContent || ''; });
+slide.notesWords = rpWords(texts.join(' '));
+})
+: Promise.resolve();
+
+var relProm = zip.file(relPath)
+? zip.file(relPath).async('string').then(function(rxml){
+var rdoc = rpXml(rxml);
+var rels = rpEls(rdoc, 'Relationship');
+var hasVideo = false, hasAudio = false, linked = false;
+rels.forEach(function(rel){
+var type = rpAttr(rel, 'Type') || '';
+var mode = rpAttr(rel, 'TargetMode') || '';
+var target = rpAttr(rel, 'Target') || '';
+if (/video/i.test(type) || /\.(mp4|mov|avi|wmv|m4v|mkv)$/i.test(target)) {
+hasVideo = true;
+if (/external/i.test(mode)) linked = true;
+}
+if (/audio/i.test(type) || /\.(mp3|wav|m4a|wma|aac)$/i.test(target)) hasAudio = true;
+if (/external/i.test(mode) && !/slide\d+\.xml/i.test(target)) R.externalLinks++;
+if (/relationships\/chart/i.test(type)) R.charts++;
+});
+if (hasVideo) {
+var fullScrn = false, mute = false;
+var mediaNodes = rpEls(sdoc, 'cMediaNode');
+mediaNodes.forEach(function(mn){
+if (rpAttr(mn, 'fullScrn') === '1') fullScrn = true;
+if (rpAttr(mn, 'mute') === '1') mute = true;
+});
+slide.video = { mode: fullScrn ? 'fullscreen' : 'framed', mute: mute, linked: linked };
+}
+slide.audio = hasAudio;
+})
+: Promise.resolve();
+
+return Promise.all([notesProm, relProm]).then(function(){ return slide; });
+});
+});
+
+return Promise.all(slideProms).then(function(slides){
+R.slides = slides;
+R.usedFonts = Object.keys(fontSet).sort();
+slides.forEach(function(s){ R.totalClicks += s.clicks; });
+var vids = slides.filter(function(s){ return s.video; });
+R.mediaCount = vids.length + slides.filter(function(s){ return s.audio; }).length;
+R.linkedMediaCount = vids.filter(function(s){ return s.video.linked; }).length;
+rpDetectOS(R);
+return R;
+});
+});
+}
+
+function rpDetectOS(R) {
+var reasons = [];
+var macApp = /macintosh/i.test(R.appName);
+var winApp = R.appName && !macApp && /powerpoint|office/i.test(R.appName);
+if (macApp) reasons.push('app tag "' + R.appName + '"');
+else if (winApp) reasons.push('app tag "' + R.appName + '"');
+if (R.hadMacEmf) reasons.push('hybrid PDF-in-EMF media (Mac signature)');
+if (macApp && R.hadMacEmf) R.os = 'macOS';
+else if (macApp) R.os = 'macOS';
+else if (R.hadMacEmf && winApp) { R.os = 'Mixed'; reasons.push('Windows app tag but Mac-origin media present'); }
+else if (R.hadMacEmf) R.os = 'macOS';
+else if (winApp) R.os = 'Windows';
+else R.os = 'Unknown';
+R.osReasons = reasons;
+}
+
+function rpStats(R) {
+var s = {};
+s.hidden = R.slides.filter(function(x){return x.hidden;}).map(function(x){return x.no;});
+s.vids = R.slides.filter(function(x){return x.video;});
+s.auds = R.slides.filter(function(x){return x.audio;}).map(function(x){return x.no;});
+s.trans = R.slides.filter(function(x){return x.transition;});
+s.anims = R.slides.filter(function(x){return x.clicks > 0 || x.animObjects > 0;});
+s.notes = R.slides.filter(function(x){return x.notesWords > 0;});
+s.fs = s.vids.filter(function(x){return x.video.mode==='fullscreen';}).length;
+s.pip = s.vids.length - s.fs;
+s.linked = s.vids.filter(function(x){return x.video.linked;}).length;
+s.embeddedV = s.vids.length - s.linked;
+s.muted = s.vids.filter(function(x){return x.video.mute;});
+s.linkedSlides = s.vids.filter(function(x){return x.video.linked;}).map(function(x){return x.no;});
+if (s.notes.length) s.mostNotes = s.notes.slice().sort(function(a,b){return b.notesWords-a.notesWords;})[0];
+return s;
+}
+function rpAspect(R) {
+if (!R.widthEmu || !R.heightEmu) return null;
+var g = rpGcd(R.widthEmu, R.heightEmu);
+var rw = R.widthEmu/g, rh = R.heightEmu/g;
+var dec = (R.widthEmu/R.heightEmu).toFixed(2);
+return { ratio: rw + ':' + rh, dec: dec };
+}
+
+/* ============================================================
+   TXT and CSV builders (for the download buttons)
+   ============================================================ */
+
+function rpBuildSummaryText(R) {
+var st = rpStats(R);
+var L = [];
+var asp = rpAspect(R);
+var notesHidden = R.slides.filter(function(s){ return s.hidden && s.notesWords > 0; }).length;
+var fileType = (R.fileName.match(/\.([a-z0-9]+)$/i) || [,''])[1].toUpperCase() + ' (PowerPoint)';
+L.push('FILE NAME: ' + R.fileName);
+L.push('');
+L.push('GENERAL');
+L.push('File size: ' + fmtBytes(R.fileSize));
+L.push('File type: ' + fileType);
+L.push('Slide count: ' + R.slideCount);
+L.push('Visible slides: ' + (R.slideCount - st.hidden.length));
+L.push('Hidden slides: ' + st.hidden.length);
+L.push('OS: ' + R.os + (R.osReasons.length ? '  (' + R.osReasons.join('; ') + ')' : ''));
+L.push('');
+L.push('FORMAT');
+L.push('Aspect: ' + (asp ? asp.ratio + ' (' + asp.dec + ':1)' : '-'));
+L.push('Slide size CM: ' + (asp ? rpEmuToCm(R.widthEmu).toFixed(2) + ' x ' + rpEmuToCm(R.heightEmu).toFixed(2) + ' cm' : '-'));
+L.push('Slide size Inch: ' + (asp ? rpEmuToIn(R.widthEmu).toFixed(2) + ' x ' + rpEmuToIn(R.heightEmu).toFixed(2) + ' in' : '-'));
+L.push('');
+L.push('MEDIA');
+L.push('Videos: ' + st.vids.length);
+L.push('Videos FS: ' + st.fs);
+L.push('Videos PIP: ' + st.pip);
+L.push('Audio: ' + st.auds.length);
+L.push('Embedded media: ' + (R.mediaCount - R.linkedMediaCount));
+L.push('Linked media: ' + R.linkedMediaCount);
+if (st.linkedSlides.length) L.push('! Linked video on slide ' + st.linkedSlides.join(', ') + ' - not embedded, will fail if missing');
+L.push('');
+L.push('PLAYBACK');
+L.push('Transitions: ' + st.trans.length);
+L.push('Animations: ' + st.anims.length);
+L.push('Estimated animation/build clicks: ' + R.totalClicks);
+L.push('Automatic slide timings: ' + (R.autoTiming ? 'detected' : 'not detected'));
+L.push('Custom shows: ' + (R.customShows ? 'detected (' + R.customShows + ')' : 'not detected'));
+L.push('Hyperlinks/actions: ' + (R.hyperlinks ? 'detected' : 'not detected'));
+L.push('');
+L.push('NOTES');
+L.push('Speaker notes: ' + (st.notes.length ? 'present' : 'none'));
+L.push('Slides with notes: ' + st.notes.length);
+L.push('Notes on hidden slides: ' + notesHidden);
+L.push('');
+L.push('FONTS');
+L.push('Fonts used in deck:');
+if (R.usedFonts.length) R.usedFonts.forEach(function(f){ L.push('- ' + f); });
+else L.push('- (none detected)');
+L.push('Embedded fonts:');
+if (R.fontsEmbedded && R.embeddedFonts.length) R.embeddedFonts.forEach(function(f){ L.push('- ' + f); });
+else if (R.fontsEmbedded) L.push('- (embedded, names unavailable)');
+else L.push('- none detected');
+L.push('');
+L.push('STRUCTURE');
+L.push('Slide masters: ' + R.masters);
+L.push('Layouts: ' + R.layouts);
+L.push('Sections: ' + R.sections);
+L.push('Hidden slide numbers: ' + (st.hidden.length ? st.hidden.join(', ') : 'none'));
+L.push('');
+L.push('ASSETS');
+L.push('Images: ' + R.images);
+L.push('Largest image: ' + (R.largestImage ? R.largestImage.name + ' / ' + fmtBytes(R.largestImage.size) : 'none'));
+L.push('Charts: ' + R.charts);
+L.push('Tables: ' + R.tables);
+L.push('OLE objects: ' + R.ole);
+L.push('External links: ' + R.externalLinks);
+return L.join('\n');
+}
+
+function rpBuildText(R) {
+var L = [rpBuildSummaryText(R)];
+L.push('');
+L.push('');
+L.push('PER-SLIDE  (FS = full screen, PIP = framed)');
+L.push(rpPad('SLIDE',7) + rpPad('HIDE',6) + rpPad('VIDEO',16) + rpPad('AUDIO',7) + rpPad('CLICKS',8) + rpPad('TRANS',12) + 'NOTES');
+R.slides.forEach(function(s){
+var vstr = '-';
+if (s.video) vstr = (s.video.mode==='fullscreen' ? 'FS' : 'PIP') + (s.video.mute ? '/mute' : '') + (s.video.linked ? '!link' : '');
+var nstr = s.notesWords ? (s.notesWords >= 150 ? 'LONG(' + s.notesWords + 'w)' : s.notesWords + 'w') : '-';
+var tstr = s.transition ? s.transition.type : '-';
+L.push(rpPad(s.no,7) + rpPad(s.hidden?'hide':'-',6) + rpPad(vstr,16) + rpPad(s.audio?'yes':'-',7) + rpPad(s.clicks||'0',8) + rpPad(tstr,12) + nstr);
+});
+L.push('');
+L.push('Note: click counts reflect the main animation sequence; trigger-based / interactive');
+L.push('animations may differ. Muted = authored mute flag, not whether the file has an audio track.');
+L.push('');
+L.push('Generated by slidesize.com (Andrew Brandse, AEGFX LTD, pptreport@aegfx.com)');
+return L.join('\n');
+}
+
+function rpBuildCsv(R) {
+var rows = [['slide','hidden','video_present','video_mode','video_muted','video_linked','audio_present','clicks','animation_objects','transition','transition_ms','notes_words','hyperlinks','auto_advance','tables']];
+R.slides.forEach(function(s){
+rows.push([
+s.no,
+s.hidden ? 'yes' : 'no',
+s.video ? 'yes' : 'no',
+s.video ? (s.video.mode==='fullscreen' ? 'FS' : 'PIP') : '',
+s.video ? (s.video.mute ? 'yes' : 'no') : '',
+s.video ? (s.video.linked ? 'yes' : 'no') : '',
+s.audio ? 'yes' : 'no',
+s.clicks, s.animObjects,
+s.transition ? s.transition.type : '',
+s.transition && s.transition.durMs != null ? s.transition.durMs : '',
+s.notesWords,
+s.hasHyperlink ? 'yes' : 'no',
+s.autoAdvance ? 'yes' : 'no',
+s.tables
+]);
+});
+return rows.map(function(r){
+return r.map(function(c){
+c = String(c);
+return /[",\n]/.test(c) ? '"' + c.replace(/"/g,'""') + '"' : c;
+}).join(',');
+}).join('\n');
+}
+
+/* ============================================================
+   On-page rendering
+   ============================================================ */
+
+var S = { report: null, sortCol: 'no', sortDir: 'asc', deckBase: '' };
+
+var drop = document.getElementById('drop');
+var fileInput = document.getElementById('file');
+['dragenter','dragover'].forEach(function(ev){
+drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.add('drag'); });
+});
+['dragleave','drop'].forEach(function(ev){
+drop.addEventListener(ev, function(e){
+e.preventDefault();
+if (ev === 'drop' || e.target === drop) drop.classList.remove('drag');
+});
+});
+drop.addEventListener('drop', function(e){
+e.preventDefault(); drop.classList.remove('drag');
+var f = e.dataTransfer.files && e.dataTransfer.files[0];
+if (f) handleFile(f);
+});
+fileInput.addEventListener('change', function(){
+if (fileInput.files && fileInput.files[0]) handleFile(fileInput.files[0]);
+fileInput.value = '';
+});
+
+function handleFile(file) {
+if (!/\.pptx$/i.test(file.name)) {
+showError('That looks like a non-PPTX file. Drop a .pptx deck instead.');
+return;
+}
+S.report = null; S.sortCol = 'no'; S.sortDir = 'asc';
+S.deckBase = file.name.replace(/\.pptx$/i, '');
+compactDrop(file);
+var stage = document.getElementById('stage');
+stage.innerHTML = '<div class="loading-note"><span class="spinner"></span>Analysing <strong style="color:var(--label);font-weight:500">' + esc(file.name) + '</strong>&hellip;</div>';
+
+loadJSZip().then(function(JSZip){
+return file.arrayBuffer().then(function(ab){ return JSZip.loadAsync(ab); });
+}).then(function(zip){
+return rpAnalyse(zip, file);
+}).then(function(R){
+S.report = R;
+renderReport();
+}).catch(function(e){
+showError('Could not analyse this deck. ' + (e && e.message ? '(' + e.message + ')' : ''));
+});
+}
+
+function compactDrop(file) {
+drop.classList.add('drag');
+setTimeout(function(){ drop.classList.remove('drag'); }, 300);
+drop.classList.add('compact');
+drop.innerHTML =
+'<div class="dz-left">' +
+'<svg class="dz-icon" viewBox="0 0 24 24"><path d="M14 3v4a1 1 0 001 1h4M5 3h9l5 5v11a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" fill="none" stroke="#4A78B5" stroke-width="1.6"/></svg>' +
+'<div class="dz-info">' +
+'<div class="dz-big">' + esc(file.name) + '</div>' +
+'<div class="dz-small">' + fmtBytes(file.size) + '</div>' +
+'</div>' +
+'</div>' +
+'<button type="button" class="replace-btn" id="replace-btn">Drop another deck</button>' +
+'<input type="file" id="file" accept=".pptx">';
+document.getElementById('replace-btn').addEventListener('click', function(){ document.getElementById('file').click(); });
+var newInput = document.getElementById('file');
+newInput.addEventListener('change', function(){
+if (newInput.files && newInput.files[0]) handleFile(newInput.files[0]);
+newInput.value = '';
+});
+}
+
+function showError(msg){
+document.getElementById('stage').innerHTML = '<div class="err-note">' + esc(msg) + '</div>';
+}
+
+function renderReport() {
+var R = S.report;
+var st = rpStats(R);
+var asp = rpAspect(R);
+var fileType = (R.fileName.match(/\.([a-z0-9]+)$/i) || [,''])[1].toUpperCase() + ' (PowerPoint)';
+var notesHidden = R.slides.filter(function(s){ return s.hidden && s.notesWords > 0; }).length;
+
+/* ----- warnings strip ----- */
+var warns = [];
+if (st.linkedSlides.length) {
+warns.push({ sev:'red', text:'Linked video, slide ' + st.linkedSlides.join(', ') + ' - will fail if missing', title:'Linked media is referenced but not embedded. If the external file is not available on the show machine, playback will fail.' });
+}
+if (!R.fontsEmbedded && R.usedFonts.length) {
+warns.push({ sev:'amber', text:'No embedded fonts (' + R.usedFonts.length + ' used)', title:'Fonts in use are not embedded. Text may reflow if any referenced face is missing on the show machine.' });
+}
+if (R.autoTiming) {
+warns.push({ sev:'amber', text:'Automatic slide timings', title:'At least one slide has an auto-advance timer. The deck may advance without a click.' });
+}
+if (R.hyperlinks) {
+warns.push({ sev:'amber', text:'Hyperlinks / actions', title:'Shapes or text runs carry hyperlinks or actions. Can cause unexpected jumps when clicked.' });
+}
+if (R.customShows) {
+warns.push({ sev:'amber', text:'Custom shows (' + R.customShows + ')', title:'Deck defines custom shows - the playing order may not be the default sequence.' });
+}
+if (!warns.length) warns.push({ sev:'ok', text:'No pre-flight warnings', title:'No linked media, no missing font embedding, no automatic timings, no custom shows.' });
+
+var warnChipsHtml = warns.map(function(w){
+return '<span class="warn-chip ' + w.sev + '" title="' + esc(w.title) + '">' +
+(w.sev === 'ok'
+? '<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>'
+: '<svg viewBox="0 0 24 24"><path d="M12 2L2 20h20L12 2zm0 7v5m0 3v.5"/></svg>') +
+esc(w.text) + '</span>';
+}).join('');
+
+/* ----- OS pill ----- */
+var osClass = R.os === 'macOS' ? 'macos' : R.os === 'Windows' ? 'windows' : R.os === 'Mixed' ? 'mixed' : 'unknown';
+var osText = R.os === 'Unknown' ? 'Origin unknown' : 'Authored on ' + R.os;
+var osTitle = R.osReasons.length ? R.osReasons.join('; ') : 'Not enough signals to infer.';
+
+/* ----- summary cards ----- */
+var genCard = card('General', [
+row('File size', fmtBytes(R.fileSize)),
+row('File type', fileType),
+row('Slide count', String(R.slideCount)),
+row('Visible slides', String(R.slideCount - st.hidden.length)),
+row('Hidden slides', String(st.hidden.length), st.hidden.length ? 'alert' : '')
+]);
+
+var fmtCard = card('Format', [
+row('Aspect', asp ? asp.ratio + ' (' + asp.dec + ':1)' : '-'),
+row('Slide size', asp ? rpEmuToCm(R.widthEmu).toFixed(2) + ' x ' + rpEmuToCm(R.heightEmu).toFixed(2) + ' cm' : '-'),
+row('Slide size (in)', asp ? rpEmuToIn(R.widthEmu).toFixed(2) + ' x ' + rpEmuToIn(R.heightEmu).toFixed(2) + ' in' : '-')
+]);
+
+var mediaRows = [
+row('Videos', String(st.vids.length)),
+row('Full screen', String(st.fs)),
+row('Framed (PIP)', String(st.pip)),
+row('Audio', String(st.auds.length)),
+row('Embedded media', String(R.mediaCount - R.linkedMediaCount)),
+row('Linked media', String(R.linkedMediaCount), R.linkedMediaCount ? 'fail' : '')
+];
+var mediaCard = card('Media', mediaRows);
+
+var playbackCard = card('Playback', [
+row('Transitions', String(st.trans.length)),
+row('Animations', String(st.anims.length)),
+row('Estimated clicks', String(R.totalClicks)),
+row('Auto timings', R.autoTiming ? 'detected' : 'not detected', R.autoTiming ? 'alert' : ''),
+row('Custom shows', R.customShows ? 'detected (' + R.customShows + ')' : 'not detected', R.customShows ? 'alert' : ''),
+row('Hyperlinks / actions', R.hyperlinks ? 'detected' : 'not detected', R.hyperlinks ? 'alert' : '')
+]);
+
+var notesRows = [
+row('Speaker notes', st.notes.length ? 'present' : 'none'),
+row('Slides with notes', String(st.notes.length)),
+row('Notes on hidden slides', String(notesHidden), notesHidden ? 'alert' : '')
+];
+if (st.notes.length) notesRows.push(row('Most notes on slide', String(st.mostNotes.no) + ' (~' + st.mostNotes.words + 'w)'.replace('~undefinedw','')));
+if (st.notes.length && st.mostNotes) notesRows[notesRows.length - 1] = row('Most notes on slide', st.mostNotes.no + ' (~' + st.mostNotes.notesWords + 'w)');
+var notesCard = card('Notes', notesRows);
+
+var fontsBody = '';
+fontsBody += '<div class="list-head">Fonts used in deck</div><div class="list">';
+if (R.usedFonts.length) fontsBody += R.usedFonts.map(function(f){ return '<div class="list-item">' + esc(f) + '</div>'; }).join('');
+else fontsBody += '<div class="list-item" style="color:var(--muted)">(none detected)</div>';
+fontsBody += '</div>';
+fontsBody += '<div class="list-head">Embedded fonts</div><div class="list">';
+if (R.fontsEmbedded && R.embeddedFonts.length) fontsBody += R.embeddedFonts.map(function(f){ return '<div class="list-item">' + esc(f) + '</div>'; }).join('');
+else if (R.fontsEmbedded) fontsBody += '<div class="list-item" style="color:var(--muted)">(embedded, names unavailable)</div>';
+else fontsBody += '<div class="list-item" style="color:var(--warn)">none detected</div>';
+fontsBody += '</div>';
+var fontsCard = '<div class="card"><div class="card-head">Fonts</div>' + fontsBody + '</div>';
+
+var structCard = card('Structure', [
+row('Slide masters', String(R.masters)),
+row('Layouts', String(R.layouts)),
+row('Sections', String(R.sections)),
+row('Hidden slide numbers', st.hidden.length ? st.hidden.join(', ') : 'none')
+]);
+
+var assetsCard = card('Assets', [
+row('Images', String(R.images)),
+row('Largest image', R.largestImage ? R.largestImage.name + ' / ' + fmtBytes(R.largestImage.size) : 'none'),
+row('Charts', String(R.charts)),
+row('Tables', String(R.tables)),
+row('OLE objects', String(R.ole)),
+row('External links', String(R.externalLinks))
+]);
+
+/* ----- compose ----- */
+var stage = document.getElementById('stage');
+stage.innerHTML =
+'<div class="topstrip">' +
+'<div class="topstrip-head">' +
+'<div><div class="topstrip-title">' + esc(R.fileName) + '</div><div class="topstrip-sub">' + fmtBytes(R.fileSize) + ' &middot; ' + R.slideCount + ' slide' + (R.slideCount===1?'':'s') + '</div></div>' +
+'<span class="os-pill ' + osClass + '" title="' + esc(osTitle) + '"><span class="os-dot"></span>' + esc(osText) + '</span>' +
+'</div>' +
+(warnChipsHtml ? '<div class="warnings">' + warnChipsHtml + '</div>' : '') +
+'</div>' +
+
+'<div class="actions">' +
+'<button class="btn primary" id="dl-pdf">Export PDF</button>' +
+'<button class="btn" id="dl-txt">Download .txt report</button>' +
+'<button class="btn" id="dl-csv">Download .csv slide table</button>' +
+'</div>' +
+
+'<div class="summary-grid">' +
+genCard + fmtCard +
+mediaCard + playbackCard +
+notesCard + fontsCard +
+structCard + assetsCard +
+'</div>' +
+
+'<div class="table-wrap">' +
+'<div class="table-head">' +
+'<span class="table-title">Per-slide breakdown</span>' +
+'<span class="table-note">Click any column header to sort &middot; FS = full screen &middot; PIP = framed</span>' +
+'</div>' +
+'<div class="table-scroll">' + buildTable() + '</div>' +
+'</div>';
+
+document.getElementById('dl-pdf').addEventListener('click', exportPdf);
+document.getElementById('dl-txt').addEventListener('click', function(){
+download(new Blob([rpBuildText(R)], {type:'text/plain'}), S.deckBase + '_report.txt');
+});
+document.getElementById('dl-csv').addEventListener('click', function(){
+download(new Blob([rpBuildCsv(R)], {type:'text/csv'}), S.deckBase + '_slides.csv');
+});
+bindTable();
+}
+
+function row(k, v, cls){
+return '<div class="row ' + (cls || '') + '"><div class="k">' + esc(k) + '</div><div class="v">' + esc(v) + '</div></div>';
+}
+function card(heading, rowsHtml){
+return '<div class="card"><div class="card-head">' + esc(heading) + '</div>' + rowsHtml.join('') + '</div>';
+}
+
+/* ---------- sortable per-slide table ---------- */
+
+var COLS = [
+{ k:'no', label:'Slide', sortVal: function(s){ return s.no; } },
+{ k:'hidden', label:'State', sortVal: function(s){ return s.hidden ? 1 : 0; } },
+{ k:'video', label:'Video', sortVal: function(s){ return s.video ? (s.video.mode==='fullscreen'?3:2) + (s.video.linked?10:0) : 0; } },
+{ k:'audio', label:'Audio', sortVal: function(s){ return s.audio ? 1 : 0; } },
+{ k:'clicks', label:'Clicks', sortVal: function(s){ return s.clicks || 0; } },
+{ k:'trans', label:'Transition', sortVal: function(s){ return s.transition ? s.transition.type : ''; } },
+{ k:'notes', label:'Notes', sortVal: function(s){ return s.notesWords || 0; } },
+{ k:'hlinks', label:'Links', sortVal: function(s){ return s.hasHyperlink ? 1 : 0; } },
+{ k:'tables', label:'Tables', sortVal: function(s){ return s.tables || 0; } }
+];
+
+function buildTable() {
+var sortCol = S.sortCol, sortDir = S.sortDir;
+var col = COLS.find(function(c){ return c.k === sortCol; }) || COLS[0];
+var rows = S.report.slides.slice().sort(function(a, b){
+var va = col.sortVal(a), vb = col.sortVal(b);
+if (va < vb) return sortDir === 'asc' ? -1 : 1;
+if (va > vb) return sortDir === 'asc' ? 1 : -1;
+return a.no - b.no;
+});
+
+var head = '<thead><tr>' + COLS.map(function(c){
+var sortedClass = c.k === sortCol ? ' sorted' : '';
+var arrow = c.k === sortCol ? '<span class="arrow">' + (sortDir === 'asc' ? '▲' : '▼') + '</span>' : '';
+return '<th class="' + sortedClass + '" data-k="' + c.k + '">' + c.label + arrow + '</th>';
+}).join('') + '</tr></thead>';
+
+var body = '<tbody>' + rows.map(function(s){
+var cls = s.hidden ? ' class="hidden-row"' : '';
+var cells = [];
+cells.push('<td><strong style="color:var(--text);font-weight:500">' + s.no + '</strong></td>');
+cells.push('<td>' + (s.hidden ? '<span class="pill hidden">Hidden</span>' : '<span class="cell-dash">-</span>') + '</td>');
+if (s.video) {
+var vp = '<span class="pill ' + (s.video.mode==='fullscreen' ? 'fs' : 'pip') + '">' + (s.video.mode==='fullscreen' ? 'FS' : 'PIP') + '</span>';
+if (s.video.mute) vp += ' <span class="pill mute">Muted</span>';
+if (s.video.linked) vp += ' <span class="pill link">Linked</span>';
+cells.push('<td>' + vp + '</td>');
+} else cells.push('<td><span class="cell-dash">-</span></td>');
+cells.push('<td>' + (s.audio ? '<span class="pill yes">Yes</span>' : '<span class="cell-dash">-</span>') + '</td>');
+cells.push('<td>' + (s.clicks || '<span class="cell-dash">0</span>') + '</td>');
+cells.push('<td>' + (s.transition ? esc(s.transition.type) : '<span class="cell-dash">-</span>') + '</td>');
+if (s.notesWords) {
+var np = s.notesWords >= 150 ? '<span class="pill long">' + s.notesWords + 'w</span>' : s.notesWords + 'w';
+cells.push('<td>' + np + '</td>');
+} else cells.push('<td><span class="cell-dash">-</span></td>');
+cells.push('<td>' + (s.hasHyperlink ? '<span class="pill yes">Yes</span>' : '<span class="cell-dash">-</span>') + '</td>');
+cells.push('<td>' + (s.tables ? s.tables : '<span class="cell-dash">-</span>') + '</td>');
+return '<tr' + cls + '>' + cells.join('') + '</tr>';
+}).join('') + '</tbody>';
+
+return '<table class="slides">' + head + body + '</table>';
+}
+
+function bindTable() {
+Array.prototype.forEach.call(document.querySelectorAll('table.slides thead th'), function(th){
+th.addEventListener('click', function(){
+var k = th.dataset.k;
+if (S.sortCol === k) S.sortDir = S.sortDir === 'asc' ? 'desc' : 'asc';
+else { S.sortCol = k; S.sortDir = 'asc'; }
+var scroll = document.querySelector('.table-scroll');
+scroll.innerHTML = buildTable();
+bindTable();
+});
+});
+}
+
+/* ============================================================
+   PDF export
+   ============================================================ */
+
+function exportPdf() {
+var btn = document.getElementById('dl-pdf');
+var old = btn.textContent;
+btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>&nbsp;Building PDF&hellip;';
+loadJSPDF().then(function(jsPDF){
+try {
+var R = S.report;
+var doc = new jsPDF({ unit: 'mm', format: 'a4' });
+var pageW = 210, pageH = 297;
+var marginX = 15, marginY = 18;
+var y = marginY;
+var contentW = pageW - 2 * marginX;
+
+function footerAndFrame(pageNum, totalPages) {
+doc.setDrawColor(220);
+doc.setLineWidth(0.1);
+doc.line(marginX, pageH - 18, pageW - marginX, pageH - 18);
+doc.setFontSize(8);
+doc.setTextColor(90);
+doc.setFont('helvetica', 'normal');
+doc.text('Andrew Brandse, AEGFX LTD  /  pptreport@aegfx.com  /  slidesize.com', marginX, pageH - 13);
+doc.text('Page ' + pageNum + ' of ' + totalPages, pageW - marginX, pageH - 13, { align: 'right' });
+doc.text('Generated ' + new Date().toISOString().slice(0,10), marginX, pageH - 9);
+}
+
+function newPage() { doc.addPage(); y = marginY; }
+function ensureSpace(h) { if (y + h > pageH - 24) newPage(); }
+function title(txt) {
+ensureSpace(10);
+doc.setFontSize(14); doc.setFont('helvetica','bold'); doc.setTextColor(74,120,181);
+doc.text(txt, marginX, y);
+y += 7;
+}
+function h2(txt) {
+ensureSpace(8);
+doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(74,120,181);
+doc.text(txt.toUpperCase(), marginX, y);
+doc.setDrawColor(74,120,181); doc.setLineWidth(0.2);
+doc.line(marginX, y + 1.3, pageW - marginX, y + 1.3);
+y += 6;
+}
+function kv(k, v, alert) {
+ensureSpace(5);
+doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(100);
+doc.text(k, marginX, y);
+doc.setFont('helvetica', alert ? 'bold' : 'normal');
+var c = alert === 'fail' ? [231,48,42] : alert === 'alert' ? [224,160,32] : [40,40,40];
+doc.setTextColor(c[0], c[1], c[2]);
+var lines = doc.splitTextToSize(String(v), contentW - 55);
+doc.text(lines, marginX + 55, y);
+y += 4.5 * lines.length;
+}
+function paragraph(txt) {
+ensureSpace(6);
+doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(40);
+var lines = doc.splitTextToSize(txt, contentW);
+lines.forEach(function(ln){ ensureSpace(5); doc.text(ln, marginX, y); y += 4.5; });
+}
+function listLines(items) {
+items.forEach(function(it){
+ensureSpace(5);
+doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(40);
+doc.text('-', marginX + 2, y);
+var lines = doc.splitTextToSize(it, contentW - 10);
+doc.text(lines, marginX + 7, y);
+y += 4.5 * lines.length;
+});
+}
+
+var st = rpStats(R);
+var asp = rpAspect(R);
+var notesHidden = R.slides.filter(function(s){ return s.hidden && s.notesWords > 0; }).length;
+var fileType = (R.fileName.match(/\.([a-z0-9]+)$/i) || [,''])[1].toUpperCase() + ' (PowerPoint)';
+
+/* Page 1: title + OS pill (as coloured chip) + warnings */
+title('PPT Report');
+doc.setFontSize(10); doc.setFont('helvetica','normal'); doc.setTextColor(60);
+doc.text(R.fileName, marginX, y); y += 5;
+doc.setFontSize(9); doc.setTextColor(120);
+doc.text(fmtBytes(R.fileSize) + '  /  ' + R.slideCount + ' slides', marginX, y); y += 7;
+
+/* OS chip */
+var osLabel = R.os === 'Unknown' ? 'Origin unknown' : 'Authored on ' + R.os;
+var osColor = R.os === 'macOS' ? [76,175,130] : R.os === 'Windows' ? [74,120,181] : R.os === 'Mixed' ? [224,160,32] : [120,120,120];
+doc.setFillColor(osColor[0], osColor[1], osColor[2]);
+doc.setTextColor(255);
+doc.setFontSize(9); doc.setFont('helvetica','bold');
+var osW = doc.getTextWidth(osLabel) + 8;
+doc.roundedRect(marginX, y, osW, 6.5, 2.5, 2.5, 'F');
+doc.text(osLabel, marginX + 4, y + 4.5);
+if (R.osReasons.length) {
+doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(100);
+doc.text('(' + R.osReasons.join('; ') + ')', marginX + osW + 3, y + 4.5);
+}
+y += 10;
+
+/* Warnings strip */
+var warnsPdf = [];
+if (st.linkedSlides.length) warnsPdf.push(['red', 'Linked video on slide ' + st.linkedSlides.join(', ') + ' - will fail if the external file is missing']);
+if (!R.fontsEmbedded && R.usedFonts.length) warnsPdf.push(['amber', 'Fonts not embedded (' + R.usedFonts.length + ' used) - text may reflow on show machine']);
+if (R.autoTiming) warnsPdf.push(['amber', 'Automatic slide timings detected']);
+if (R.hyperlinks) warnsPdf.push(['amber', 'Hyperlinks or actions present on at least one slide']);
+if (R.customShows) warnsPdf.push(['amber', 'Custom shows defined (' + R.customShows + ')']);
+
+if (warnsPdf.length) {
+h2('Pre-flight warnings');
+warnsPdf.forEach(function(w){
+var col = w[0] === 'red' ? [231,48,42] : [224,160,32];
+ensureSpace(6);
+doc.setFillColor(col[0], col[1], col[2]);
+doc.circle(marginX + 1.5, y - 1.3, 1, 'F');
+doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(col[0]*0.7, col[1]*0.7, col[2]*0.7);
+var lines = doc.splitTextToSize(w[1], contentW - 6);
+doc.text(lines, marginX + 5, y);
+y += 4.5 * lines.length + 1;
+});
+} else {
+h2('Pre-flight warnings');
+doc.setFillColor(76,175,130); doc.circle(marginX + 1.5, y - 1.3, 1, 'F');
+doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(50,130,90);
+doc.text('No pre-flight warnings detected.', marginX + 5, y);
+y += 6;
+}
+y += 2;
+
+h2('General');
+kv('File size', fmtBytes(R.fileSize));
+kv('File type', fileType);
+kv('Slide count', String(R.slideCount));
+kv('Visible slides', String(R.slideCount - st.hidden.length));
+kv('Hidden slides', String(st.hidden.length), st.hidden.length ? 'alert' : null);
+kv('OS', R.os + (R.osReasons.length ? ' (' + R.osReasons.join('; ') + ')' : ''));
+
+y += 2; h2('Format');
+kv('Aspect', asp ? asp.ratio + ' (' + asp.dec + ':1)' : '-');
+kv('Slide size cm', asp ? rpEmuToCm(R.widthEmu).toFixed(2) + ' x ' + rpEmuToCm(R.heightEmu).toFixed(2) + ' cm' : '-');
+kv('Slide size inch', asp ? rpEmuToIn(R.widthEmu).toFixed(2) + ' x ' + rpEmuToIn(R.heightEmu).toFixed(2) + ' in' : '-');
+
+y += 2; h2('Media');
+kv('Videos', String(st.vids.length));
+kv('Full screen', String(st.fs));
+kv('Framed (PIP)', String(st.pip));
+kv('Audio', String(st.auds.length));
+kv('Embedded media', String(R.mediaCount - R.linkedMediaCount));
+kv('Linked media', String(R.linkedMediaCount), R.linkedMediaCount ? 'fail' : null);
+
+y += 2; h2('Playback');
+kv('Transitions', String(st.trans.length));
+kv('Animations', String(st.anims.length));
+kv('Estimated clicks', String(R.totalClicks));
+kv('Auto timings', R.autoTiming ? 'detected' : 'not detected', R.autoTiming ? 'alert' : null);
+kv('Custom shows', R.customShows ? 'detected (' + R.customShows + ')' : 'not detected', R.customShows ? 'alert' : null);
+kv('Hyperlinks', R.hyperlinks ? 'detected' : 'not detected', R.hyperlinks ? 'alert' : null);
+
+y += 2; h2('Notes');
+kv('Speaker notes', st.notes.length ? 'present' : 'none');
+kv('Slides with notes', String(st.notes.length));
+kv('Notes on hidden slides', String(notesHidden), notesHidden ? 'alert' : null);
+if (st.mostNotes) kv('Most notes on slide', st.mostNotes.no + ' (~' + st.mostNotes.notesWords + ' words)');
+
+y += 2; h2('Fonts');
+paragraph('Used in deck:');
+listLines(R.usedFonts.length ? R.usedFonts : ['(none detected)']);
+y += 1;
+paragraph('Embedded:');
+if (R.fontsEmbedded && R.embeddedFonts.length) listLines(R.embeddedFonts);
+else if (R.fontsEmbedded) listLines(['(embedded, names unavailable)']);
+else listLines(['none detected']);
+
+y += 2; h2('Structure');
+kv('Slide masters', String(R.masters));
+kv('Layouts', String(R.layouts));
+kv('Sections', String(R.sections));
+kv('Hidden slide numbers', st.hidden.length ? st.hidden.join(', ') : 'none');
+
+y += 2; h2('Assets');
+kv('Images', String(R.images));
+kv('Largest image', R.largestImage ? R.largestImage.name + ' / ' + fmtBytes(R.largestImage.size) : 'none');
+kv('Charts', String(R.charts));
+kv('Tables', String(R.tables));
+kv('OLE objects', String(R.ole));
+kv('External links', String(R.externalLinks));
+
+/* Per-slide table on fresh page */
+newPage();
+title('Per-slide breakdown');
+doc.setFontSize(8); doc.setFont('helvetica','italic'); doc.setTextColor(120);
+doc.text('FS = full screen video, PIP = framed. Click count is main-sequence click-triggered animations.', marginX, y);
+y += 6;
+
+var colX = [marginX, marginX+15, marginX+28, marginX+60, marginX+75, marginX+92, marginX+120, marginX+150];
+var headers = ['Slide','State','Video','Audio','Clicks','Transition','Notes','Links'];
+doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(80);
+headers.forEach(function(h, i){ doc.text(h, colX[i], y); });
+y += 1.5;
+doc.setDrawColor(74,120,181); doc.setLineWidth(0.3);
+doc.line(marginX, y, pageW - marginX, y);
+y += 3.5;
+doc.setFont('helvetica','normal');
+
+R.slides.forEach(function(s){
+if (y > pageH - 24) { newPage(); doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(80);
+headers.forEach(function(h, i){ doc.text(h, colX[i], y); }); y += 1.5;
+doc.setDrawColor(74,120,181); doc.setLineWidth(0.3); doc.line(marginX, y, pageW - marginX, y); y += 3.5;
+doc.setFont('helvetica','normal');
+}
+doc.setFontSize(8); doc.setTextColor(s.hidden ? 150 : 40);
+doc.text(String(s.no), colX[0], y);
+doc.text(s.hidden ? 'Hidden' : '-', colX[1], y);
+var vstr = s.video ? (s.video.mode==='fullscreen'?'FS':'PIP') + (s.video.mute?' mute':'') + (s.video.linked?' !LINK':'') : '-';
+if (s.video && s.video.linked) doc.setTextColor(231,48,42);
+doc.text(vstr, colX[2], y);
+doc.setTextColor(s.hidden ? 150 : 40);
+doc.text(s.audio ? 'Yes' : '-', colX[3], y);
+doc.text(String(s.clicks || 0), colX[4], y);
+doc.text(s.transition ? s.transition.type : '-', colX[5], y);
+var nstr = s.notesWords ? (s.notesWords >= 150 ? s.notesWords+'w !' : s.notesWords+'w') : '-';
+if (s.notesWords >= 150) doc.setTextColor(224,160,32);
+doc.text(nstr, colX[6], y);
+doc.setTextColor(s.hidden ? 150 : 40);
+doc.text(s.hasHyperlink ? 'Yes' : '-', colX[7], y);
+y += 4.2;
+});
+
+y += 4;
+if (y < pageH - 30) {
+doc.setFontSize(7); doc.setFont('helvetica','italic'); doc.setTextColor(120);
+doc.text('Note: click counts reflect the main animation sequence. Trigger-based or interactive animations may differ.', marginX, y); y += 3.5;
+doc.text('Muted indicates the authored mute flag, not whether the file has an audio track.', marginX, y);
+}
+
+/* Footer on every page */
+var totalPages = doc.internal.getNumberOfPages();
+for (var p = 1; p <= totalPages; p++) {
+doc.setPage(p);
+footerAndFrame(p, totalPages);
+}
+
+doc.save(S.deckBase + '_report.pdf');
+btn.textContent = 'PDF saved ✓';
+setTimeout(function(){ btn.disabled = false; btn.textContent = old; }, 2500);
+} catch (e) {
+btn.disabled = false; btn.textContent = 'PDF failed';
+console.error(e);
+setTimeout(function(){ btn.textContent = old; }, 2000);
+}
+}).catch(function(){
+btn.disabled = false; btn.textContent = 'PDF unavailable';
+setTimeout(function(){ btn.textContent = old; }, 2000);
+});
+}
+
+})();
+</script>
+</body>
+</html>

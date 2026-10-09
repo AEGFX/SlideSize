@@ -1178,27 +1178,17 @@ before it starts. Opens in its own page so this one stays quick to load.
 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
 </a>
 
-<div class="emf-tool report-tool">
+<a class="emf-tool tool-link report-tool" href="/ppt-report.html">
 <div class="emf-tool-title">PPT Report <span class="emf-chip">PPTX &rarr; Pre-flight</span></div>
 <p class="emf-intro">
-A pre-flight summary for graphics ops &mdash; slide count, hidden slides, audio, embedded fonts,
-transitions, animation click-counts, speaker notes and more. Every embedded video is inspected
-down to the bitstream: codec, profile and level, resolution, pixel aspect, frame rate, interlacing
-and colour, then flagged for anything that will stutter, stretch or fail to play on a Windows
-show machine. Drop a <strong>.pptx</strong> to generate a report you can send to the breakout room.
+A pre-flight summary for graphics ops &mdash; slide count, hidden slides, aspect, fonts, videos
+(full-screen vs framed, muted vs audio, embedded vs linked), audio, transitions, animation
+click-counts, speaker notes, an OS-origin pill (macOS / Windows / Mixed) and a sortable per-slide
+table. Export to TXT, CSV or a printable PDF for the breakout room. Opens in its own page.
 </p>
-<label class="emf-drop" id="report-drop" for="report-file">
-<svg class="emf-dz-icon" viewBox="0 0 24 24"><path d="M14 3v4a1 1 0 001 1h4M5 3h9l5 5v11a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/><path d="M9 13h6M9 17h6"/></svg>
-<div class="emf-dz-big">Drop PPTX</div>
-<div class="emf-dz-small">or tap to browse</div>
-<input type="file" id="report-file" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation">
-<div class="emf-privacy">
-<svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
-Processed in your browser &middot; nothing uploaded
-</div>
-</label>
-<div id="report-results"></div>
-</div>
+<div class="go-row"><span>Open PPT Report</span>
+<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+</a>
 
 <div class="emf-tool vt-tool">
 <div class="emf-tool-title">VT Inspector <span class="emf-chip">Video &rarr; Playback check</span></div>
