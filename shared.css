@@ -3,7 +3,7 @@
  * Loaded by every page. Each tool page sets its own --accent before
  * this file loads (via a scoped <style> block in the <head> after
  * this link), which swaps the logo-mark border, highlighted word in
- * the logo-text and back-link hover to that tool's colour.
+ * the logo-text and the current breadcrumb to that tool's colour.
  *
  * The calculator (index.html) keeps the site red as --accent. */
 
@@ -43,40 +43,83 @@ align-items: center;
    Shared header
    Markup contract (every page):
      <header>
-       <a class="home-btn" href="/" title="Slide Size Calculator"><svg>...</svg></a>
+       <div class="site-bar">
+         <a class="brand" href="https://aegfx.com" target="_blank" rel="noopener"><img src="aegfx-logo-reversed.svg" alt="AEGFX"></a>
+         <nav aria-label="Breadcrumb"><ol class="crumbs">
+           <li><a href="/">Slide Size</a></li>
+           <li aria-current="page">Tool Name</li>
+         </ol></nav>
+         <a class="site-contact" href="mailto:slidesize@aegfx.com">slidesize@aegfx.com</a>
+       </div>
        <div class="logo-mark"></div>
        <div class="logo-text">Tool <span>Name</span></div>
-       <a class="header-by" href="mailto:slidesize@aegfx.com">By AEGFX LTD</a>
      </header>
-   The home-btn is omitted on the landing page.
+   The trail reads AEGFX / Slide Size / Tool Name. The logo is the root of
+   the trail and goes to aegfx.com in a new tab, so a tool with a file loaded
+   is not navigated away from. The landing page has the single crumb
+   <li aria-current="page">Slide Size</li>.
    ============================================================ */
 
 header {
 width: 100%;
 background: var(--panel);
 border-bottom: 1px solid var(--border2);
-padding: 20px 24px 18px;
+padding: 0 0 18px;
 display: flex;
 flex-direction: column;
 align-items: center;
 gap: 6px;
-position: relative;
 }
-.home-btn {
-position: absolute;
-left: 20px; top: 50%;
-transform: translateY(-50%);
-width: 36px; height: 36px;
-display: flex; align-items: center; justify-content: center;
-border: 1px solid var(--border2);
-border-radius: 2px;
+.site-bar {
+align-self: stretch;
+display: flex;
+align-items: center;
+padding: 12px 24px;
+margin-bottom: 14px;
+background: var(--bg);
+border-bottom: 1px solid var(--border);
+}
+.brand { display: block; flex-shrink: 0; line-height: 0; transition: opacity 0.15s; }
+.brand:hover { opacity: 0.8; }
+.brand img { display: block; height: 24px; width: auto; }
+.site-bar nav { min-width: 0; }
+.crumbs {
+list-style: none;
+display: flex;
+flex-wrap: wrap;
+align-items: center;
+font-family: var(--sans);
+font-size: 11px;
+font-weight: 500;
+letter-spacing: 1.5px;
+text-transform: uppercase;
+line-height: 1.5;
+}
+.crumbs li { display: flex; align-items: center; white-space: nowrap; }
+.crumbs li::before { content: '/'; color: var(--muted); opacity: 0.6; margin: 0 11px; font-weight: 400; }
+.crumbs a { color: var(--label); text-decoration: none; transition: color 0.15s; }
+.crumbs a:hover { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
+.crumbs [aria-current] { color: var(--accent); font-weight: 700; }
+.site-contact {
+margin-left: auto;
+padding-left: 16px;
+font-family: var(--sans);
+font-size: 11px;
+font-weight: 500;
+letter-spacing: 0.5px;
 color: var(--muted);
 text-decoration: none;
-transition: all 0.15s;
-background: transparent;
+white-space: nowrap;
+transition: color 0.15s;
 }
-.home-btn:hover { border-color: var(--accent); color: var(--accent); }
-.home-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+.site-contact:hover { color: var(--accent); }
+@media (max-width: 560px) {
+.site-bar { padding: 10px 16px; }
+.brand img { height: 20px; }
+.crumbs { font-size: 10px; letter-spacing: 1px; }
+.crumbs li::before { margin: 0 8px; }
+.site-contact { display: none; }   /* still in the footer */
+}
 .logo-mark {
 height: 24px; width: 42px;
 border: 2px solid var(--accent);
@@ -101,19 +144,6 @@ text-transform: uppercase;
 text-align: center;
 }
 .logo-text span { color: var(--accent); }
-.header-by {
-font-family: var(--sans);
-font-size: 11px;
-font-weight: 500;
-color: var(--muted);
-letter-spacing: 1px;
-text-transform: uppercase;
-text-align: center;
-text-decoration: none;
-transition: color 0.15s;
-}
-.header-by:hover { color: var(--accent); }
-
 /* ============================================================
    Shared footer
    ============================================================ */

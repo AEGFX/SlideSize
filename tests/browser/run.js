@@ -23,7 +23,7 @@ const path = require('path'), fs = require('fs'), os = require('os'), http = req
 const root = path.resolve(__dirname, '..', '..');
 const work = process.env.WORK || path.join(os.tmpdir(), 'slidesize-browser-checks');
 const port = Number(process.env.PORT || 8912);
-const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
+const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml' };
 
 function serve() {
   return new Promise(resolve => {

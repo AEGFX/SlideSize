@@ -308,7 +308,7 @@ const st = (page, fn) => page.evaluate(src => (new Function('s', 'return (' + sr
     await page.screenshot({ path: S + '/shots/N-home.png', fullPage: true });
     await link.click(); await page.waitForFunction(() => window.SlideshowApp);
     check('N2 the entry opens the builder', /\/photo-montage\.html$/.test(page.url()) && (await page.title()).startsWith('Photo Montage'));
-    await page.click('header .header-by a'); await page.waitForLoadState();
+    await page.click('header .crumbs a'); await page.waitForLoadState();
     check('N3 the builder links straight back to SlideSize', page.url() === L.ROOT + '/' && /Slide Size Calculator/.test(await page.title()), page.url());
     await page.fill('#px-w', '3840'); await page.fill('#px-h', '1080'); await page.selectOption('#fps', '50'); await page.click('.calc-btn');
     await page.click('#montage-link'); await page.waitForFunction(() => window.SlideshowApp && !SlideshowApp.state().probing);
