@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Media Extractor &middot; SlideSize</title>
+<meta name="description" content="Drop a PowerPoint deck and pull out every embedded image, video, audio or EMF with thumbnails and metadata. Runs entirely in your browser.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23E7302A'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+--bg: #1a1a1a;
+--panel: #262626;
+--panel2: #2d2d2d;
+--border: #333333;
+--border2: #3d3d3d;
+--accent: #E7302A;
+--accent2: #ff4f49;
+--muted: #888888;
+--text: #F2F2F2;
+--label: #D9D9D9;
+--mono: 'Share Tech Mono', monospace;
+--sans: 'DM Sans', sans-serif;
+--md: #E0A020;
+--md2: #f0b840;
+--md-dim: rgba(224,160,32,0.12);
+--md-glow: rgba(224,160,32,0.35);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+background: var(--bg);
+color: var(--text);
+font-family: var(--sans);
+min-height: 100vh;
+display: flex;
+flex-direction: column;
+align-items: center;
+}
+header {
+width: 100%;
+background: var(--panel);
+border-bottom: 1px solid var(--border2);
+padding: 20px 24px;
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 6px;
+}
+.logo-mark {
+height: 24px; width: 42px;
+border: 2px solid var(--accent);
+flex-shrink: 0;
+position: relative;
+background: transparent;
+}
+.logo-mark::after {
+content: ''; position: absolute; inset: 3px;
+background: var(--accent); opacity: 0.2;
+}
+.logo-text {
+font-family: var(--sans);
+font-weight: 700;
+font-size: 18px;
+letter-spacing: 3px;
+color: #fff;
+text-transform: uppercase;
+text-align: center;
+}
+.logo-text span { color: var(--md); }
+.header-by {
+font-family: var(--sans);
+font-size: 11px;
+font-weight: 500;
+color: var(--muted);
+letter-spacing: 1px;
+text-transform: uppercase;
+text-align: center;
+}
+.header-by a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
+.header-by a:hover { color: var(--md); }
+
+.wrap {
+width: 100%;
+max-width: 1280px;
+padding: 24px 20px 48px;
+display: flex;
+flex-direction: column;
+gap: 18px;
+}
+
+.intro {
+font-family: var(--sans);
+font-size: 13px;
+line-height: 1.55;
+color: var(--label);
+max-width: 820px;
+}
+.intro strong { color: var(--text); font-weight: 500; }
+
+/* Drop zone */
+.drop {
+border: 1px dashed var(--border2);
+border-radius: 3px;
+background: var(--panel);
+padding: 28px 20px;
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 7px;
+cursor: pointer;
+transition: all 0.15s;
+position: relative;
+}
+.drop:hover { border-color: var(--md); background: var(--panel2); }
+.drop.drag { border-color: var(--md); background: var(--md-dim); box-shadow: 0 0 0 3px var(--md-glow); }
+.drop svg.dz-icon { width: 34px; height: 34px; stroke: var(--md); fill: none; stroke-width: 1.6; }
+.drop .dz-big { font-size: 14px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--text); }
+.drop .dz-small { font-size: 11px; color: var(--muted); }
+.drop input[type="file"] { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.drop.compact { padding: 14px 18px; flex-direction: row; justify-content: space-between; cursor: default; }
+.drop.compact svg.dz-icon { width: 20px; height: 20px; }
+.drop.compact .dz-big { font-size: 12px; letter-spacing: 0.5px; }
+.drop.compact .dz-small { font-size: 11px; }
+.drop.compact .dz-left { display: flex; align-items: center; gap: 12px; }
+.drop.compact .dz-info { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.drop.compact .replace-btn {
+background: transparent; border: 1px solid var(--border2); color: var(--label);
+font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+text-transform: uppercase; padding: 7px 13px; border-radius: 2px; cursor: pointer;
+transition: all 0.15s;
+}
+.drop.compact .replace-btn:hover { border-color: var(--md); color: var(--md); }
+.privacy {
+font-family: var(--sans); font-size: 11px; color: var(--md);
+display: flex; align-items: center; gap: 5px; margin-top: 4px;
+}
+.privacy svg { width: 11px; height: 11px; stroke: var(--md); fill: none; stroke-width: 2; }
+
+/* Top bar after a deck loads */
+.topbar {
+display: grid;
+grid-template-columns: 1fr auto;
+gap: 16px;
+align-items: center;
+background: var(--panel);
+border: 1px solid var(--border2);
+border-left: 2px solid var(--md);
+border-radius: 2px;
+padding: 14px 18px;
+}
+.topbar-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.topbar-title { font-family: var(--mono); font-size: 13px; color: var(--text); word-break: break-all; }
+.topbar-summary { font-family: var(--sans); font-size: 12px; color: var(--muted); }
+.topbar-summary strong { color: var(--label); font-weight: 500; }
+.topbar-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.save-all-btn {
+background: var(--md); border: 1px solid var(--md); color: #221700;
+font-family: var(--sans); font-size: 12px; font-weight: 700; letter-spacing: 1px;
+text-transform: uppercase; padding: 10px 16px; border-radius: 2px; cursor: pointer;
+transition: all 0.15s;
+}
+.save-all-btn:hover { background: var(--md2); }
+.save-all-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.save-all-note {
+font-family: var(--sans); font-size: 10px; color: var(--muted);
+letter-spacing: 0.3px; margin-top: 2px;
+}
+
+.manifest { display: flex; flex-wrap: wrap; gap: 7px; }
+.chip {
+font-family: var(--mono); font-size: 11px;
+color: var(--label); background: var(--panel);
+border: 1px solid var(--border2); border-radius: 2px;
+padding: 5px 9px; cursor: pointer; user-select: none;
+transition: all 0.15s;
+}
+.chip b { color: var(--md); font-weight: 400; }
+.chip:hover { border-color: var(--md); }
+.chip.active { background: var(--md-dim); border-color: var(--md); }
+.chip.all b { color: var(--text); }
+
+/* Main two-pane layout: grid | metadata panel */
+.main {
+display: grid;
+grid-template-columns: 1fr 320px;
+gap: 16px;
+align-items: start;
+}
+@media (max-width: 980px) {
+.main { grid-template-columns: 1fr; }
+.meta-panel { position: static; max-height: none; }
+}
+
+.grid {
+display: grid;
+grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+gap: 10px;
+background: var(--panel);
+border: 1px solid var(--border2);
+border-radius: 2px;
+padding: 12px;
+min-height: 200px;
+}
+.tile {
+background: var(--panel2);
+border: 1px solid var(--border2);
+border-radius: 2px;
+cursor: pointer;
+transition: all 0.12s;
+overflow: hidden;
+display: flex;
+flex-direction: column;
+position: relative;
+}
+.tile:hover { border-color: var(--md); transform: translateY(-1px); }
+.tile.selected { border-color: var(--md); box-shadow: 0 0 0 1px var(--md); }
+.tile-thumb {
+width: 100%;
+aspect-ratio: 1 / 1;
+background: #0f0f0f;
+display: flex;
+align-items: center;
+justify-content: center;
+position: relative;
+overflow: hidden;
+}
+.tile-thumb img, .tile-thumb canvas {
+width: 100%; height: 100%; object-fit: contain; display: block;
+}
+.tile-thumb .ph {
+font-family: var(--mono); font-size: 11px;
+color: var(--muted); text-align: center;
+display: flex; flex-direction: column; align-items: center; gap: 6px;
+padding: 10px;
+}
+.tile-thumb .ph .ph-icon { width: 32px; height: 32px; opacity: 0.6; }
+.tile-type {
+position: absolute; top: 6px; left: 6px;
+font-family: var(--sans); font-size: 9px; font-weight: 700; letter-spacing: 1px;
+text-transform: uppercase; color: var(--md); background: rgba(0,0,0,0.75);
+border: 1px solid var(--md); border-radius: 2px; padding: 2px 6px;
+}
+.tile-dur {
+position: absolute; bottom: 6px; right: 6px;
+font-family: var(--mono); font-size: 10px;
+color: #fff; background: rgba(0,0,0,0.75);
+border-radius: 2px; padding: 2px 6px;
+}
+.tile-foot {
+padding: 7px 9px 8px;
+display: flex;
+flex-direction: column;
+gap: 2px;
+border-top: 1px solid var(--border);
+background: var(--panel);
+}
+.tile-name {
+font-family: var(--mono); font-size: 11px; color: var(--label);
+white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tile-size { font-family: var(--sans); font-size: 10px; color: var(--muted); }
+.tile-vid-btn {
+position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+background: transparent; border: 0; color: var(--md); cursor: pointer;
+font-family: var(--sans); font-size: 10px; font-weight: 700; letter-spacing: 1px;
+text-transform: uppercase;
+}
+.tile-vid-btn:hover { background: rgba(224,160,32,0.08); }
+.tile-vid-btn .play {
+width: 36px; height: 36px; border-radius: 50%;
+border: 1.5px solid var(--md); display: flex; align-items: center; justify-content: center;
+margin-bottom: 6px;
+}
+.tile-vid-btn .play::before {
+content: ''; width: 0; height: 0;
+border-left: 10px solid var(--md);
+border-top: 7px solid transparent;
+border-bottom: 7px solid transparent;
+margin-left: 3px;
+}
+.tile-busy {
+position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+background: rgba(0,0,0,0.6);
+}
+.spinner {
+width: 18px; height: 18px; border: 2px solid var(--border2);
+border-top-color: var(--md); border-radius: 50%;
+animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Metadata panel */
+.meta-panel {
+background: var(--panel);
+border: 1px solid var(--border2);
+border-left: 2px solid var(--md);
+border-radius: 2px;
+padding: 16px 18px;
+position: sticky;
+top: 16px;
+max-height: calc(100vh - 32px);
+overflow-y: auto;
+display: flex;
+flex-direction: column;
+gap: 12px;
+}
+.meta-empty {
+font-family: var(--sans); font-size: 12px; color: var(--muted);
+text-align: center; padding: 36px 10px;
+}
+.meta-name {
+font-family: var(--mono); font-size: 13px; color: var(--text); word-break: break-all;
+}
+.meta-preview {
+width: 100%;
+aspect-ratio: 1 / 1;
+background: #0f0f0f;
+border-radius: 2px;
+display: flex; align-items: center; justify-content: center;
+overflow: hidden;
+}
+.meta-preview img, .meta-preview video, .meta-preview canvas {
+max-width: 100%; max-height: 100%; display: block;
+}
+.meta-preview audio { width: 100%; }
+.meta-preview .ph { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.meta-table { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; }
+.meta-table .k { font-family: var(--sans); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.meta-table .v { font-family: var(--mono); font-size: 12px; color: var(--label); text-align: right; word-break: break-all; }
+.meta-save {
+background: var(--md); border: 1px solid var(--md); color: #221700;
+font-family: var(--sans); font-size: 12px; font-weight: 700; letter-spacing: 1px;
+text-transform: uppercase; padding: 10px 14px; border-radius: 2px; cursor: pointer;
+transition: all 0.15s;
+}
+.meta-save:hover { background: var(--md2); }
+
+.err-note {
+background: var(--panel);
+border: 1px solid var(--border2);
+border-left: 2px solid var(--accent);
+padding: 12px 16px;
+font-family: var(--sans); font-size: 12px;
+color: var(--label);
+border-radius: 2px;
+}
+.loading-note {
+background: var(--panel);
+border: 1px solid var(--border2);
+padding: 14px 18px;
+font-family: var(--sans); font-size: 12px;
+color: var(--muted);
+border-radius: 2px;
+display: flex; align-items: center; gap: 10px;
+}
+
+footer {
+width: 100%;
+border-top: 1px solid var(--border);
+padding: 14px 24px;
+font-family: var(--sans);
+font-size: 11px;
+color: var(--muted);
+display: flex;
+flex-direction: column;
+align-items: center;
+text-align: center;
+gap: 3px;
+line-height: 1.6;
+}
+footer a { color: var(--accent); text-decoration: none; }
+footer a:hover { color: var(--accent2); }
+.footer-sep { margin: 4px 0; height: 1px; width: 40px; background: var(--border2); }
+</style>
+</head>
+<body>
+<header>
+<div class="logo-mark"></div>
+<div class="logo-text">Media <span>Extractor</span></div>
+<div class="header-by"><a href="/">&larr; Slide Size Calculator</a></div>
+</header>
+
+<div class="wrap">
+
+<p class="intro">
+Drop a <strong>.pptx</strong> and see every embedded asset as a thumbnail. The filenames inside a deck
+are flat and non-descriptive (<code>image1.png</code>, <code>image47.jpg</code>) so this gives you a
+visual way to find the one you need. Click any tile for its metadata and a per-file save, or save the
+lot into a folder of your choice. Nothing is uploaded, it all runs in your browser.
+</p>
+
+<label class="drop" id="drop" for="file">
+<svg class="dz-icon" viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
+<div class="dz-big">Drop PPTX</div>
+<div class="dz-small">or tap to browse</div>
+<input type="file" id="file" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation">
+<div class="privacy">
+<svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+Processed in your browser &middot; nothing uploaded
+</div>
+</label>
+
+<div id="stage"></div>
+
+</div>
+
+<footer>
+<span>Created by Andrew Brandse</span>
+<span><a href="mailto:info@aegfx.com">info@aegfx.com</a></span>
+<span>Built with Claude (Anthropic)</span>
+<div class="footer-sep"></div>
+<span>Nothing uploaded &middot; everything stays in your browser</span>
+</footer>
+
+<script>
+(function(){
+'use strict';
+
+/* ---------- shared helpers (duplicated from site, matches pdf.html pattern) ---------- */
+
+var JSZIP_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+var jszipReady = null;
+function loadJSZip() {
+if (jszipReady) return jszipReady;
+jszipReady = new Promise(function(res, rej) {
+var sc = document.createElement('script');
+sc.src = JSZIP_SRC;
+sc.onload = function() { window.JSZip ? res(window.JSZip) : rej(new Error('JSZip not available')); };
+sc.onerror = function() { rej(new Error('JSZip failed to load')); };
+document.head.appendChild(sc);
+});
+return jszipReady;
+}
+
+function fmtBytes(n) {
+if (n < 1024) return n + ' B';
+if (n < 1048576) return (n / 1024).toFixed(1) + ' KB';
+if (n < 1073741824) return (n / 1048576).toFixed(2) + ' MB';
+return (n / 1073741824).toFixed(2) + ' GB';
+}
+function fmtDuration(s) {
+if (!isFinite(s) || s < 0) return '--';
+var m = Math.floor(s / 60), ss = Math.floor(s % 60), ms = Math.round((s - Math.floor(s)) * 1000);
+if (m >= 60) {
+var h = Math.floor(m / 60); m = m % 60;
+return h + ':' + String(m).padStart(2,'0') + ':' + String(ss).padStart(2,'0');
+}
+return m + ':' + String(ss).padStart(2,'0') + (ms && m < 10 ? '.' + String(ms).padStart(3,'0').slice(0,2) : '');
+}
+function download(blob, filename) {
+var url = URL.createObjectURL(blob);
+var a = document.createElement('a');
+a.href = url; a.download = filename;
+document.body.appendChild(a); a.click(); a.remove();
+setTimeout(function() { URL.revokeObjectURL(url); }, 4000);
+}
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* ---------- type map ---------- */
+
+var TYPE_MAP = {
+png:'PNG', jpg:'JPG', jpeg:'JPG', gif:'GIF', bmp:'BMP', tiff:'TIFF', tif:'TIFF', svg:'SVG',
+emf:'EMF', wmf:'WMF', webp:'WEBP', ico:'ICO',
+mp4:'MP4', mov:'MOV', avi:'AVI', wmv:'WMV', m4v:'M4V', mkv:'MKV', webm:'WEBM',
+mp3:'MP3', wav:'WAV', m4a:'M4A', wma:'WMA', aac:'AAC', ogg:'OGG',
+ttf:'FONT', otf:'FONT', fntdata:'FONT'
+};
+var MIME_MAP = {
+png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg', gif:'image/gif', bmp:'image/bmp',
+tiff:'image/tiff', tif:'image/tiff', svg:'image/svg+xml', webp:'image/webp',
+emf:'image/x-emf', wmf:'image/x-wmf',
+mp4:'video/mp4', mov:'video/quicktime', avi:'video/x-msvideo', wmv:'video/x-ms-wmv',
+m4v:'video/x-m4v', mkv:'video/x-matroska', webm:'video/webm',
+mp3:'audio/mpeg', wav:'audio/wav', m4a:'audio/mp4', wma:'audio/x-ms-wma',
+aac:'audio/aac', ogg:'audio/ogg'
+};
+var IMAGE_PREVIEWABLE = { png:1, jpg:1, jpeg:1, gif:1, bmp:1, webp:1, svg:1 };
+var VIDEO_PREVIEWABLE = { mp4:1, m4v:1, webm:1, mov:1 };
+var AUDIO_PREVIEWABLE = { mp3:1, wav:1, m4a:1, aac:1, ogg:1 };
+function extOf(name){ var m = name.match(/\.([a-z0-9]+)$/i); return m ? m[1].toLowerCase() : ''; }
+function typeOf(name){ return TYPE_MAP[extOf(name)] || (extOf(name) ? extOf(name).toUpperCase() : 'FILE'); }
+function mimeOf(name){ return MIME_MAP[extOf(name)] || 'application/octet-stream'; }
+function kindOf(ext){
+if (IMAGE_PREVIEWABLE[ext]) return 'image';
+if (VIDEO_PREVIEWABLE[ext]) return 'video';
+if (AUDIO_PREVIEWABLE[ext]) return 'audio';
+if (ext === 'emf' || ext === 'wmf') return 'vector';
+if (ext === 'ttf' || ext === 'otf') return 'font';
+return 'other';
+}
+
+/* ---------- state ---------- */
+
+var S = {
+files: [],         /* [{ name, blob, size, ext, type, kind, url, meta, thumbUrl, selected }] */
+deckBase: '',
+filter: 'ALL',
+selectedIdx: -1
+};
+
+/* ---------- drop zone ---------- */
+
+var drop = document.getElementById('drop');
+var fileInput = document.getElementById('file');
+['dragenter','dragover'].forEach(function(ev){
+drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.add('drag'); });
+});
+['dragleave','drop'].forEach(function(ev){
+drop.addEventListener(ev, function(e){
+e.preventDefault();
+if (ev === 'drop' || e.target === drop) drop.classList.remove('drag');
+});
+});
+drop.addEventListener('drop', function(e){
+e.preventDefault(); drop.classList.remove('drag');
+var f = e.dataTransfer.files && e.dataTransfer.files[0];
+if (f) handleFile(f);
+});
+fileInput.addEventListener('change', function(){
+if (fileInput.files && fileInput.files[0]) handleFile(fileInput.files[0]);
+fileInput.value = '';
+});
+
+function handleFile(file) {
+if (!/\.pptx$/i.test(file.name)) {
+showError('That looks like a ' + (extOf(file.name).toUpperCase() || 'non-PPTX') + ' file. Drop a .pptx deck instead.');
+return;
+}
+/* release any previous blob URLs */
+S.files.forEach(function(f){
+if (f.url) URL.revokeObjectURL(f.url);
+if (f.thumbUrl && f.thumbUrl !== f.url) URL.revokeObjectURL(f.thumbUrl);
+});
+S.files = []; S.selectedIdx = -1; S.filter = 'ALL';
+S.deckBase = file.name.replace(/\.pptx$/i, '');
+
+compactDrop(file);
+var stage = document.getElementById('stage');
+stage.innerHTML = '<div class="loading-note"><span class="spinner"></span>Reading <strong style="color:var(--label);font-weight:500">' + esc(file.name) + '</strong>&hellip;</div>';
+
+loadJSZip().then(function(JSZip){
+return file.arrayBuffer().then(function(ab){ return JSZip.loadAsync(ab); });
+}).then(function(zip){
+var entries = [];
+zip.forEach(function(path, entry){
+if (/^ppt\/media\//i.test(path) && !entry.dir) entries.push(entry);
+});
+entries.sort(function(a,b){
+function key(p){ var m = p.match(/(\D*)(\d+)?\.[a-z0-9]+$/i); return [m ? m[1] : p, m && m[2] ? parseInt(m[2],10) : 0]; }
+var ka = key(a.name), kb = key(b.name);
+if (ka[0] !== kb[0]) return ka[0] < kb[0] ? -1 : 1;
+return ka[1] - kb[1];
+});
+if (!entries.length) {
+showError('No media found in this deck (ppt/media/ is empty).');
+return;
+}
+return Promise.all(entries.map(function(entry){
+return entry.async('blob').then(function(blob){
+var name = entry.name.replace(/^ppt\/media\//i, '');
+var ext = extOf(name);
+var mime = mimeOf(name);
+/* Blob from JSZip has no type; wrap in a typed Blob so previews work */
+var typedBlob = new Blob([blob], { type: mime });
+return {
+name: name, blob: typedBlob, size: typedBlob.size,
+ext: ext, type: typeOf(name), kind: kindOf(ext),
+url: URL.createObjectURL(typedBlob),
+meta: null,       /* { width, height, duration, ... } populated on demand */
+thumbUrl: null    /* for video thumbs, generated on demand */
+};
+});
+})).then(function(files){
+S.files = files;
+render();
+/* kick off image meta probing in the background so the panel is ready instantly */
+files.forEach(function(f, i){ if (f.kind === 'image') probeImage(i); });
+});
+}).catch(function(e){
+showError('Could not read this deck. ' + (e && e.message ? '(' + e.message + ')' : ''));
+});
+}
+
+function compactDrop(file) {
+drop.classList.add('compact');
+drop.innerHTML =
+'<div class="dz-left">' +
+'<svg class="dz-icon" viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" fill="none" stroke="#E0A020" stroke-width="1.6"/></svg>' +
+'<div class="dz-info">' +
+'<div class="dz-big">' + esc(file.name) + '</div>' +
+'<div class="dz-small">' + fmtBytes(file.size) + '</div>' +
+'</div>' +
+'</div>' +
+'<button type="button" class="replace-btn" id="replace-btn">Drop another deck</button>' +
+'<input type="file" id="file" accept=".pptx">';
+var btn = document.getElementById('replace-btn');
+btn.addEventListener('click', function(){ document.getElementById('file').click(); });
+var newInput = document.getElementById('file');
+newInput.addEventListener('change', function(){
+if (newInput.files && newInput.files[0]) handleFile(newInput.files[0]);
+newInput.value = '';
+});
+}
+
+function showError(msg) {
+document.getElementById('stage').innerHTML = '<div class="err-note">' + esc(msg) + '</div>';
+}
+
+/* ---------- rendering ---------- */
+
+function render() {
+var stage = document.getElementById('stage');
+var counts = {};
+var totalBytes = 0;
+S.files.forEach(function(f){
+counts[f.type] = (counts[f.type] || 0) + 1;
+totalBytes += f.size;
+});
+var typeNames = Object.keys(counts).sort();
+var chipsHtml = '<span class="chip all' + (S.filter === 'ALL' ? ' active' : '') + '" data-f="ALL"><b>' + S.files.length + '</b> ALL</span>' +
+typeNames.map(function(t){
+return '<span class="chip' + (S.filter === t ? ' active' : '') + '" data-f="' + t + '"><b>' + counts[t] + '</b> ' + t + '</span>';
+}).join('');
+
+var supportsFS = (typeof window.showDirectoryPicker === 'function');
+var saveLabel = supportsFS ? 'Save all to folder&hellip;' : 'Download all';
+var saveNote = supportsFS
+? 'Creates <strong style="color:var(--label)">' + esc(S.deckBase) + '_media/</strong> in the folder you choose.'
+: 'Downloads to your browser\'s Downloads folder (one permission prompt). Chrome or Edge on desktop give you a folder picker.';
+
+stage.innerHTML =
+'<div class="topbar">' +
+'<div class="topbar-info">' +
+'<div class="topbar-title">' + esc(S.deckBase) + '.pptx</div>' +
+'<div class="topbar-summary"><strong>' + S.files.length + '</strong> media file' + (S.files.length === 1 ? '' : 's') + ' &middot; ' + fmtBytes(totalBytes) + '</div>' +
+'</div>' +
+'<div class="topbar-actions">' +
+'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">' +
+'<button class="save-all-btn" id="save-all-btn">' + saveLabel + '</button>' +
+'<div class="save-all-note">' + saveNote + '</div>' +
+'</div>' +
+'</div>' +
+'</div>' +
+'<div class="manifest" id="manifest">' + chipsHtml + '</div>' +
+'<div class="main">' +
+'<div class="grid" id="grid"></div>' +
+'<div class="meta-panel" id="meta-panel"><div class="meta-empty">Click a tile to see its details.</div></div>' +
+'</div>';
+
+document.getElementById('save-all-btn').addEventListener('click', saveAll);
+Array.prototype.forEach.call(document.querySelectorAll('#manifest .chip'), function(chip){
+chip.addEventListener('click', function(){
+S.filter = chip.dataset.f;
+render();
+if (S.selectedIdx >= 0) renderMeta();
+});
+});
+renderGrid();
+if (S.selectedIdx >= 0) renderMeta();
+}
+
+function renderGrid() {
+var grid = document.getElementById('grid');
+var visible = S.files.map(function(f, i){ return { f: f, i: i }; })
+.filter(function(x){ return S.filter === 'ALL' || x.f.type === S.filter; });
+if (!visible.length) {
+grid.innerHTML = '<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--muted);font-size:12px">Nothing to show for ' + esc(S.filter) + '.</div>';
+return;
+}
+grid.innerHTML = visible.map(function(x){
+return tileHtml(x.f, x.i);
+}).join('');
+Array.prototype.forEach.call(grid.querySelectorAll('.tile'), function(el){
+el.addEventListener('click', function(ev){
+if (ev.target.closest('.tile-vid-btn')) return;
+S.selectedIdx = parseInt(el.dataset.idx, 10);
+Array.prototype.forEach.call(grid.querySelectorAll('.tile'), function(t){ t.classList.remove('selected'); });
+el.classList.add('selected');
+renderMeta();
+});
+});
+Array.prototype.forEach.call(grid.querySelectorAll('.tile-vid-btn'), function(btn){
+btn.addEventListener('click', function(ev){
+ev.stopPropagation();
+var idx = parseInt(btn.dataset.idx, 10);
+generateVideoThumb(idx);
+});
+});
+}
+
+function tileHtml(f, idx) {
+var sel = idx === S.selectedIdx ? ' selected' : '';
+var dur = f.meta && f.meta.duration ? '<div class="tile-dur">' + fmtDuration(f.meta.duration) + '</div>' : '';
+var thumb;
+if (f.kind === 'image') {
+thumb = '<img src="' + esc(f.url) + '" alt="" loading="lazy">';
+} else if (f.kind === 'video' && f.thumbUrl) {
+thumb = '<img src="' + esc(f.thumbUrl) + '" alt="" loading="lazy">';
+} else if (f.kind === 'video') {
+thumb = '<button type="button" class="tile-vid-btn" data-idx="' + idx + '" title="Generate thumbnail (loads the video)">' +
+'<div style="display:flex;flex-direction:column;align-items:center;gap:4px">' +
+'<div class="play"></div><div>Thumbnail</div></div></button>';
+} else {
+thumb = '<div class="ph">' + placeholderIcon(f.kind) + '<div>' + f.type + '</div></div>';
+}
+return '<div class="tile' + sel + '" data-idx="' + idx + '">' +
+'<div class="tile-thumb">' +
+'<span class="tile-type">' + f.type + '</span>' +
+thumb + dur +
+'</div>' +
+'<div class="tile-foot">' +
+'<div class="tile-name" title="' + esc(f.name) + '">' + esc(f.name) + '</div>' +
+'<div class="tile-size">' + fmtBytes(f.size) + '</div>' +
+'</div>' +
+'</div>';
+}
+
+function placeholderIcon(kind) {
+if (kind === 'audio') return '<svg class="ph-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
+if (kind === 'video') return '<svg class="ph-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M10 9l5 3-5 3V9z"/></svg>';
+if (kind === 'vector') return '<svg class="ph-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l6-6 4 4 8-8"/><circle cx="3" cy="17" r="1.5"/><circle cx="21" cy="7" r="1.5"/></svg>';
+if (kind === 'font') return '<svg class="ph-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 20V6h12M9 13h7M9 20h4"/></svg>';
+return '<svg class="ph-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 3v4a1 1 0 001 1h4M5 3h9l5 5v11a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/></svg>';
+}
+
+/* ---------- metadata panel ---------- */
+
+function renderMeta() {
+var panel = document.getElementById('meta-panel');
+if (!panel) return;
+if (S.selectedIdx < 0 || !S.files[S.selectedIdx]) {
+panel.innerHTML = '<div class="meta-empty">Click a tile to see its details.</div>';
+return;
+}
+var f = S.files[S.selectedIdx];
+/* if an image hasn't been probed yet, do it now */
+if (f.kind === 'image' && !f.meta) {
+probeImage(S.selectedIdx).then(renderMeta);
+}
+if (f.kind === 'video' && !f.meta) {
+probeVideo(S.selectedIdx).then(renderMeta);
+}
+if (f.kind === 'audio' && !f.meta) {
+probeAudio(S.selectedIdx).then(renderMeta);
+}
+
+var preview = buildPreview(f);
+var rows = [
+['Filename', esc(f.name)],
+['Type', f.type + ' (' + f.ext + ')'],
+['Size', fmtBytes(f.size)]
+];
+if (f.meta) {
+if (f.meta.width && f.meta.height) rows.push(['Dimensions', f.meta.width + ' x ' + f.meta.height + ' px']);
+if (f.meta.duration != null) rows.push(['Duration', fmtDuration(f.meta.duration)]);
+if (f.meta.aspect) rows.push(['Aspect', f.meta.aspect]);
+if (f.meta.error) rows.push(['Note', esc(f.meta.error)]);
+}
+if (f.kind === 'vector') rows.push(['Note', 'Office vector graphic. Open in the EMF Extractor to recover its contents.']);
+if (f.kind === 'font') rows.push(['Note', 'Embedded typeface. Rename to .ttf or .otf to install.']);
+
+panel.innerHTML =
+'<div class="meta-name">' + esc(f.name) + '</div>' +
+'<div class="meta-preview">' + preview + '</div>' +
+'<div class="meta-table">' +
+rows.map(function(r){ return '<div class="k">' + r[0] + '</div><div class="v">' + r[1] + '</div>'; }).join('') +
+'</div>' +
+'<button class="meta-save" id="meta-save-btn">Save this file</button>';
+document.getElementById('meta-save-btn').addEventListener('click', function(){
+download(f.blob, f.name);
+});
+}
+
+function buildPreview(f) {
+if (f.kind === 'image') return '<img src="' + esc(f.url) + '" alt="">';
+if (f.kind === 'video') return '<video src="' + esc(f.url) + '" controls preload="metadata"></video>';
+if (f.kind === 'audio') return '<audio src="' + esc(f.url) + '" controls></audio>';
+if (f.kind === 'vector') return '<div class="ph">EMF / WMF &middot; no preview</div>';
+if (f.kind === 'font') return '<div class="ph" style="font-family:serif;font-size:36px;color:var(--label);text-align:center"><div>Aa Bb Cc</div><div style="font-size:11px;font-family:var(--sans);color:var(--muted);margin-top:8px">(using fallback font)</div></div>';
+return '<div class="ph">No preview available</div>';
+}
+
+/* ---------- metadata probes (async, cached on the file obj) ---------- */
+
+function probeImage(i) {
+var f = S.files[i];
+if (!f || f.meta) return Promise.resolve();
+return new Promise(function(res){
+var img = new Image();
+img.onload = function(){
+f.meta = {
+width: img.naturalWidth,
+height: img.naturalHeight,
+aspect: aspectOf(img.naturalWidth, img.naturalHeight)
+};
+res();
+};
+img.onerror = function(){ f.meta = { error: 'Image failed to decode (unsupported format)' }; res(); };
+img.src = f.url;
+});
+}
+
+function probeVideo(i) {
+var f = S.files[i];
+if (!f || f.meta) return Promise.resolve();
+return new Promise(function(res){
+var v = document.createElement('video');
+v.preload = 'metadata';
+v.muted = true;
+var done = false;
+function finish(ok, err){
+if (done) return; done = true;
+v.src = '';
+res();
+}
+v.onloadedmetadata = function(){
+f.meta = {
+width: v.videoWidth || null,
+height: v.videoHeight || null,
+duration: v.duration,
+aspect: (v.videoWidth && v.videoHeight) ? aspectOf(v.videoWidth, v.videoHeight) : null
+};
+finish(true);
+};
+v.onerror = function(){
+f.meta = { error: 'Browser cannot decode this video format (duration and dimensions unknown)' };
+finish(false);
+};
+setTimeout(function(){ if (!done) { f.meta = f.meta || { error: 'Metadata timed out' }; finish(false); } }, 8000);
+v.src = f.url;
+});
+}
+
+function probeAudio(i) {
+var f = S.files[i];
+if (!f || f.meta) return Promise.resolve();
+return new Promise(function(res){
+var a = document.createElement('audio');
+a.preload = 'metadata';
+var done = false;
+function finish(){ if (done) return; done = true; a.src = ''; res(); }
+a.onloadedmetadata = function(){ f.meta = { duration: a.duration }; finish(); };
+a.onerror = function(){ f.meta = { error: 'Browser cannot decode this audio format' }; finish(); };
+setTimeout(function(){ if (!done) { f.meta = f.meta || { error: 'Metadata timed out' }; finish(); } }, 8000);
+a.src = f.url;
+});
+}
+
+function aspectOf(w, h) {
+function gcd(a,b){ a=Math.round(a); b=Math.round(b); while(b){ var t=b; b=a%b; a=t; } return a||1; }
+var g = gcd(w, h);
+var rw = w/g, rh = h/g;
+/* if the reduced form is still ugly, show a 2-decimal ratio as well */
+if (rw > 50 || rh > 50) return (w/h).toFixed(2) + ':1';
+return rw + ':' + rh + ' (' + (w/h).toFixed(2) + ':1)';
+}
+
+/* Generate a thumbnail from a video by loading it, seeking to 1s, and painting a canvas */
+function generateVideoThumb(i) {
+var f = S.files[i];
+if (!f || f.thumbUrl) return;
+var tile = document.querySelector('.tile[data-idx="' + i + '"] .tile-thumb');
+if (tile) {
+tile.innerHTML = '<span class="tile-type">' + f.type + '</span><div class="tile-busy"><div class="spinner"></div></div>';
+}
+var v = document.createElement('video');
+v.preload = 'auto';
+v.muted = true;
+v.playsInline = true;
+v.crossOrigin = 'anonymous';
+var done = false;
+function fail(msg){
+if (done) return; done = true;
+f.meta = f.meta || { error: msg || 'Could not generate thumbnail' };
+renderGrid(); renderMeta();
+}
+v.onloadedmetadata = function(){
+f.meta = f.meta || {
+width: v.videoWidth || null,
+height: v.videoHeight || null,
+duration: v.duration,
+aspect: (v.videoWidth && v.videoHeight) ? aspectOf(v.videoWidth, v.videoHeight) : null
+};
+var seekTo = v.duration > 2 ? 1 : (v.duration / 2);
+try { v.currentTime = seekTo; } catch (e) { fail('Seek failed'); }
+};
+v.onseeked = function(){
+if (done) return;
+try {
+var w = v.videoWidth || 320, h = v.videoHeight || 180;
+var scale = Math.min(1, 480 / Math.max(w, h));
+var c = document.createElement('canvas');
+c.width = Math.round(w * scale); c.height = Math.round(h * scale);
+c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+c.toBlob(function(b){
+if (b) {
+f.thumbUrl = URL.createObjectURL(b);
+done = true;
+v.src = '';
+renderGrid(); renderMeta();
+} else { fail('Canvas export failed'); }
+}, 'image/jpeg', 0.85);
+} catch (e) { fail('Canvas draw failed (' + e.message + ')'); }
+};
+v.onerror = function(){ fail('Browser cannot decode this video format'); };
+setTimeout(function(){ fail('Video load timed out (file too large or codec unsupported)'); }, 30000);
+v.src = f.url;
+}
+
+/* ---------- save all ---------- */
+
+function saveAll() {
+var btn = document.getElementById('save-all-btn');
+if (!S.files.length) return;
+if (typeof window.showDirectoryPicker === 'function') {
+var oldLabel = btn.innerHTML;
+window.showDirectoryPicker({ mode: 'readwrite' }).then(function(handle){
+return handle.getDirectoryHandle(S.deckBase + '_media', { create: true });
+}).then(function(subDir){
+btn.disabled = true;
+var done = 0;
+function writeNext(i){
+if (i >= S.files.length) {
+btn.disabled = false;
+btn.innerHTML = 'Saved ' + done + ' ✓';
+setTimeout(function(){ btn.innerHTML = oldLabel; }, 2500);
+return Promise.resolve();
+}
+var f = S.files[i];
+return subDir.getFileHandle(f.name, { create: true }).then(function(fh){
+return fh.createWritable();
+}).then(function(ws){
+return ws.write(f.blob).then(function(){ return ws.close(); });
+}).then(function(){
+done++;
+btn.innerHTML = 'Saving ' + done + '/' + S.files.length;
+return writeNext(i + 1);
+});
+}
+return writeNext(0);
+}).catch(function(e){
+if (e && e.name === 'AbortError') return;
+btn.disabled = false;
+sequentialDownload();
+});
+} else {
+sequentialDownload();
+}
+}
+
+function sequentialDownload() {
+S.files.forEach(function(f, i){
+setTimeout(function(){ download(f.blob, f.name); }, i * 150);
+});
+}
+
+})();
+</script>
+</body>
+</html>
