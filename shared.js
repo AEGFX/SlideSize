@@ -188,9 +188,12 @@ if (!usable.length) {
 SS.showToast('This tool does not accept that file type');
 return;
 }
+/* Immediate visual feedback on the tile so the user sees something is
+   happening while the IDB write runs. */
+el.classList.add('loading');
 SS.handoff.put(usable).then(function(ok){
 var href = el.getAttribute('href');
-if (!href) return;
+if (!href) { el.classList.remove('loading'); return; }
 var sep = href.indexOf('?') < 0 ? '?' : '&';
 window.location.href = href + (ok ? sep + 'pickup=1' : '');
 });
@@ -198,14 +201,38 @@ window.location.href = href + (ok ? sep + 'pickup=1' : '');
 };
 
 /* ---------- Consume handoff on a tool page ----------
- * Call SS.consumeHandoff(handler) at the end of a tool page's init.
+ * Call SS.consumeHandoff(handler) at the top of a tool page's script.
  * handler(files) is called if the URL has ?pickup=1 and the IndexedDB
- * stash has files. */
+ * stash has files.
+ *
+ * On any page load with ?pickup=1 we also IMMEDIATELY show a loading
+ * overlay (before any tool code runs) so the user sees the incoming
+ * work the moment the destination page appears. The handler is
+ * responsible for removing the overlay once its own processing UI
+ * takes over, which SS.hideHandoffOverlay() does. */
+SS.showHandoffOverlay = function(label) {
+if (document.getElementById('ss-handoff-overlay')) return;
+var o = document.createElement('div');
+o.id = 'ss-handoff-overlay';
+o.className = 'ss-handoff-overlay';
+o.innerHTML = '<div class="ss-handoff-card"><div class="spinner"></div><div class="ss-handoff-label">' + SS.esc(label || 'Loading your file') + '</div></div>';
+document.body.appendChild(o);
+};
+SS.hideHandoffOverlay = function() {
+var o = document.getElementById('ss-handoff-overlay');
+if (o) o.remove();
+};
 SS.consumeHandoff = function(handler) {
 var qs = new URLSearchParams(window.location.search);
 if (qs.get('pickup') !== '1') return;
 SS.handoff.take().then(function(files){
+try {
 if (files && files.length) handler(files);
+} finally {
+/* Caller can hide overlay sooner if its own 'Analysing...' UI takes
+   over faster, but we always clear after 1500 ms as a safety net. */
+setTimeout(SS.hideHandoffOverlay, 1500);
+}
 /* Clean the ?pickup=1 off the URL so a refresh doesn't try again */
 if (window.history && window.history.replaceState) {
 var clean = window.location.pathname + window.location.hash;
@@ -213,5 +240,15 @@ window.history.replaceState({}, '', clean);
 }
 });
 };
+
+/* As soon as this script loads, if the URL carries ?pickup=1, drop the
+   loading overlay in. This runs synchronously before any tool init so
+   the user sees the incoming work the moment the page paints. */
+if (new URLSearchParams(window.location.search).get('pickup') === '1') {
+/* Document body may not exist yet if shared.js was somehow placed in
+   head, but every page loads it at end of body, so this is safe. */
+if (document.body) SS.showHandoffOverlay();
+else document.addEventListener('DOMContentLoaded', function(){ SS.showHandoffOverlay(); });
+}
 
 })();

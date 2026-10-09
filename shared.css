@@ -173,3 +173,40 @@ opacity: 0; pointer-events: none; transition: opacity 0.2s;
 z-index: 100; box-shadow: 0 6px 20px rgba(0,0,0,0.4);
 }
 .toast.visible { opacity: 1; }
+
+/* Handoff: tile 'loading' state immediately after a drop, before navigation */
+.tool-link.loading {
+pointer-events: none;
+position: relative;
+}
+.tool-link.loading::after {
+content: 'Opening tool...';
+position: absolute; inset: 0;
+display: flex; align-items: center; justify-content: center;
+background: rgba(26,26,26,0.9);
+font-family: var(--sans); font-size: 11px; font-weight: 700;
+letter-spacing: 2px; text-transform: uppercase; color: var(--accent);
+border-radius: 2px;
+}
+
+/* Handoff: destination-page overlay shown the moment ?pickup=1 is detected */
+.ss-handoff-overlay {
+position: fixed; inset: 0;
+background: rgba(26,26,26,0.92);
+display: flex; align-items: center; justify-content: center;
+z-index: 1000;
+animation: ss-fade 0.15s ease both;
+}
+@keyframes ss-fade { from { opacity: 0; } to { opacity: 1; } }
+.ss-handoff-card {
+background: var(--panel);
+border: 1px solid var(--border2);
+border-left: 2px solid var(--accent);
+padding: 24px 32px;
+border-radius: 2px;
+display: flex; align-items: center; gap: 14px;
+font-family: var(--sans); font-size: 13px; color: var(--label);
+box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+}
+.ss-handoff-card .spinner { width: 18px; height: 18px; margin: 0; }
+.ss-handoff-label { letter-spacing: 0.3px; }
