@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VT Inspector &middot; SlideSize</title>
+<meta name="description" content="Inspect video files (MP4, MOV, M4V) down to the bitstream. Catches the misdeclared H.264 levels, VFR, odd pixel aspect and other things that stutter or stretch on Windows show machines. Runs entirely in your browser.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%239B7BD4'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+--bg: #1a1a1a;
+--panel: #262626;
+--panel2: #2d2d2d;
+--border: #333333;
+--border2: #3d3d3d;
+--accent: #9B7BD4;         /* page accent is VT violet */
+--accent2: #b295e0;
+--brand-red: #E7302A;
+--red: #E7302A;
+--green: #4caf82;
+--warn: #E0A020;
+--muted: #888888;
+--text: #F2F2F2;
+--label: #D9D9D9;
+--mono: 'Share Tech Mono', monospace;
+--sans: 'DM Sans', sans-serif;
+--rp: #9B7BD4;             /* for the lifted VT engine CSS that uses --rp */
+--rp2: #b295e0;
+--rp-dim: rgba(155,123,212,0.12);
+--rp-glow: rgba(155,123,212,0.35);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+background: var(--bg); color: var(--text); font-family: var(--sans);
+min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+}
+header {
+width: 100%; background: var(--panel);
+border-bottom: 1px solid var(--border2);
+padding: 20px 24px;
+display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.logo-mark {
+height: 24px; width: 42px; border: 2px solid var(--accent);
+flex-shrink: 0; position: relative; background: transparent;
+}
+.logo-mark::after { content: ''; position: absolute; inset: 3px; background: var(--accent); opacity: 0.2; }
+.logo-text {
+font-family: var(--sans); font-weight: 700; font-size: 18px;
+letter-spacing: 3px; color: #fff; text-transform: uppercase; text-align: center;
+}
+.logo-text span { color: var(--accent); }
+.header-by {
+font-family: var(--sans); font-size: 11px; font-weight: 500;
+color: var(--muted); letter-spacing: 1px;
+text-transform: uppercase; text-align: center;
+}
+.header-by a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
+.header-by a:hover { color: var(--accent); }
+
+.wrap {
+width: 100%; max-width: 1280px;
+padding: 24px 20px 48px;
+display: flex; flex-direction: column; gap: 18px;
+}
+.intro {
+font-family: var(--sans); font-size: 13px; line-height: 1.55;
+color: var(--label); max-width: 820px;
+}
+.intro strong { color: var(--text); font-weight: 500; }
+
+/* Controls (target + fps) */
+.controls {
+display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+background: var(--panel); border: 1px solid var(--border2);
+border-radius: 2px; padding: 14px 16px;
+}
+@media (max-width: 640px) { .controls { grid-template-columns: 1fr; } }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label {
+font-family: var(--sans); font-size: 10px; font-weight: 700;
+letter-spacing: 1px; text-transform: uppercase; color: var(--muted);
+}
+.field select {
+background: var(--bg); color: var(--text);
+border: 1px solid var(--border2); border-radius: 2px;
+font-family: var(--mono); font-size: 12px; padding: 9px 10px; width: 100%;
+appearance: none; cursor: pointer;
+background-image: linear-gradient(45deg, transparent 50%, var(--accent) 50%), linear-gradient(135deg, var(--accent) 50%, transparent 50%);
+background-position: calc(100% - 15px) 50%, calc(100% - 10px) 50%;
+background-size: 5px 5px, 5px 5px;
+background-repeat: no-repeat;
+padding-right: 28px;
+}
+.field select:focus { outline: none; border-color: var(--accent); }
+.field .hint { font-family: var(--sans); font-size: 10.5px; color: var(--muted); line-height: 1.5; margin-top: 2px; }
+
+/* Drop zone */
+.drop {
+border: 1px dashed var(--border2);
+border-radius: 3px; background: var(--panel);
+padding: 28px 20px;
+display: flex; flex-direction: column; align-items: center; gap: 7px;
+cursor: pointer; transition: all 0.15s; position: relative;
+}
+.drop:hover { border-color: var(--accent); background: var(--panel2); }
+.drop.drag { border-color: var(--accent); background: var(--rp-dim); box-shadow: 0 0 0 3px var(--rp-glow); }
+.drop svg.dz-icon { width: 34px; height: 34px; stroke: var(--accent); fill: none; stroke-width: 1.6; }
+.drop .dz-big { font-size: 14px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--text); }
+.drop .dz-small { font-size: 11px; color: var(--muted); }
+.drop input[type="file"] { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.privacy {
+font-family: var(--sans); font-size: 11px; color: var(--accent);
+display: flex; align-items: center; gap: 5px; margin-top: 4px;
+}
+.privacy svg { width: 11px; height: 11px; stroke: var(--accent); fill: none; stroke-width: 2; }
+
+.note {
+background: var(--panel); border: 1px solid var(--border2); padding: 12px 16px;
+font-family: var(--sans); font-size: 12px; color: var(--muted);
+border-radius: 2px; display: flex; align-items: center; gap: 10px;
+}
+.note.err { border-left: 2px solid var(--red); color: var(--label); }
+
+.spinner {
+width: 14px; height: 14px; border: 2px solid var(--border2);
+border-top-color: var(--accent); border-radius: 50%;
+animation: spin 0.8s linear infinite;
+display: inline-block; vertical-align: -2px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Grid of result cards */
+#results { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 14px; }
+
+.vt-file {
+background: var(--panel);
+border: 1px solid var(--border2);
+border-left: 2px solid var(--accent);
+border-radius: 2px;
+padding: 14px 16px;
+}
+.vt-file-head {
+font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--text);
+margin-bottom: 10px; word-break: break-all;
+display: flex; align-items: center; gap: 8px;
+}
+.vt-verdict {
+display: inline-block; font-family: var(--sans); font-size: 10px; font-weight: 700;
+letter-spacing: 1px; text-transform: uppercase; padding: 3px 9px; border-radius: 2px;
+border: 1px solid currentColor; white-space: nowrap;
+}
+.vt-v-green { color: var(--green); }
+.vt-v-amber { color: var(--warn); }
+.vt-v-red   { color: var(--red); }
+.vt-spec {
+font-family: var(--mono); font-size: 11px; color: var(--muted);
+margin-bottom: 8px; line-height: 1.6; word-break: break-word;
+}
+.vt-grid {
+display: grid; grid-template-columns: auto 1fr; gap: 3px 14px;
+margin-bottom: 11px; font-family: var(--mono); font-size: 11.5px; line-height: 1.55;
+}
+.vt-grid dt {
+color: var(--muted); white-space: nowrap;
+font-family: var(--sans); font-size: 10px; font-weight: 600;
+letter-spacing: 0.6px; text-transform: uppercase; padding-top: 2px;
+}
+.vt-grid dd { margin: 0; color: var(--label); word-break: break-word; }
+.vt-grid dd .vt-q { color: var(--muted); }
+.vt-grid dd .vt-q::before {
+content: '\00b7'; color: var(--border2); margin: 0 6px 0 7px;
+}
+.vt-grid dd.flag-amber .vt-pri { color: var(--warn); }
+.vt-grid dd.flag-red .vt-pri { color: var(--red); }
+
+.vt-find { border-left: 2px solid var(--border2); padding: 6px 0 6px 11px; margin-bottom: 7px; }
+.vt-find.sev-red   { border-left-color: var(--red); }
+.vt-find.sev-amber { border-left-color: var(--warn); }
+.vt-find-title { font-family: var(--sans); font-size: 12px; font-weight: 600; color: var(--label); }
+.vt-find-detail { font-family: var(--sans); font-size: 11px; line-height: 1.55; color: var(--muted); margin-top: 3px; }
+
+.vt-fix {
+font-family: var(--mono); font-size: 10.5px; color: var(--label);
+background: var(--bg); border: 1px solid var(--border); border-radius: 2px;
+padding: 7px 9px; margin-top: 6px; white-space: pre-wrap; word-break: break-all; cursor: pointer;
+}
+.vt-fix:hover { border-color: var(--accent); }
+.vt-fix::before {
+content: 'click to copy'; display: block; font-family: var(--sans); font-size: 9px;
+letter-spacing: 1px; text-transform: uppercase; color: var(--accent); margin-bottom: 4px;
+}
+.vt-note {
+font-family: var(--sans); font-size: 11px; line-height: 1.5; color: var(--muted);
+margin-top: 6px; padding-left: 13px; position: relative;
+}
+.vt-note::before { content: '\2192'; position: absolute; left: 0; color: var(--accent); }
+.vt-note code {
+font-family: var(--mono); font-size: 10.5px; color: var(--label);
+background: var(--bg); border: 1px solid var(--border); border-radius: 2px;
+padding: 1px 4px; white-space: nowrap;
+}
+.vt-act {
+display: inline-flex; align-items: center; gap: 7px;
+font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: 0.6px;
+color: var(--bg); background: var(--accent); border: 0; border-radius: 2px;
+padding: 8px 13px; margin-top: 9px; cursor: pointer;
+}
+.vt-act:hover { background: var(--accent2); }
+.vt-act:disabled { opacity: 0.5; cursor: default; }
+.vt-act svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; }
+.vt-act-sub {
+font-family: var(--sans); font-size: 10.5px; color: var(--muted);
+margin-top: 5px; line-height: 1.5;
+}
+
+/* Toast */
+.toast {
+position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%);
+background: var(--accent); color: #1a1026;
+padding: 10px 20px; border-radius: 3px;
+font-family: var(--sans); font-size: 12px; font-weight: 700;
+letter-spacing: 0.5px; text-transform: uppercase;
+opacity: 0; pointer-events: none; transition: opacity 0.2s;
+z-index: 100; box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+}
+.toast.visible { opacity: 1; }
+
+footer {
+width: 100%; border-top: 1px solid var(--border);
+padding: 14px 24px;
+font-family: var(--sans); font-size: 11px; color: var(--muted);
+display: flex; flex-direction: column; align-items: center; text-align: center;
+gap: 3px; line-height: 1.6;
+}
+footer a { color: var(--brand-red); text-decoration: none; }
+footer a:hover { color: #ff4f49; }
+.footer-sep { margin: 4px 0; height: 1px; width: 40px; background: var(--border2); }
+</style>
+</head>
+<body>
+<header>
+<div class="logo-mark"></div>
+<div class="logo-text">VT <span>Inspector</span></div>
+<div class="header-by"><a href="/">&larr; Slide Size Calculator</a></div>
+</header>
+
+<div class="wrap">
+
+<p class="intro">
+Drop one or more <strong>MP4</strong>, <strong>MOV</strong>, <strong>M4V</strong> or <strong>M4A</strong>
+files to inspect the bitstream for anything that will stutter, stretch, or fail to play on a show machine.
+Catches misdeclared H.264 levels (a classic Windows PowerPoint stutter), VFR frame rates, odd pixel
+aspect, bit depth, interlacing, HDR colour tags, edit-list trims, non-faststart layout, and more. Where
+there is a fix, you get the ffmpeg command, and for the common level-mismatch case you get a two-byte
+header rewrite you can download right here with no re-encode and no quality loss.
+</p>
+
+<div class="controls">
+<div class="field">
+<label for="vt-target">Target playback</label>
+<select id="vt-target">
+<option value="powerpoint-win">PowerPoint on Windows (strict H.264 level, HD only)</option>
+<option value="powerpoint-mac">PowerPoint on macOS (more forgiving)</option>
+<option value="media-server">Media server (Watchout, QLab, Hippotizer, Resolume)</option>
+<option value="web">Web playback (desktop and mobile browsers)</option>
+</select>
+<div class="hint">The rules change by target. Windows PowerPoint is the strictest, catches things macOS plays fine.</div>
+</div>
+<div class="field">
+<label for="vt-fps">Project frame rate (optional)</label>
+<select id="vt-fps">
+<option value="">Not set</option>
+<option value="23.976">23.976</option>
+<option value="24">24</option>
+<option value="25">25</option>
+<option value="29.97">29.97</option>
+<option value="30">30</option>
+<option value="50">50</option>
+<option value="59.94">59.94</option>
+<option value="60">60</option>
+</select>
+<div class="hint">Flags files whose rate does not match the project (24 into 25 and similar).</div>
+</div>
+</div>
+
+<label class="drop" id="drop" for="file">
+<svg class="dz-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M10 9l5 3-5 3V9z"/></svg>
+<div class="dz-big">Drop videos</div>
+<div class="dz-small">or tap to browse &middot; multiple files OK</div>
+<input type="file" id="file" accept="video/*,.mp4,.mov,.m4v,.m4a" multiple>
+<div class="privacy">
+<svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+Processed in your browser &middot; nothing uploaded
+</div>
+</label>
+
+<div id="results"></div>
+
+</div>
+
+<div class="toast" id="toast">Copied</div>
+
+<footer>
+<span>Created by Andrew Brandse</span>
+<span><a href="mailto:info@aegfx.com">info@aegfx.com</a></span>
+<span>Built with Claude (Anthropic)</span>
+<div class="footer-sep"></div>
+<span>Nothing uploaded &middot; everything stays in your browser</span>
+</footer>
+
+<script>
+(function(){
+'use strict';
+
+/* ============================================================
+   Media Inspector engine loader (ships as media-inspect.js in
+   the repo root — same file the main site uses).
+   ============================================================ */
+var MI_SRC = 'media-inspect.js';
+var miReady = null;
+function loadMI() {
+if (miReady) return miReady;
+miReady = new Promise(function(res, rej){
+var sc = document.createElement('script');
+sc.src = MI_SRC;
+sc.onload = function(){ window.MI ? res(window.MI) : rej(new Error('Media Inspector not available')); };
+sc.onerror = function(){ rej(new Error('Media Inspector failed to load')); };
+document.head.appendChild(sc);
+});
+return miReady;
+}
+
+/* ============================================================
+   Toast + copy helpers
+   ============================================================ */
+var toastTimer = null;
+function showToast(msg) {
+var t = document.getElementById('toast');
+t.textContent = msg || 'Copied';
+t.classList.add('visible');
+if (toastTimer) clearTimeout(toastTimer);
+toastTimer = setTimeout(function(){ t.classList.remove('visible'); }, 2500);
+}
+function fallbackCopy(text) {
+var ta = document.createElement('textarea');
+ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+document.body.appendChild(ta); ta.select();
+try { document.execCommand('copy'); } catch(e){}
+document.body.removeChild(ta);
+showToast('Copied');
+}
+function copyToClipboard(text) {
+if (navigator.clipboard && navigator.clipboard.writeText) {
+navigator.clipboard.writeText(text).then(function(){ showToast('Command copied'); }).catch(function(){ fallbackCopy(text); });
+} else fallbackCopy(text);
+}
+function esc(t) {
+return String(t == null ? '' : t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ============================================================
+   VT engine (copied verbatim from index.html, same markup)
+   ============================================================ */
+
+var vtLast = [];
+var vtStash = [];   /* index -> { file, info, level } for the rewrite buttons */
+
+function vtProcess(files, isRerun) {
+var results = document.getElementById('results');
+var usable = files.filter(function(f) { return /\.(mp4|m4v|mov|m4a)$/i.test(f.name); });
+var skipped = files.filter(function(f) { return usable.indexOf(f) < 0; });
+if (!usable.length) {
+results.innerHTML = '<div class="note err">Drop an .mp4, .m4v, .mov or .m4a. Other containers (MKV, AVI, WMV) are not readable in the browser.</div>';
+return;
+}
+vtLast = files;
+if (!isRerun) results.innerHTML = '<div class="note"><span class="spinner"></span>Reading ' + usable.length + ' file' + (usable.length > 1 ? 's' : '') + '&hellip;</div>';
+
+vtStash = [];
+var target = (document.getElementById('vt-target') || {}).value || 'powerpoint-win';
+var fpsRaw = (document.getElementById('vt-fps') || {}).value || '';
+var fps = fpsRaw ? parseFloat(fpsRaw) : undefined;
+
+loadMI().then(function(MI) {
+var seq = Promise.resolve();
+var out = [];
+usable.forEach(function(f) {
+seq = seq.then(function() {
+return MI.inspectFile(f).then(function(info) {
+var risk = MI.assess(info, { target: target, projectFrameRate: fps });
+var fix = info.ok ? MI.buildFixCommand(info, risk, { target: target, projectFrameRate: fps }) : null;
+out.push(vtRenderOne(MI, f, info, risk, fix));
+}).catch(function(e) {
+out.push('<div class="vt-file"><div class="vt-file-head"><span class="vt-verdict vt-v-red">Fail</span>' + esc(f.name) + '</div><div class="vt-spec">Could not read this file. ' + esc(e.message || e) + '</div></div>');
+});
+});
+});
+return seq.then(function() {
+if (skipped.length) {
+out.push('<div class="note" style="grid-column:1/-1">Skipped (not an ISO BMFF container): ' + skipped.map(function(f){ return esc(f.name); }).join(', ') + '</div>');
+}
+results.innerHTML = out.join('');
+Array.prototype.forEach.call(results.querySelectorAll('[data-vt-fix]'), function(btn) {
+btn.addEventListener('click', function() {
+var job = vtStash[Number(btn.getAttribute('data-vt-fix'))];
+if (!job) return;
+btn.disabled = true;
+try {
+var fixOut = MI.rewriteLevel(job.file, job.info, job.level);
+if (!fixOut) { btn.disabled = false; showToast('Could not rewrite this file'); return; }
+var url = URL.createObjectURL(fixOut.blob);
+var a = document.createElement('a');
+a.href = url; a.download = fixOut.filename;
+document.body.appendChild(a); a.click(); document.body.removeChild(a);
+setTimeout(function(){ URL.revokeObjectURL(url); }, 30000);
+btn.textContent = 'Downloaded ' + fixOut.filename;
+} catch (err) {
+btn.disabled = false;
+showToast('Rewrite failed: ' + (err.message || err));
+}
+});
+});
+Array.prototype.forEach.call(results.querySelectorAll('.vt-fix'), function(el) {
+el.addEventListener('click', function(){ copyToClipboard(el.getAttribute('data-cmd')); });
+});
+});
+}).catch(function(e) {
+results.innerHTML = '<div class="note err">Inspector failed to load. ' + esc(e.message || e) + '</div>';
+});
+}
+
+var VT_FLAG_MAP = {
+'codec-blocked': 'Codec', 'codec-risky': 'Codec', 'not-intra': 'Codec',
+'level-mismatch': 'Level', 'level-mismatch-info': 'Level', 'level-bitrate': 'Level',
+'bit-depth': 'Depth', 'chroma': 'Depth',
+'vfr': 'Frame rate', 'near-cfr': 'Frame rate', 'framerate-mismatch': 'Frame rate', 'high-framerate': 'Frame rate',
+'oversize': 'Resolution', 'odd-dimensions': 'Resolution', 'unaligned-dimensions': 'Resolution',
+'nonstandard-resolution': 'Resolution', 'upscaled': 'Resolution', 'aspect-distortion': 'Resolution',
+'non-square-pixels': 'Pixel aspect', 'rotation': 'Rotation',
+'interlaced': 'Scan', 'long-gop': 'Keyframes',
+'high-bitrate': 'Bitrate', 'peaky-bitrate': 'Bitrate',
+'hdr': 'Colour', 'colour-mismatch': 'Colour', 'no-colour-tags': 'Colour', 'full-range': 'Colour',
+'edit-list-trim': 'Edit list', 'edit-list-delay': 'Edit list', 'composition-offset': 'Edit list',
+'audio-blocked': 'Audio', 'audio-risky': 'Audio', 'multichannel': 'Audio', 'odd-samplerate': 'Audio', 'no-audio': 'Audio',
+'not-faststart': 'Container', 'fragmented': 'Container', 'mov-container': 'Container'
+};
+
+function vtGrid(MI, info, risk) {
+var v = info.video[0];
+if (!v) return '';
+var flags = {}, rank = { info: 1, amber: 2, red: 3 };
+risk.findings.forEach(function(f) {
+var row = VT_FLAG_MAP[f.code];
+if (!row) return;
+if (!flags[row] || rank[f.severity] > rank[flags[row]]) flags[row] = f.severity;
+});
+
+var w = v.cropped ? v.cropped.width : v.coded.width;
+var hh = v.cropped ? v.cropped.height : v.coded.height;
+var square = v.squarePixels !== false;
+var rows = [];
+var add = function(k, primary) {
+if (!primary) return;
+var row = [k, String(primary)];
+for (var i = 2; i < arguments.length; i++) if (arguments[i]) row.push(String(arguments[i]));
+rows.push(row);
+};
+
+add('Codec', v.codec.name, v.profile, v.codec.string);
+if (v.level) {
+add('Level', v.level, v.levelCheck
+? (v.levelCheck.conformant === false
+? 'needs ' + (v.levelCheck.requiredByThroughput || v.levelCheck.requiredByFrameSize)
+: 'conformant')
+: null);
+}
+add('Resolution', w + '×' + hh,
+square ? null : 'displays ' + v.display.width + '×' + v.display.height,
+v.displayAspect);
+if (!square) add('Pixel aspect', v.pixelAspect.h + ':' + v.pixelAspect.v, v.pixelAspect.source);
+if (v.rotation) add('Rotation', v.rotation + '°');
+add('Depth', v.bitDepth ? v.bitDepth + '-bit' : '?', v.chroma, v.bitDepthInferred ? 'inferred' : null);
+add('Frame rate', MI.fmtFps(v.frameRate.nominalFps || v.frameRate.fps), v.frameRate.mode,
+v.frameRate.mode !== 'CFR' ? MI.fmtFps(v.frameRate.minFps) + ' to ' + MI.fmtFps(v.frameRate.maxFps) : null);
+if (v.interlaced && v.interlaced.flag) add('Scan', 'interlaced', v.interlaced.fieldOrder);
+if (v.keyframes) {
+if (v.keyframes.allIntra) add('Keyframes', 'all-intra');
+else add('Keyframes', 'every ' + v.keyframes.intervalSeconds + 's', v.keyframes.count + ' total');
+}
+add('Bitrate', MI.fmtBitrate(v.bitrate), info.duration ? MI.fmtDuration(info.duration) : null);
+
+var col = v.colour;
+if (col && col.primaries) {
+var same = col.primaries === col.transfer && col.transfer === col.matrix;
+add('Colour', same ? col.primaries : col.primaries + ' / ' + col.transfer + ' / ' + col.matrix,
+col.fullRange ? 'full range' : null);
+} else { add('Colour', 'untagged'); }
+
+if (v.trimmedHeadSeconds) add('Edit list', 'skips first ' + v.trimmedHeadSeconds + 's');
+else if (v.startDelay) add('Edit list', v.startDelay.toFixed(2) + 's empty gap');
+
+var a = info.audio[0];
+if (a) add('Audio', a.codec.name, a.channels + ' ch', a.sampleRate + ' Hz');
+else add('Audio', 'none');
+add('Container', info.container, MI.fmtBytes(info.fileSize), info.faststart === false ? 'not faststart' : null);
+
+var out = '<dl class="vt-grid">';
+rows.forEach(function(r) {
+var cls = flags[r[0]] === 'red' ? ' class="flag-red"' : flags[r[0]] === 'amber' ? ' class="flag-amber"' : '';
+var val = '<span class="vt-pri">' + esc(r[1]) + '</span>';
+for (var i = 2; i < r.length; i++) val += '<span class="vt-q">' + esc(r[i]) + '</span>';
+out += '<dt>' + esc(r[0]) + '</dt><dd' + cls + '>' + val + '</dd>';
+});
+return out + '</dl>';
+}
+
+function vtRenderOne(MI, file, info, risk, fix) {
+var cls = 'vt-v-' + risk.verdict;
+var word = risk.verdict === 'red' ? 'Fail' : risk.verdict === 'amber' ? 'Warn' : 'OK';
+var h = '<div class="vt-file">';
+h += '<div class="vt-file-head"><span class="vt-verdict ' + cls + '">' + word + '</span>' + esc(file.name) + '</div>';
+
+if (info.ok) {
+h += vtGrid(MI, info, risk);
+} else {
+h += '<div class="vt-spec">' + esc(info.error || 'Not readable') + '</div>';
+}
+
+var real = risk.findings.filter(function(f){ return f.severity !== 'info'; });
+real.forEach(function(f) {
+h += '<div class="vt-find sev-' + f.severity + '">';
+h += '<div class="vt-find-title">' + esc(f.title) + '</div>';
+if (f.detail) h += '<div class="vt-find-detail">' + esc(f.detail) + '</div>';
+if (f.code === 'level-mismatch' && info.ok) {
+var v0 = info.video[0];
+var want = v0 && v0.levelCheck
+? (v0.levelCheck.requiredByThroughput || v0.levelCheck.requiredByFrameSize) : null;
+if (want && MI.buildLevelPatch(info, want)) {
+var idx = vtStash.push({ file: file, info: info, level: want }) - 1;
+h += '<button class="vt-act" data-vt-fix="' + idx + '">'
++ '<svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M4 20h16"/></svg>'
++ 'Rewrite to level ' + esc(want) + ' and download</button>';
+h += '<div class="vt-act-sub">Changes 2 bytes in the header. No re-encode, no quality loss, every frame bit-identical. Done here in the browser.</div>';
+}
+}
+h += '</div>';
+});
+if (!real.length && info.ok) {
+h += '<div class="vt-find"><div class="vt-find-title">Nothing to flag for this target.</div></div>';
+}
+if (fix && risk.verdict !== 'green') {
+h += '<div class="vt-fix" data-cmd="' + esc(fix.command) + '">' + esc(fix.command) + '</div>';
+if (!fix.reencode) h += '<div class="vt-note">Header rewrite only. No re-encode, no quality loss, near instant.</div>';
+(fix.notes || []).forEach(function(t) {
+h += '<div class="vt-note">' + esc(t).replace(/`([^`]+)`/g, '<code>$1</code>') + '</div>';
+});
+}
+h += '</div>';
+return h;
+}
+
+/* ============================================================
+   Drop handling
+   ============================================================ */
+
+var drop = document.getElementById('drop');
+var fileInput = document.getElementById('file');
+['dragenter','dragover'].forEach(function(ev){
+drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.add('drag'); });
+});
+['dragleave','drop'].forEach(function(ev){
+drop.addEventListener(ev, function(e){
+e.preventDefault();
+if (ev === 'drop' || e.target === drop) drop.classList.remove('drag');
+});
+});
+drop.addEventListener('drop', function(e){
+e.preventDefault(); drop.classList.remove('drag');
+var fs = e.dataTransfer.files;
+if (fs && fs.length) vtProcess(Array.prototype.slice.call(fs));
+});
+fileInput.addEventListener('change', function(){
+if (fileInput.files && fileInput.files.length) vtProcess(Array.prototype.slice.call(fileInput.files));
+fileInput.value = '';
+});
+
+/* Re-run on a settings change rather than making people drop again */
+['vt-target','vt-fps'].forEach(function(id){
+var el = document.getElementById(id);
+if (el) el.addEventListener('change', function(){ if (vtLast.length) vtProcess(vtLast, true); });
+});
+
+})();
+</script>
+</body>
+</html>

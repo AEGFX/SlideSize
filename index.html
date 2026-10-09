@@ -555,7 +555,7 @@ footer a:hover { color: var(--accent2); }
 /* ===== Other Tools: EMF Extractor (complementary teal accent) ===== */
 .other-tools {
 width: 100%;
-max-width: var(--max-w);
+max-width: 960px;
 padding: 0 20px;
 display: flex;
 flex-direction: column;
@@ -565,6 +565,35 @@ margin: 4px auto 0;
 --emf2: #43d6c6;
 --emf-dim: rgba(31,182,166,0.12);
 }
+.tools-grid {
+display: grid;
+grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+gap: 14px;
+}
+.tools-grid .emf-tool {
+padding: 16px 16px 14px;
+gap: 10px;
+min-height: 180px;
+}
+.tools-grid .emf-tool-title { font-size: 14px; }
+.tools-grid .emf-tool-title .emf-chip { font-size: 8.5px; padding: 2px 5px; }
+.tools-grid .emf-intro {
+font-size: 11.5px; line-height: 1.5;
+flex: 1;
+display: -webkit-box;
+-webkit-line-clamp: 4;
+-webkit-box-orient: vertical;
+overflow: hidden;
+}
+.tools-grid .emf-tool strong { color: var(--label); font-weight: 500; }
+.tools-grid .go-row { font-size: 10px; letter-spacing: 1.5px; }
+/* PDF to Slides pink accent for the grid */
+.tools-grid .pdf-tool { --emf: #D96EB0; --emf2: #e689c0; --emf-dim: rgba(217,110,176,0.12); }
+.tools-grid .pdf-tool { border-top-color: #D96EB0 !important; }
+.tools-grid .pdf-tool .emf-tool-title .emf-chip { color: #D96EB0; border-color: #D96EB0; }
+.tools-grid .pdf-tool .go-row { color: #D96EB0; }
+.tools-grid .pdf-tool .go-row svg { stroke: #D96EB0; }
+.tools-grid .pdf-tool.tool-link:hover { border-color: #D96EB0; }
 .other-tools-head {
 display: flex;
 align-items: center;
@@ -1156,116 +1185,74 @@ Standard Presets Reference
 </div>
 <div class="other-tools">
 <div class="other-tools-head"><span class="ot-label">Other Tools</span></div>
-<a class="emf-tool tool-link montage-link" href="/photo-montage.html" id="montage-link">
-<div class="emf-tool-title">Photo Montage <span class="emf-chip">Photos &rarr; Looping video</span></div>
-<p class="emf-intro">
-Drop a batch of photos and get a finished video for the screen, with slow Ken Burns motion, crossfades,
-exact timing and a loop that joins without a jump. Any pixel size including wide blends, up to 60 fps.
-Opens in its own page and picks up the pixel size from the calculator above if you have entered one.
-</p>
-<div class="go-row"><span>Open Photo Montage</span>
-<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
-</a>
-
-<a class="emf-tool tool-link" href="/pdf.html">
-<div class="emf-tool-title">PDF to Slides <span class="emf-chip">PDF &rarr; PNG + PPTX</span></div>
-<p class="emf-intro">
-Drop a PDF and get back a folder of numbered images plus a PowerPoint deck with one image per slide,
-sized to match the PDF instead of squashed into a guess. Flags non-embedded fonts and mixed page sizes
-before it starts. Opens in its own page so this one stays quick to load.
-</p>
-<div class="go-row"><span>Open PDF to Slides</span>
-<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
-</a>
+<div class="tools-grid">
 
 <a class="emf-tool tool-link report-tool" href="/ppt-report.html">
-<div class="emf-tool-title">PPT Report <span class="emf-chip">PPTX &rarr; Pre-flight</span></div>
+<div class="emf-tool-title">PPT Report <span class="emf-chip">Pre-flight</span></div>
 <p class="emf-intro">
-A pre-flight summary for graphics ops &mdash; slide count, hidden slides, aspect, fonts, videos
-(full-screen vs framed, muted vs audio, embedded vs linked), audio, transitions, animation
-click-counts, speaker notes, an OS-origin pill (macOS / Windows / Mixed) and a sortable per-slide
-table. Export to TXT, CSV or a printable PDF for the breakout room. Opens in its own page.
+Pre-flight summary for graphics ops. Slide count, hidden slides, aspect, fonts, videos, audio,
+transitions, animation click counts, speaker notes, OS origin pill (macOS or Windows), sortable
+per-slide table. Export to TXT, CSV or a printable PDF.
 </p>
 <div class="go-row"><span>Open PPT Report</span>
 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
 </a>
 
-<div class="emf-tool vt-tool">
-<div class="emf-tool-title">VT Inspector <span class="emf-chip">Video &rarr; Playback check</span></div>
+<a class="emf-tool tool-link vt-tool" href="/vt-inspector.html">
+<div class="emf-tool-title">VT Inspector <span class="emf-chip">Playback check</span></div>
 <p class="emf-intro">
-Drop a <strong>.mp4</strong> or <strong>.mov</strong> to read what is actually inside it &mdash; codec,
-profile and level, resolution, pixel aspect, frame rate, interlacing, colour and keyframe spacing &mdash;
-then get told what will stutter, stretch or refuse to play, and the ffmpeg line that fixes it.
-Same engine the PPT Report uses on embedded video. Drop several at once to check a whole VT folder.
+Inspect MP4, MOV, M4V and M4A video down to the bitstream. Catches misdeclared H.264 levels, VFR,
+odd pixel aspect, HDR tags, edit lists and more. Gives the ffmpeg fix, and rewrites header-only
+fixes right here with no re-encode.
 </p>
-<div class="vt-controls">
-<div class="vt-field">
-<label for="vt-target">Playback target</label>
-<select id="vt-target">
-<option value="powerpoint-win" selected>PowerPoint on Windows</option>
-<option value="powerpoint-mac">PowerPoint on macOS</option>
-<option value="media-server">Media server</option>
-<option value="web">Browser / web</option>
-</select>
-</div>
-<div class="vt-field">
-<label for="vt-fps">Project frame rate</label>
-<select id="vt-fps">
-<option value="" selected>Any</option>
-<option value="23.976">23.98</option>
-<option value="24">24</option>
-<option value="25">25</option>
-<option value="29.97">29.97</option>
-<option value="30">30</option>
-<option value="50">50</option>
-<option value="59.94">59.94</option>
-<option value="60">60</option>
-</select>
-</div>
-</div>
-<label class="emf-drop" id="vt-drop" for="vt-file">
-<svg class="emf-dz-icon" viewBox="0 0 24 24"><path d="M3 6a2 2 0 012-2h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V6z"/><path d="M10 9l5 3-5 3V9z"/></svg>
-<div class="emf-dz-big">Drop video</div>
-<div class="emf-dz-small">or tap to browse &middot; multiple files OK</div>
-<input type="file" id="vt-file" accept="video/*,.mp4,.mov,.m4v" multiple>
-<div class="emf-privacy">
-<svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
-Read in your browser &middot; nothing uploaded
-</div>
-</label>
-<div id="vt-results"></div>
-</div>
+<div class="go-row"><span>Open VT Inspector</span>
+<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+</a>
 
 <a class="emf-tool tool-link media-tool" href="/media-extractor.html">
-<div class="emf-tool-title">Media Extractor <span class="emf-chip">PPTX &rarr; Files</span></div>
+<div class="emf-tool-title">Media Extractor <span class="emf-chip">PPTX &rarr; files</span></div>
 <p class="emf-intro">
-Pull every embedded asset (images, EMF/WMF, video, audio) straight out of a deck &mdash; no renaming
-to .zip and digging through folders. See everything as thumbnails with per-file metadata, pick the ones
-you want or save them all to a folder of your choice. Opens in its own page.
+Pull every embedded asset out of a deck as thumbnails with per-file metadata. Images, EMF, WMF, video,
+audio and fonts. Pick the ones you want or save them all to a folder of your choice. No renaming to
+.zip and digging through folders.
 </p>
 <div class="go-row"><span>Open Media Extractor</span>
 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
 </a>
 
-<div class="emf-tool">
+<a class="emf-tool tool-link" href="/emf-extractor.html">
 <div class="emf-tool-title">EMF Extractor <span class="emf-chip">Hybrid EMF &rarr; PDF</span></div>
 <p class="emf-intro">
-Mac-origin EMF files often carry a tiny low-res bitmap <strong>plus</strong> a full-quality vector PDF
-hidden in an Office GDIC block. Windows PowerPoint only draws the bitmap &mdash; hence the blur.
-This pulls the real PDF (or fallback raster) back out. Drop a single <strong>.emf</strong>, or a
-<strong>.pptx</strong> to list every EMF inside it.
+Mac apps save EMFs with a full-quality PDF hidden inside, which Windows PowerPoint cannot see. This
+pulls the real PDF or fallback raster back out, and batch-converts to PNG at any DPI for Windows-bound
+decks. Takes a single .emf or a whole .pptx.
 </p>
-<label class="emf-drop" id="emf-drop" for="emf-file">
-<svg class="emf-dz-icon" viewBox="0 0 24 24"><path d="M12 16V4m0 0l-4 4m4-4l4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
-<div class="emf-dz-big">Drop EMF or PPTX</div>
-<div class="emf-dz-small">or tap to browse &middot; multiple files OK</div>
-<input type="file" id="emf-file" accept=".emf,.pptx,image/x-emf,application/octet-stream,application/vnd.openxmlformats-officedocument.presentationml.presentation" multiple>
-<div class="emf-privacy">
-<svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
-Processed in your browser &middot; nothing uploaded
-</div>
-</label>
-<div id="emf-results"></div>
+<div class="go-row"><span>Open EMF Extractor</span>
+<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+</a>
+
+<a class="emf-tool tool-link pdf-tool" href="/pdf.html">
+<div class="emf-tool-title">PDF to Slides <span class="emf-chip">PDF &rarr; PNG + PPTX</span></div>
+<p class="emf-intro">
+Drop a PDF, get a folder of numbered images plus a PowerPoint deck with one image per slide, sized to
+match the PDF rather than squashed into a guess. Flags non-embedded fonts and mixed page sizes before
+it starts.
+</p>
+<div class="go-row"><span>Open PDF to Slides</span>
+<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+</a>
+
+<a class="emf-tool tool-link montage-link" href="/photo-montage.html" id="montage-link">
+<div class="emf-tool-title">Photo Montage <span class="emf-chip">Looping video</span></div>
+<p class="emf-intro">
+Drop photos and get a finished video for the screen, with slow Ken Burns motion, crossfades, exact
+timing and a loop that joins without a jump. Any pixel size including wide blends, up to 60 fps.
+Picks up the pixel size from the calculator.
+</p>
+<div class="go-row"><span>Open Photo Montage</span>
+<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+</a>
+
 </div>
 </div>
 
