@@ -15,7 +15,7 @@
 --accent: #D96EB0;
 --accent2: #e689c0;
 --amber: #d8a657;
---max-w: 720px;
+--max-w: 1040px;
 --emf: #D96EB0;
 --emf2: #e689c0;
 --emf-dim: rgba(217,110,176,0.12);
@@ -168,11 +168,46 @@ font-family: var(--sans); font-size: 11px; color: var(--muted); text-transform: 
 }
 .bar-label b { font-family: var(--mono); font-size: 13px; color: var(--text); font-weight: 400; text-transform: none; letter-spacing: 0; }
 
-.thumbs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
-.thumbs canvas, .thumbs img {
-height: 62px; width: auto; border: 1px solid var(--border2); background: #fff;
-border-radius: 2px; flex-shrink: 0; display: block;
+#stage { display: flex; flex-direction: column; gap: 12px; }
+#stage:empty { display: none; }
+.pre-top { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 820px) { .pre-top { grid-template-columns: 1fr; } }
+
+/* page picker: every page as a thumbnail, click to leave one out */
+.pg-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pg-title {
+font-family: var(--sans); font-size: 10px; font-weight: 600; letter-spacing: 1px;
+color: var(--muted); text-transform: uppercase;
 }
+.pg-count { font-family: var(--mono); font-size: 13px; color: var(--text); }
+.pg-actions { margin-left: auto; display: flex; gap: 6px; }
+.emf-btn.mini { padding: 6px 10px; font-size: 10px; }
+.pages {
+display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 8px;
+align-items: start; max-height: 540px; overflow-y: auto; padding: 2px;
+}
+.pg {
+position: relative; display: block; padding: 0; margin: 0; overflow: hidden;
+background: #fff; border: 1px solid var(--border2); border-radius: 2px;
+cursor: pointer; transition: border-color 0.15s;
+}
+.pg img { display: block; width: 100%; height: auto; transition: opacity 0.15s; }
+.pg .num {
+position: absolute; left: 0; bottom: 0; padding: 2px 7px;
+background: rgba(26,26,26,0.88); color: var(--text);
+font-family: var(--mono); font-size: 11px; border-top-right-radius: 2px;
+}
+.pg:hover:not(:disabled) { border-color: var(--emf); }
+.pg.skip { background: var(--bg); border-style: dashed; }
+.pg.skip img { opacity: 0.16; filter: grayscale(1); }
+.pg.skip .num { color: var(--muted); }
+.pg.skip::after {
+content: 'Left out'; position: absolute; inset: 0;
+display: flex; align-items: center; justify-content: center;
+font-family: var(--sans); font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+text-transform: uppercase; color: var(--label);
+}
+.pg:disabled { cursor: default; }
 .spinner {
 width: 13px; height: 13px; border: 2px solid var(--border2);
 border-top-color: var(--emf); border-radius: 50%;
@@ -193,7 +228,7 @@ footer { margin-top: auto; }
 <body>
 <header>
 <div class="site-bar">
-<a class="brand" href="https://aegfx.com" target="_blank" rel="noopener" title="AEGFX"><img src="aegfx-logo-reversed.svg" alt="AEGFX" width="104" height="24"></a>
+<a class="brand" href="/" title="Slide Size home"><img src="aegfx-logo-white.svg" alt="AEGFX, Slide Size home" width="104" height="24"></a>
 <nav aria-label="Breadcrumb"><ol class="crumbs">
 <li><a href="/">Slide Size</a></li>
 <li aria-current="page">PDF to Slides</li>
@@ -236,6 +271,7 @@ Processed in your browser &middot; nothing uploaded
 <span>Built with Claude (Anthropic)</span>
 <div class="footer-sep"></div>
 <span>PowerPoint max slide: 142.24cm x 142.24cm (56in x 56in)</span>
+<a class="footer-brand" href="https://aegfx.com" target="_blank" rel="noopener" title="AEGFX"><img src="aegfx-logo-reversed.svg" alt="AEGFX" width="121" height="28"></a>
 </footer>
 
 <script src="shared.js"></script>
@@ -259,16 +295,17 @@ var SOFT_LIMIT   = 1.5 * 1024 * 1024 * 1024;  /* warn above 1.5 GB in-memory */
 /* ---------- state ---------- */
 var S = {
   file: null, pdf: null, name: 'slides',
-  pages: [],            /* {n, wPt, hPt} */
+  pages: [],            /* {n, wPt, hPt, thumb, skip}  skip means left out of the export */
   frame: null,          /* {wPt, hPt, pxW, pxH} */
   fonts: [],            /* {name, embedded, type3} */
-  longEdge: 1920,
+  longEdge: 2560,
   fit: 'source',        /* source | fit169 | fill169 */
   fmt: 'png',
   pad: '#ffffff',
   fade: false,
   bytesPerPage: 0,
-  busy: false
+  busy: false, again: false,
+  lastPick: null        /* index of the last page clicked, for shift click runs */
 };
 
 var $ = function(id){ return document.getElementById(id); };
@@ -295,6 +332,7 @@ function aspectLabel(w,h){
   return a + ':' + b;
 }
 function pad4(n){ return ('000' + n).slice(-4); }
+function included(){ return S.pages.filter(function(p){ return !p.skip; }); }
 function loadScript(src){
   return new Promise(function(res, rej){
     var t = document.createElement('script');
@@ -696,7 +734,8 @@ function modalPageSize(pages){
 }
 
 function computeFrame(){
-  var m = modalPageSize(S.pages);
+  var inc = included();
+  var m = modalPageSize(inc.length ? inc : S.pages);
   var wPt = m.wPt, hPt = m.hPt;
 
   if (S.fit !== 'source'){
@@ -822,8 +861,8 @@ function optionsMarkup(){
   +   '<div><label class="fld" for="res">Resolution (long edge)</label>'
   +   '<select id="res">'
   +     '<option value="1280">1280 px</option>'
-  +     '<option value="1920" selected>1920 px</option>'
-  +     '<option value="2560">2560 px</option>'
+  +     '<option value="1920">1920 px</option>'
+  +     '<option value="2560" selected>2560 px</option>'
   +     '<option value="3840">3840 px</option>'
   +     '<option value="5120">5120 px</option>'
   +   '</select></div>'
@@ -851,9 +890,11 @@ function optionsMarkup(){
   +   '<em>Leave off if the deck is going into a playback system.</em></span></label>';
 }
 
-function renderPreflight(){
+/* the warnings under the page picker. Rebuilt on its own when pages are
+   toggled, since the size estimate depends on how many are going out */
+function flagsMarkup(){
   var f = S.frame;
-  var est = S.bytesPerPage * S.pages.length;
+  var est = S.bytesPerPage * included().length;
   var missing = S.fonts.filter(function(x){ return x.missing; });
   var type3   = S.fonts.filter(function(x){ return x.type3; });
   var canStream = typeof window.showDirectoryPicker === 'function';
@@ -893,30 +934,105 @@ function renderPreflight(){
     flags += flag('warn', 'Large output',
       'Around ' + fmtBytes(est) + '. Each page is written into the folder as it is rendered, so memory is fine, but leave it time.');
   }
+  return flags ? '<div class="panel-in">' + flags + '</div>' : '';
+}
+
+function pagesMarkup(){
+  return ''
+  + '<div class="pg-head">'
+  +   '<span class="pg-title">Pages</span><span class="pg-count" id="pg-count"></span>'
+  +   '<span class="pg-actions">'
+  +     '<button type="button" class="emf-btn mini" id="pg-all">Include all</button>'
+  +     '<button type="button" class="emf-btn mini" id="pg-none">Leave all out</button>'
+  +   '</span>'
+  + '</div>'
+  + '<div class="emf-dz-small">Click a page to leave it out of the deck and the image folder. Shift click to change a run of pages.</div>'
+  + '<div class="pages" id="pages">'
+  + S.pages.map(function(pg){
+      return '<button type="button" class="pg" data-n="' + pg.n + '" title="Page ' + pg.n + '">'
+        + '<img alt="" loading="lazy" src="' + pg.thumb + '"><span class="num">' + pg.n + '</span></button>';
+    }).join('')
+  + '</div>';
+}
+
+function renderPreflight(){
+  var f = S.frame;
+  var canStream = typeof window.showDirectoryPicker === 'function';
 
   stage.innerHTML =
-    '<div class="panel-in">'
-  +   '<div class="kv">'
-  +     '<div class="erow"><span>File</span><span>' + esc(S.file.name) + '</span></div>'
-  +     '<div class="erow"><span>Pages</span><span>' + S.pages.length + '</span></div>'
-  +     '<div class="erow"><span>PDF page</span><span>' + ptToCm(f.srcWPt).toFixed(2) + ' x ' + ptToCm(f.srcHPt).toFixed(2) + ' cm &middot; ' + aspectLabel(f.srcWPt, f.srcHPt) + '</span></div>'
-  +     '<div class="erow"><span>Slide size</span><span>' + ptToCm(f.wPt).toFixed(2) + ' x ' + ptToCm(f.hPt).toFixed(2) + ' cm &middot; ' + aspectLabel(f.wPt, f.hPt) + '</span></div>'
-  +     '<div class="erow"><span>Image size</span><span>' + f.pxW + ' x ' + f.pxH + ' px</span></div>'
-  +     '<div class="erow"><span>Estimated</span><span>' + fmtBytes(est) + ' total</span></div>'
+    '<div class="pre-top">'
+  +   '<div class="panel-in">'
+  +     '<div class="kv">'
+  +       '<div class="erow"><span>File</span><span>' + esc(S.file.name) + '</span></div>'
+  +       '<div class="erow"><span>Pages</span><span id="kv-pages"></span></div>'
+  +       '<div class="erow"><span>PDF page</span><span>' + ptToCm(f.srcWPt).toFixed(2) + ' x ' + ptToCm(f.srcHPt).toFixed(2) + ' cm &middot; ' + aspectLabel(f.srcWPt, f.srcHPt) + '</span></div>'
+  +       '<div class="erow"><span>Slide size</span><span>' + ptToCm(f.wPt).toFixed(2) + ' x ' + ptToCm(f.hPt).toFixed(2) + ' cm &middot; ' + aspectLabel(f.wPt, f.hPt) + '</span></div>'
+  +       '<div class="erow"><span>Image size</span><span>' + f.pxW + ' x ' + f.pxH + ' px</span></div>'
+  +       '<div class="erow"><span>Estimated</span><span id="kv-est"></span></div>'
+  +     '</div>'
   +   '</div>'
-  +   (S.thumbs ? '<div class="hairline"></div><div class="thumbs">' + S.thumbs + '</div>' : '')
+  +   '<div class="panel-in">' + optionsMarkup() + '</div>'
   + '</div>'
-  + '<div class="panel-in">' + optionsMarkup() + '</div>'
-  + (flags ? '<div class="panel-in" id="flags">' + flags + '</div>' : '')
+  + '<div class="panel-in">' + pagesMarkup() + '</div>'
+  + '<div id="flags"></div>'
   + '<div style="margin-top:2px">'
   +   '<button class="emf-btn primary" id="go" style="width:100%">Create PNGs and deck</button>'
-  +   '<div class="emf-dz-small" style="text-align:center;margin-top:9px">'
+  +   '<div class="emf-dz-small" id="go-note" style="text-align:center;margin-top:9px" data-note="'
   +     (canStream ? 'Writes a folder to disk, one page at a time' : 'Assembled in the browser, then downloaded as a zip')
-  +   '</div>'
+  +   '"></div>'
   + '</div>';
 
   wireOptions();
+  wirePages();
+  paintSelection();
   $('go').addEventListener('click', function(){ build(false); });
+}
+
+/* bring everything that depends on which pages are included up to date,
+   without rebuilding the thumbnails */
+function paintSelection(){
+  var inc = included().length, total = S.pages.length;
+  Array.prototype.forEach.call(document.querySelectorAll('#pages .pg'), function(b){
+    var skip = S.pages[parseInt(b.dataset.n, 10) - 1].skip;
+    b.classList.toggle('skip', skip);
+    b.setAttribute('aria-pressed', skip ? 'false' : 'true');
+    b.setAttribute('aria-label', 'Page ' + b.dataset.n + (skip ? ', left out' : ', included'));
+  });
+  $('pg-count').textContent = inc + ' of ' + total + ' included';
+  $('kv-pages').textContent = inc === total ? String(total) : inc + ' of ' + total;
+  $('kv-est').textContent = fmtBytes(S.bytesPerPage * inc) + ' total';
+  $('flags').innerHTML = flagsMarkup();
+  $('go').disabled = !inc;
+  $('go-note').textContent = inc ? $('go-note').dataset.note : 'Every page is left out. Include at least one to export.';
+}
+
+/* the slide size follows the pages that are going out, so leaving out the odd
+   sized ones can change it. Only then is a full re-measure needed. */
+function frameKey(f){
+  return [f.wPt, f.hPt, f.pxW, f.pxH, f.uniform, f.variants, f.clamped].join('|');
+}
+function selectionChanged(){
+  if (frameKey(computeFrame()) !== frameKey(S.frame)) refresh();
+  else paintSelection();
+}
+
+function wirePages(){
+  $('pages').addEventListener('click', function(e){
+    var b = e.target.closest('.pg'); if (!b) return;
+    var i = parseInt(b.dataset.n, 10) - 1;
+    var skip = !S.pages[i].skip;
+    var from = i, to = i;
+    if (e.shiftKey && S.lastPick !== null){ from = Math.min(i, S.lastPick); to = Math.max(i, S.lastPick); }
+    for (var k = from; k <= to; k++) S.pages[k].skip = skip;
+    S.lastPick = i;
+    selectionChanged();
+  });
+  $('pg-all').addEventListener('click', function(){
+    S.pages.forEach(function(pg){ pg.skip = false; }); selectionChanged();
+  });
+  $('pg-none').addEventListener('click', function(){
+    S.pages.forEach(function(pg){ pg.skip = true; }); selectionChanged();
+  });
 }
 
 function wireOptions(){
@@ -942,17 +1058,18 @@ function wireOptions(){
 
 /* recompute frame and re-measure page 1 so the size estimate stays honest */
 async function refresh(){
-  if (S.busy) return;
+  if (S.busy) { S.again = true; return; }
   S.busy = true;
   S.frame = computeFrame();
   try {
-    var page = await S.pdf.getPage(1);
+    var page = await S.pdf.getPage((included()[0] || S.pages[0]).n);
     var canvas = await renderPage(page, S.frame);
     var bytes = await canvasBytes(canvas);
     S.bytesPerPage = bytes.length;
     page.cleanup();
   } catch (e) { /* keep the previous estimate */ }
   S.busy = false;
+  if (S.again) { S.again = false; return refresh(); }
   renderPreflight();
 }
 
@@ -974,33 +1091,30 @@ async function analyse(file){
   S.pdf = await task.promise;
 
   var n = S.pdf.numPages, i, page, vp;
-  S.pages = []; S.fonts = [];
+  S.pages = []; S.fonts = []; S.lastPick = null;
   var acc = { seen: {}, list: [] };
-  var thumbs = [];
+  var t = document.createElement('canvas');   /* one canvas reused for every thumbnail */
 
   for (i = 1; i <= n; i++){
     page = await S.pdf.getPage(i);
     vp = page.getViewport({ scale: 1 });
-    S.pages.push({ n: i, wPt: vp.width, hPt: vp.height });
+    S.pages.push({ n: i, wPt: vp.width, hPt: vp.height, thumb: '', skip: false });
     /* getOperatorList populates commonObjs, which is where the font records live */
     try { await page.getOperatorList(); readFonts(page, acc); } catch (e) {}
-    if (i <= 4){
-      var t = document.createElement('canvas');
-      var s = 124 / Math.max(vp.width, vp.height);
-      var tv = page.getViewport({ scale: s });
+    try {
+      var tv = page.getViewport({ scale: 280 / Math.max(vp.width, vp.height) });
       t.width = Math.round(tv.width); t.height = Math.round(tv.height);
       var tc = t.getContext('2d'); tc.fillStyle = '#fff'; tc.fillRect(0, 0, t.width, t.height);
       await page.render({ canvasContext: tc, viewport: tv }).promise;
-      thumbs.push('<img alt="Page ' + i + '" src="' + t.toDataURL('image/jpeg', 0.7) + '">');
-    }
+      S.pages[i - 1].thumb = t.toDataURL('image/jpeg', 0.7);
+    } catch (e) { /* a page that will not draw still gets a numbered blank tile */ }
     page.cleanup();
     var pct = Math.round(i / n * 100);
     if ($('pfb')) { $('pfb').style.width = pct + '%'; $('pfn').textContent = pct + '%'; }
-    if (i % 5 === 0) await nextFrame();
+    if (i % 2 === 0) await nextFrame();
   }
 
   S.fonts = acc.list;
-  S.thumbs = thumbs.join('');
   await refresh();
 }
 
@@ -1057,7 +1171,9 @@ async function freeDeckName(dir, base){
 
 async function build(forceZip){
   var go = $('go');
-  var count = S.pages.length;
+  var list = included();          /* the pages going out, in order. Slide k is list[k - 1] */
+  var count = list.length;
+  if (!count) return;
   var ext = S.fmt === 'jpg' ? 'jpg' : 'png';
   var f = S.frame;
   var cx = Math.round(f.wPt * EMU_PER_PT);
@@ -1079,7 +1195,7 @@ async function build(forceZip){
 
   go.disabled = true;
   var locks = ['res','fit','fade'].map($).filter(Boolean)
-    .concat(Array.prototype.slice.call(document.querySelectorAll('.seg button')));
+    .concat(Array.prototype.slice.call(document.querySelectorAll('.seg button, .pg, .emf-btn.mini')));
   locks.forEach(function(el){ el.disabled = true; });
   var old = $('build-status');
   if (old) old.remove();
@@ -1109,15 +1225,16 @@ async function build(forceZip){
   try {
     /* pass 1: render every page and save its image */
     for (var i = 1; i <= count; i++){
-      $('bs').textContent = 'Rendering page ' + i;
-      var page = await S.pdf.getPage(i);
+      var pn = list[i - 1].n;     /* images are named after the PDF page they came from */
+      $('bs').textContent = 'Rendering page ' + pn;
+      var page = await S.pdf.getPage(pn);
       var canvas = await renderPage(page, f);
       var bytes = await canvasBytes(canvas);
       page.cleanup();
 
       crcs[i] = crc32(bytes);
       if (toDisk){
-        var loose = pad4(i) + '.' + ext;
+        var loose = pad4(pn) + '.' + ext;
         await writeToDisk(pngDir, loose, (function(b){
           return function(ws){ return ws.write(b); };
         })(bytes), 'png/' + loose);
@@ -1127,7 +1244,7 @@ async function build(forceZip){
 
       imgBytes += bytes.length;
       bytes = null;
-      tick(i, 'Rendering page ' + i);
+      tick(i, 'Rendering page ' + pn);
       await nextFrame();
     }
 
@@ -1137,7 +1254,7 @@ async function build(forceZip){
 
     if (toDisk){
       var fromDisk = async function(n){
-        return (await pngDir.getFileHandle(pad4(n) + '.' + ext)).getFile();
+        return (await pngDir.getFileHandle(pad4(list[n - 1].n) + '.' + ext)).getFile();
       };
       var fillDeck = function(ws){
         deckBytes = 0;
@@ -1172,7 +1289,7 @@ async function build(forceZip){
       pptxBlob = null;
       for (var j = 1; j <= count; j++){
         $('bs').textContent = 'Packing image ' + j;
-        await outer.addBlob(S.name + '/png/' + pad4(j) + '.' + ext, pngBlobs[j], crcs[j]);
+        await outer.addBlob(S.name + '/png/' + pad4(list[j - 1].n) + '.' + ext, pngBlobs[j], crcs[j]);
         pngBlobs[j] = null;
         if (j % 4 === 0) await nextFrame();
       }
@@ -1180,12 +1297,34 @@ async function build(forceZip){
       downloadBlob(outSink.result(), S.name + '.zip');
     }
 
+    /* A run with pages left out into a folder that already holds a fuller run
+       would leave the old images sitting there looking current. Nothing is
+       deleted, the user is just told. */
+    var stale = [];
+    if (toDisk){
+      try {
+        var mine = {};
+        list.forEach(function(pg){ mine[pad4(pg.n) + '.' + ext] = true; });
+        for await (var entry of pngDir.keys()){
+          if (/^\d{4}\.(png|jpe?g)$/i.test(entry) && !mine[entry]) stale.push(entry);
+        }
+        stale.sort();
+      } catch (e) { stale = []; }
+    }
+    var skipped = S.pages.length - count;
+
     status.innerHTML = flag('ok', 'Done',
-      count + ' page' + (count > 1 ? 's' : '') + ' at ' + f.pxW + ' x ' + f.pxH + ' px.',
+      count + ' page' + (count > 1 ? 's' : '') + ' at ' + f.pxW + ' x ' + f.pxH + ' px'
+        + (skipped ? ', ' + skipped + ' left out.' : '.'),
       toDisk
         ? 'In the folder you picked: <code>' + esc(S.name) + '/' + esc(deckName) + '</code> and <code>'
           + esc(S.name) + '/png/</code> with the numbered ' + ext.toUpperCase() + ' files.'
         : 'Downloaded <code>' + esc(S.name) + '.zip</code> containing the deck and a <code>png/</code> folder.')
+      + (stale.length ? flag('warn', 'Older images are still in the folder',
+          'The <code>png/</code> folder also holds ' + stale.length + ' image' + (stale.length > 1 ? 's' : '')
+          + ' from an earlier run that ' + (stale.length > 1 ? 'are' : 'is') + ' not part of this export, '
+          + stale.slice(0, 6).map(function(x){ return '<code>' + esc(x) + '</code>'; }).join(', ')
+          + (stale.length > 6 ? ' and ' + (stale.length - 6) + ' more' : '') + '. Delete them if they are not wanted.') : '')
       + (renamed ? flag('warn', 'Saved under a new name',
           '<code>' + esc(S.name) + '.pptx</code> could not be replaced, most likely because it is open in PowerPoint. '
           + 'The new deck is next to it as <code>' + esc(deckName) + '</code>.') : '');
