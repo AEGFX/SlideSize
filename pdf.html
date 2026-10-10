@@ -775,14 +775,21 @@ async function renderPage(page, frame){
   var vp = page.getViewport({ scale: scale });
   var rw = Math.max(1, Math.round(vp.width)), rh = Math.max(1, Math.round(vp.height));
 
+  /* The page is drawn on a canvas that keeps an alpha channel, on purpose. On
+     an opaque canvas Chrome is allowed to draw text with the screen's subpixel
+     antialiasing (ClearType on Windows), which bakes red and blue fringes into
+     the letter edges. Those only suit the one LCD they were made for. Scaled by
+     PowerPoint, or shown on a projector or LED wall, they read as soft, tinted
+     text. With alpha kept, text is always plain greyscale antialiasing. */
   workCanvas.width = rw; workCanvas.height = rh;
-  var wctx = workCanvas.getContext('2d', { alpha: false });
+  var wctx = workCanvas.getContext('2d');
   wctx.fillStyle = '#ffffff';
   wctx.fillRect(0, 0, rw, rh);
   await page.render({ canvasContext: wctx, viewport: vp }).promise;
 
-  if (rw === frame.pxW && rh === frame.pxH) return workCanvas;
-
+  /* always copied 1:1 onto the opaque frame, so the saved image has no alpha
+     channel. No scaling happens here, only an offset when the page is padded
+     or cropped. */
   frameCanvas.width = frame.pxW; frameCanvas.height = frame.pxH;
   var fctx = frameCanvas.getContext('2d', { alpha: false });
   fctx.fillStyle = S.pad;
