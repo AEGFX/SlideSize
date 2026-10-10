@@ -44,7 +44,7 @@ align-items: center;
    Markup contract (every page):
      <header>
        <div class="site-bar">
-         <a class="brand" href="https://aegfx.com" target="_blank" rel="noopener"><img src="aegfx-logo-reversed.svg" alt="AEGFX"></a>
+         <a class="brand" href="/"><img src="aegfx-logo-white.svg" alt="AEGFX, Slide Size home"></a>
          <nav aria-label="Breadcrumb"><ol class="crumbs">
            <li><a href="/">Slide Size</a></li>
            <li aria-current="page">Tool Name</li>
@@ -54,10 +54,10 @@ align-items: center;
        <div class="logo-mark"></div>
        <div class="logo-text">Tool <span>Name</span></div>
      </header>
-   The trail reads AEGFX / Slide Size / Tool Name. The logo is the root of
-   the trail and goes to aegfx.com in a new tab, so a tool with a file loaded
-   is not navigated away from. The landing page has the single crumb
-   <li aria-current="page">Slide Size</li>.
+   The white logo sits on the left and goes back to the Slide Size home page.
+   The trail is centred in the bar and reads Slide Size / Tool Name. The
+   landing page has the single crumb <li aria-current="page">Slide Size</li>.
+   The link out to aegfx.com is the coloured logo at the foot of the page.
    ============================================================ */
 
 header {
@@ -72,14 +72,16 @@ gap: 6px;
 }
 .site-bar {
 align-self: stretch;
-display: flex;
+display: grid;
+grid-template-columns: 1fr auto 1fr;   /* equal sides keep the trail centred */
 align-items: center;
+column-gap: 14px;
 padding: 12px 24px;
 margin-bottom: 14px;
 background: var(--bg);
 border-bottom: 1px solid var(--border);
 }
-.brand { display: block; flex-shrink: 0; line-height: 0; transition: opacity 0.15s; }
+.brand { display: block; justify-self: start; line-height: 0; transition: opacity 0.15s; }
 .brand:hover { opacity: 0.8; }
 .brand img { display: block; height: 24px; width: auto; }
 .site-bar nav { min-width: 0; }
@@ -87,6 +89,7 @@ border-bottom: 1px solid var(--border);
 list-style: none;
 display: flex;
 flex-wrap: wrap;
+justify-content: center;
 align-items: center;
 font-family: var(--sans);
 font-size: 11px;
@@ -96,13 +99,12 @@ text-transform: uppercase;
 line-height: 1.5;
 }
 .crumbs li { display: flex; align-items: center; white-space: nowrap; }
-.crumbs li::before { content: '/'; color: var(--muted); opacity: 0.6; margin: 0 11px; font-weight: 400; }
+.crumbs li + li::before { content: '/'; color: var(--muted); opacity: 0.6; margin: 0 11px; font-weight: 400; }
 .crumbs a { color: var(--label); text-decoration: none; transition: color 0.15s; }
 .crumbs a:hover { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
 .crumbs [aria-current] { color: var(--accent); font-weight: 700; }
 .site-contact {
-margin-left: auto;
-padding-left: 16px;
+justify-self: end;
 font-family: var(--sans);
 font-size: 11px;
 font-weight: 500;
@@ -114,10 +116,13 @@ transition: color 0.15s;
 }
 .site-contact:hover { color: var(--accent); }
 @media (max-width: 560px) {
-.site-bar { padding: 10px 16px; }
+/* no room for the logo beside a centred trail, so the logo goes on its own
+   row above it and both stay centred */
+.site-bar { padding: 10px 16px; grid-template-columns: 1fr; row-gap: 8px; }
+.brand { justify-self: center; }
 .brand img { height: 20px; }
 .crumbs { font-size: 10px; letter-spacing: 1px; }
-.crumbs li::before { margin: 0 8px; }
+.crumbs li + li::before { margin: 0 8px; }
 .site-contact { display: none; }   /* still in the footer */
 }
 .logo-mark {
@@ -165,6 +170,10 @@ line-height: 1.6;
 footer a { color: var(--brand-red); text-decoration: none; }
 footer a:hover { color: var(--brand-red2); }
 .footer-sep { margin: 4px 0; height: 1px; width: 40px; background: var(--border2); }
+/* coloured AEGFX logo, last thing on the page, out to aegfx.com in a new tab */
+.footer-brand { display: block; line-height: 0; margin-top: 14px; transition: opacity 0.15s; }
+.footer-brand:hover { opacity: 0.8; }
+.footer-brand img { display: block; height: 28px; width: auto; }
 
 /* ============================================================
    Shared helpers used across pages
