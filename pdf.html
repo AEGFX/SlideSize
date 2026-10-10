@@ -157,6 +157,8 @@ font-family: var(--sans); font-size: 12px; line-height: 1.55;
 .flag.ok svg { stroke: var(--emf); }
 .flag .sub { color: var(--muted); font-size: 11px; display: block; margin-top: 4px; }
 .flag .sub code { font-family: var(--mono); color: var(--label); }
+.flag code { font-family: var(--mono); }
+.flag + .flag { margin-top: 8px; }
 
 .bar-outer { width: 100%; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
 .bar-inner { height: 100%; width: 0%; background: var(--emf); transition: width 0.18s linear; }
@@ -338,6 +340,10 @@ ZipWriter.prototype._w = function(u8){
   this.offset += u8.length;
   return this.sink.write(u8);
 };
+ZipWriter.prototype._wBlob = function(blob){
+  this.offset += blob.size;
+  return this.sink.writeBlob(blob);
+};
 ZipWriter.prototype._localHeader = function(name, crc, size){
   var nameBytes = TE.encode(name);
   var head = new Uint8Array(30 + nameBytes.length);
@@ -363,14 +369,18 @@ ZipWriter.prototype.add = async function(name, data){
   await this._w(this._localHeader(name, crc32(body), body.length));
   await this._w(body);
 };
-/* large part held as a Blob: two streamed passes, one for the CRC and one for
-   the bytes, so nothing bigger than a read chunk lands on the JS heap */
-ZipWriter.prototype.addBlob = async function(name, blob){
-  var c = crcInit(), rd = blob.stream().getReader(), r;
-  for (;;){ r = await rd.read(); if (r.done) break; c = crcUpdate(c, r.value); }
-  await this._w(this._localHeader(name, crcFinal(c), blob.size));
-  rd = blob.stream().getReader();
-  for (;;){ r = await rd.read(); if (r.done) break; await this._w(r.value); }
+/* large part held as a Blob, or as a File still sitting on disk. The CRC is
+   streamed a chunk at a time unless the caller already has it, and the bytes
+   are handed to the sink as the Blob itself, so nothing bigger than a read
+   chunk lands on the JS heap */
+ZipWriter.prototype.addBlob = async function(name, blob, crc){
+  if (crc === undefined){
+    var c = crcInit(), rd = blob.stream().getReader(), r;
+    for (;;){ r = await rd.read(); if (r.done) break; c = crcUpdate(c, r.value); }
+    crc = crcFinal(c);
+  }
+  await this._w(this._localHeader(name, crc, blob.size));
+  await this._wBlob(blob);
 };
 ZipWriter.prototype.finish = async function(){
   var cdStart = this.offset, i, e, rec, dv;
@@ -405,13 +415,14 @@ ZipWriter.prototype.finish = async function(){
   await this.sink.close();
 };
 
-/* sink A: straight to a file on disk, constant memory */
-function fsSink(handle){
-  var stream = null;
+/* sink A: straight into an open file on disk, constant memory. writeToDisk
+   owns the stream and closes it, so close here has nothing to do. */
+function streamSink(stream){
   return {
-    init: async function(){ stream = await handle.createWritable(); },
+    init: async function(){},
     write: function(u8){ return stream.write(u8); },
-    close: function(){ return stream.close(); },
+    writeBlob: function(blob){ return stream.write(blob); },
+    close: function(){ return Promise.resolve(); },
     result: function(){ return null; }
   };
 }
@@ -432,6 +443,11 @@ function blobSink(){
       if (bufLen > 8 * 1024 * 1024) flush();
       return Promise.resolve();
     },
+    writeBlob: function(blob){
+      buf.push(blob); bufLen += blob.size;
+      if (bufLen > 8 * 1024 * 1024) flush();
+      return Promise.resolve();
+    },
     close: function(){ flush(); return Promise.resolve(); },
     result: function(){ return acc || new Blob([]); }
   };
@@ -442,6 +458,51 @@ function downloadBlob(blob, filename){
   a.href = url; a.download = filename;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(function(){ URL.revokeObjectURL(url); }, 120000);
+}
+
+/* ---------- writing into the picked folder ----------
+   Chrome does not write a file in place. It writes a hidden swap file next to
+   it and swaps the two when the stream is closed. If anything else has the
+   target open at that moment the swap is refused, and all the browser reports
+   is a vague "state had changed since it was read from disk". On a show laptop
+   the something else is usually antivirus scanning the file the instant it
+   appears, a sync client (OneDrive, iCloud, Dropbox) picking it up, or the
+   deck from an earlier run still open in PowerPoint.
+
+   So every file is written in one short burst, and a refusal is retried after
+   a pause, which is all a scanner or sync client needs to let go. */
+var DISK_PAUSES = [0, 300, 800, 1600];   /* ms before each attempt */
+
+function wait(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+
+async function fileExists(dir, name){
+  try { await dir.getFileHandle(name); return true; } catch (e) { return false; }
+}
+
+/* fill(stream) writes the content. Throws an Error marked disk:true once the
+   attempts run out, carrying the browser's own error and the file's name as
+   it should be shown to the user. */
+async function writeToDisk(dir, name, fill, shown){
+  var existed = await fileExists(dir, name), last = null;
+  for (var t = 0; t < DISK_PAUSES.length; t++){
+    if (DISK_PAUSES[t]) await wait(DISK_PAUSES[t]);
+    var ws = null;
+    try {
+      var fh = await dir.getFileHandle(name, { create: true });
+      ws = await fh.createWritable();
+      await fill(ws);
+      await ws.close();
+      return;
+    } catch (e){
+      last = e;
+      if (ws) { try { await ws.abort(); } catch (x) {} }
+    }
+  }
+  /* do not leave an empty file behind where there was none before */
+  if (!existed) { try { await dir.removeEntry(name); } catch (x) {} }
+  var err = new Error(last && last.message ? last.message : String(last));
+  err.disk = true; err.file = shown || name; err.cause = last;
+  throw err;
 }
 
 /* ---------- OOXML ---------- */
@@ -848,7 +909,7 @@ function renderPreflight(){
   + '</div>';
 
   wireOptions();
-  $('go').addEventListener('click', build);
+  $('go').addEventListener('click', function(){ build(false); });
 }
 
 function wireOptions(){
@@ -938,10 +999,56 @@ async function analyse(file){
 
 /* ---------- build ----------
    Two output shapes. Where the File System Access API exists we make a real
-   folder on disk holding the deck and a png subfolder, and every page is
-   written out as it is rendered, so memory stays flat. Everywhere else we fall
-   back to a single zip assembled through Blobs. */
-async function build(){
+   folder on disk holding the deck and a png subfolder. Everywhere else, or if
+   the folder refuses the writes, we fall back to a single zip assembled
+   through Blobs.
+
+   Either way the work runs in two passes. First every page is rendered and its
+   image saved, to the png folder or to a Blob. Then the deck is assembled from
+   those saved images. Building the deck last means its file is only open for
+   the moment it takes to write, and that a refused write can simply be run
+   again without rendering anything twice. Memory stays flat because only one
+   page is ever held at a time. */
+
+/* the whole .pptx package, written to sink. image(i) resolves to the Blob for
+   page i, crcs[i] is its CRC32 and onImage(i) is called as each one goes in */
+async function writeDeck(sink, count, ext, cx, cy, image, crcs, onImage){
+  await sink.init();
+  var zip = new ZipWriter(sink);
+
+  /* everything that does not depend on a rendered page goes out first, which
+     keeps the package in the order a streaming reader expects */
+  await zip.add('[Content_Types].xml', contentTypes(count, ext));
+  await zip.add('_rels/.rels', rootRels());
+  await zip.add('docProps/core.xml', coreProps(S.name));
+  await zip.add('docProps/app.xml', appProps(count));
+  await zip.add('ppt/presentation.xml', presentationXml(count, cx, cy));
+  await zip.add('ppt/_rels/presentation.xml.rels', presentationRels(count));
+  await zip.add('ppt/theme/theme1.xml', themeXml());
+  await zip.add('ppt/slideMasters/slideMaster1.xml', slideMasterXml());
+  await zip.add('ppt/slideMasters/_rels/slideMaster1.xml.rels', slideMasterRels());
+  await zip.add('ppt/slideLayouts/slideLayout1.xml', slideLayoutXml());
+  await zip.add('ppt/slideLayouts/_rels/slideLayout1.xml.rels', slideLayoutRels());
+
+  for (var i = 1; i <= count; i++){
+    await zip.addBlob('ppt/media/image' + i + '.' + ext, await image(i), crcs[i]);
+    await zip.add('ppt/slides/slide' + i + '.xml', slideXml(i, 0, 0, cx, cy, S.fade));
+    await zip.add('ppt/slides/_rels/slide' + i + '.xml.rels', slideRels(i, ext));
+    if (onImage) onImage(i);
+  }
+  await zip.finish();
+}
+
+/* first "name (2).pptx", "name (3).pptx"... that is not already in the folder */
+async function freeDeckName(dir, base){
+  for (var n = 2; n < 50; n++){
+    var name = base + ' (' + n + ').pptx';
+    if (!(await fileExists(dir, name))) return name;
+  }
+  return base + ' (' + Date.now() + ').pptx';
+}
+
+async function build(forceZip){
   var go = $('go');
   var count = S.pages.length;
   var ext = S.fmt === 'jpg' ? 'jpg' : 'png';
@@ -949,15 +1056,14 @@ async function build(){
   var cx = Math.round(f.wPt * EMU_PER_PT);
   var cy = Math.round(f.hPt * EMU_PER_PT);
 
-  var toDisk = typeof window.showDirectoryPicker === 'function';
-  var pngDir = null, pptHandle = null, root = null;
+  var toDisk = !forceZip && typeof window.showDirectoryPicker === 'function';
+  var pngDir = null, root = null;
 
   if (toDisk){
     try {
       var chosen = await window.showDirectoryPicker({ mode: 'readwrite' });
-      root      = await chosen.getDirectoryHandle(S.name, { create: true });
-      pngDir    = await root.getDirectoryHandle('png', { create: true });
-      pptHandle = await root.getFileHandle(S.name + '.pptx', { create: true });
+      root   = await chosen.getDirectoryHandle(S.name, { create: true });
+      pngDir = await root.getDirectoryHandle('png', { create: true });
     } catch (e){
       if (e && e.name === 'AbortError') return;
       toDisk = false;   /* permission refused, fall back to the zip */
@@ -968,7 +1074,10 @@ async function build(){
   var locks = ['res','fit','fade'].map($).filter(Boolean)
     .concat(Array.prototype.slice.call(document.querySelectorAll('.seg button')));
   locks.forEach(function(el){ el.disabled = true; });
+  var old = $('build-status');
+  if (old) old.remove();
   var status = document.createElement('div');
+  status.id = 'build-status';
   status.className = 'panel-in';
   status.style.marginTop = '12px';
   status.innerHTML =
@@ -978,36 +1087,20 @@ async function build(){
     + '<div class="emf-dz-small" id="bw">' + (toDisk ? 'Writing to the folder you picked' : 'Assembling a zip') + '</div>';
   go.parentNode.appendChild(status);
 
-  var pngBlobs = [];     /* only used on the fallback path */
-  var written = 0;
+  var pngBlobs = [];     /* only used on the zip path, index is page number */
+  var crcs = [];         /* CRC32 of each page image, index is page number */
+  var imgBytes = 0, deckBytes = 0;
 
   function tick(i, label){
     var pct = Math.round(i / count * 100);
     $('bb').style.width = pct + '%';
     $('bn').textContent = i + ' / ' + count;
     $('bs').textContent = label;
-    $('bw').textContent = (toDisk ? 'Written: ' : 'Held: ') + fmtBytes(written);
+    $('bw').textContent = (toDisk ? 'Written: ' : 'Held: ') + fmtBytes(imgBytes + deckBytes);
   }
 
   try {
-    var sink = toDisk ? fsSink(pptHandle) : blobSink();
-    await sink.init();
-    var zip = new ZipWriter(sink);
-
-    /* everything that does not depend on a rendered page goes out first, which
-       keeps the package in the order a streaming reader expects */
-    await zip.add('[Content_Types].xml', contentTypes(count, ext));
-    await zip.add('_rels/.rels', rootRels());
-    await zip.add('docProps/core.xml', coreProps(S.name));
-    await zip.add('docProps/app.xml', appProps(count));
-    await zip.add('ppt/presentation.xml', presentationXml(count, cx, cy));
-    await zip.add('ppt/_rels/presentation.xml.rels', presentationRels(count));
-    await zip.add('ppt/theme/theme1.xml', themeXml());
-    await zip.add('ppt/slideMasters/slideMaster1.xml', slideMasterXml());
-    await zip.add('ppt/slideMasters/_rels/slideMaster1.xml.rels', slideMasterRels());
-    await zip.add('ppt/slideLayouts/slideLayout1.xml', slideLayoutXml());
-    await zip.add('ppt/slideLayouts/_rels/slideLayout1.xml.rels', slideLayoutRels());
-
+    /* pass 1: render every page and save its image */
     for (var i = 1; i <= count; i++){
       $('bs').textContent = 'Rendering page ' + i;
       var page = await S.pdf.getPage(i);
@@ -1015,42 +1108,64 @@ async function build(){
       var bytes = await canvasBytes(canvas);
       page.cleanup();
 
-      await zip.add('ppt/media/image' + i + '.' + ext, bytes);
-      await zip.add('ppt/slides/slide' + i + '.xml', slideXml(i, 0, 0, cx, cy, S.fade));
-      await zip.add('ppt/slides/_rels/slide' + i + '.xml.rels', slideRels(i, ext));
-
-      /* the same bytes again as a loose file next to the deck */
-      var loose = pad4(i) + '.' + ext;
+      crcs[i] = crc32(bytes);
       if (toDisk){
-        var fh = await pngDir.getFileHandle(loose, { create: true });
-        var ws = await fh.createWritable();
-        await ws.write(bytes);
-        await ws.close();
+        var loose = pad4(i) + '.' + ext;
+        await writeToDisk(pngDir, loose, (function(b){
+          return function(ws){ return ws.write(b); };
+        })(bytes), 'png/' + loose);
       } else {
-        pngBlobs.push(new Blob([bytes]));
+        pngBlobs[i] = new Blob([bytes]);
       }
 
-      written += bytes.length * 2;
+      imgBytes += bytes.length;
       bytes = null;
       tick(i, 'Rendering page ' + i);
       await nextFrame();
     }
 
+    /* pass 2: the deck, built from the images saved in pass 1 */
     $('bs').textContent = 'Writing the deck';
-    await zip.finish();
+    var deckName = S.name + '.pptx', renamed = false;
 
-    if (!toDisk){
-      /* wrap the deck and the loose images into one archive, reading each blob
-         back a chunk at a time so the heap never holds a whole page */
+    if (toDisk){
+      var fromDisk = async function(n){
+        return (await pngDir.getFileHandle(pad4(n) + '.' + ext)).getFile();
+      };
+      var fillDeck = function(ws){
+        deckBytes = 0;
+        return writeDeck(streamSink(ws), count, ext, cx, cy, fromDisk, crcs, function(n){
+          /* sizes are not held here, so count the deck as it grows by its share */
+          deckBytes = Math.round(imgBytes * n / count);
+          tick(count, 'Writing the deck');
+        });
+      };
+      try {
+        await writeToDisk(root, deckName, fillDeck);
+      } catch (e){
+        if (!e.disk) throw e;
+        /* The images went in fine but this one file will not be replaced, so
+           the old deck is almost certainly open in PowerPoint. Put the new one
+           beside it under a fresh name instead of failing. */
+        deckName = await freeDeckName(root, S.name);
+        await writeToDisk(root, deckName, fillDeck);
+        renamed = true;
+      }
+    } else {
+      var sink = blobSink();
+      await writeDeck(sink, count, ext, cx, cy, function(n){ return pngBlobs[n]; }, crcs, null);
+
+      /* wrap the deck and the loose images into one archive. Everything is
+         passed along as Blobs, so the heap never holds a whole page */
       var pptxBlob = sink.result();
       var outSink = blobSink();
       await outSink.init();
       var outer = new ZipWriter(outSink);
       await outer.addBlob(S.name + '/' + S.name + '.pptx', pptxBlob);
       pptxBlob = null;
-      for (var j = 0; j < pngBlobs.length; j++){
-        $('bs').textContent = 'Packing image ' + (j + 1);
-        await outer.addBlob(S.name + '/png/' + pad4(j + 1) + '.' + ext, pngBlobs[j]);
+      for (var j = 1; j <= count; j++){
+        $('bs').textContent = 'Packing image ' + j;
+        await outer.addBlob(S.name + '/png/' + pad4(j) + '.' + ext, pngBlobs[j], crcs[j]);
         pngBlobs[j] = null;
         if (j % 4 === 0) await nextFrame();
       }
@@ -1061,13 +1176,29 @@ async function build(){
     status.innerHTML = flag('ok', 'Done',
       count + ' page' + (count > 1 ? 's' : '') + ' at ' + f.pxW + ' x ' + f.pxH + ' px.',
       toDisk
-        ? 'In the folder you picked: <code>' + esc(S.name) + '/' + esc(S.name) + '.pptx</code> and <code>'
+        ? 'In the folder you picked: <code>' + esc(S.name) + '/' + esc(deckName) + '</code> and <code>'
           + esc(S.name) + '/png/</code> with the numbered ' + ext.toUpperCase() + ' files.'
-        : 'Downloaded <code>' + esc(S.name) + '.zip</code> containing the deck and a <code>png/</code> folder.');
+        : 'Downloaded <code>' + esc(S.name) + '.zip</code> containing the deck and a <code>png/</code> folder.')
+      + (renamed ? flag('warn', 'Saved under a new name',
+          '<code>' + esc(S.name) + '.pptx</code> could not be replaced, most likely because it is open in PowerPoint. '
+          + 'The new deck is next to it as <code>' + esc(deckName) + '</code>.') : '');
   } catch (err) {
-    status.innerHTML = flag('bad', 'Could not finish',
-      esc(err && err.message ? err.message : String(err)),
-      'Try a lower resolution or JPEG, then run it again.');
+    if (err && err.disk){
+      /* nothing wrong with the PDF or the settings, the folder said no */
+      var kind = err.cause && err.cause.name ? ' (' + esc(err.cause.name) + ')' : '';
+      status.innerHTML = flag('bad', 'Could not write to that folder',
+        'The browser was refused when saving <code>' + esc(err.file) + '</code>' + kind + '. '
+        + 'The PDF itself converted without a problem. This is nearly always the file being open in another app, '
+        + 'or the folder being synced or scanned (OneDrive, iCloud, Dropbox, antivirus).',
+        'Close the deck if it is open in PowerPoint or pick a different folder, then run it again. '
+        + 'Or take the same output as one zip download.')
+        + '<button class="emf-btn" id="as-zip" style="width:100%;margin-top:10px">Download as a zip instead</button>';
+      $('as-zip').addEventListener('click', function(){ build(true); });
+    } else {
+      status.innerHTML = flag('bad', 'Could not finish',
+        esc(err && err.message ? err.message : String(err)),
+        'Try a lower resolution or JPEG, then run it again.');
+    }
   } finally {
     pngBlobs.length = 0;
     locks.forEach(function(el){ el.disabled = false; });
