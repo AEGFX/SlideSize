@@ -1181,10 +1181,12 @@ async function build(forceZip){
 
   var toDisk = !forceZip && typeof window.showDirectoryPicker === 'function';
   var pngDir = null, root = null;
+  var where = '';   /* name of the folder the user picked. The browser never gives the full path */
 
   if (toDisk){
     try {
       var chosen = await window.showDirectoryPicker({ mode: 'readwrite' });
+      where = chosen.name || '';
       root   = await chosen.getDirectoryHandle(S.name, { create: true });
       pngDir = await root.getDirectoryHandle('png', { create: true });
     } catch (e){
@@ -1317,8 +1319,8 @@ async function build(forceZip){
       count + ' page' + (count > 1 ? 's' : '') + ' at ' + f.pxW + ' x ' + f.pxH + ' px'
         + (skipped ? ', ' + skipped + ' left out.' : '.'),
       toDisk
-        ? 'In the folder you picked: <code>' + esc(S.name) + '/' + esc(deckName) + '</code> and <code>'
-          + esc(S.name) + '/png/</code> with the numbered ' + ext.toUpperCase() + ' files.'
+        ? 'Saved in <code>' + (where ? esc(where) + '/' : '') + esc(S.name) + '/</code> as <code>' + esc(deckName)
+          + '</code>, with the numbered ' + ext.toUpperCase() + ' files in <code>png/</code>.'
         : 'Downloaded <code>' + esc(S.name) + '.zip</code> containing the deck and a <code>png/</code> folder.')
       + (stale.length ? flag('warn', 'Older images are still in the folder',
           'The <code>png/</code> folder also holds ' + stale.length + ' image' + (stale.length > 1 ? 's' : '')
