@@ -518,6 +518,7 @@ margin: 0;
 .tools-grid .media-tool  { --emf: #E0A020; --emf2: #f0b840; --emf-dim: rgba(224,160,32,0.12); }
 .tools-grid .pdf-tool    { --emf: #D96EB0; --emf2: #e689c0; --emf-dim: rgba(217,110,176,0.12); }
 .tools-grid .montage-link{ --emf: #A6CE4E; --emf2: #bfe070; --emf-dim: rgba(166,206,78,0.12); }
+.tools-grid .compare-tool{ --emf: #F07C30; --emf2: #f69a5a; --emf-dim: rgba(240,124,48,0.12); }
 /* EMF Extractor uses the default --emf teal already set on .other-tools */
 .other-tools-head {
 display: flex;
@@ -1131,6 +1132,17 @@ per-slide table. Export to TXT, CSV or a printable PDF.
 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
 </a>
 
+<a class="emf-tool tool-link compare-tool" href="/deck-compare.html">
+<div class="emf-tool-title">Deck Compare <span class="emf-chip">v1 vs v2</span></div>
+<p class="emf-intro">
+Drop two versions of a deck and see exactly what changed, slide by slide. Text edits word by word,
+swapped pictures and videos, playback settings, hidden, moved, added and deleted slides. Tracks slides
+by PowerPoint's own IDs, so reordering does not throw it.
+</p>
+<div class="go-row"><span>Open Deck Compare</span>
+<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+</a>
+
 <a class="emf-tool tool-link vt-tool" href="/vt-inspector.html">
 <div class="emf-tool-title">VT Inspector <span class="emf-chip">Playback check</span></div>
 <p class="emf-intro">
@@ -1465,6 +1477,7 @@ loadFromURL();
 if (!window.SS || !SS.wireTileDrop) return;
 var map = {
 '/ppt-report.html':      ['pptx'],
+'/deck-compare.html':    ['pptx'],
 '/vt-inspector.html':    ['mp4','mov','m4v','m4a'],
 '/media-extractor.html': ['pptx'],
 '/emf-extractor.html':   ['emf','pptx'],

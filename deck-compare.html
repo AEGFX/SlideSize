@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deck Compare &middot; SlideSize</title>
+<meta name="description" content="Compare two versions of a PowerPoint deck and get a slide by slide report of what changed. Text edits, swapped pictures and videos, playback settings, moved, added and deleted slides. Runs entirely in your browser.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23F07C30'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+/* Page accent override. shared.css provides base header, footer, body, logo and .intro. */
+:root {
+--accent: #F07C30;
+--accent2: #f69a5a;
+--dc: #F07C30;          /* Deck Compare orange */
+--dc2: #f69a5a;
+--dc-dim: rgba(240,124,48,0.12);
+--dc-glow: rgba(240,124,48,0.35);
+--warn-dim: rgba(224,160,32,0.14);
+--ok: #4caf82;
+--ok-dim: rgba(76,175,130,0.14);
+--fail: #E7302A;
+--fail-dim: rgba(231,48,42,0.14);
+--blue: #6a96d0;
+--blue-dim: rgba(74,120,181,0.16);
+--ins: rgba(76,175,130,0.22);
+--del: rgba(231,48,42,0.22);
+}
+
+.wrap {
+width: 100%;
+max-width: 1100px;
+padding: 24px 20px 48px;
+display: flex;
+flex-direction: column;
+gap: 18px;
+}
+
+/* ---------- the two drop zones ---------- */
+.pair {
+display: grid;
+grid-template-columns: 1fr auto 1fr;
+gap: 12px;
+align-items: stretch;
+}
+@media (max-width: 720px) {
+.pair { grid-template-columns: 1fr; }
+.swap { justify-self: center; transform: rotate(90deg); }
+}
+.drop {
+border: 1px dashed var(--border2);
+border-radius: 3px;
+background: var(--panel);
+padding: 22px 18px;
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+gap: 6px;
+cursor: pointer;
+transition: all 0.15s;
+position: relative;
+min-height: 150px;
+text-align: center;
+}
+.drop:hover { border-color: var(--dc); background: var(--panel2); }
+.drop.drag { border-color: var(--dc); background: var(--dc-dim); box-shadow: 0 0 0 3px var(--dc-glow); }
+.drop.loaded { border-style: solid; border-color: var(--border2); border-top: 2px solid var(--dc); }
+.drop svg.dz-icon { width: 30px; height: 30px; stroke: var(--dc); fill: none; stroke-width: 1.6; }
+.drop .dz-tag {
+font-family: var(--sans); font-size: 10px; font-weight: 700; letter-spacing: 2px;
+text-transform: uppercase; color: var(--dc);
+}
+.drop .dz-big { font-size: 14px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--text); }
+.drop .dz-small { font-size: 11px; color: var(--muted); }
+.drop .dz-file { font-family: var(--mono); font-size: 13px; color: var(--text); word-break: break-all; }
+.drop input[type="file"] { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.swap {
+align-self: center;
+width: 38px; height: 38px;
+border-radius: 50%;
+border: 1px solid var(--border2);
+background: var(--panel);
+color: var(--label);
+cursor: pointer;
+display: flex; align-items: center; justify-content: center;
+transition: all 0.15s;
+}
+.swap:hover:not(:disabled) { border-color: var(--dc); color: var(--dc); }
+.swap:disabled { opacity: 0.35; cursor: not-allowed; }
+.swap svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; }
+.privacy {
+font-family: var(--sans); font-size: 11px; color: var(--dc);
+display: flex; align-items: center; justify-content: center; gap: 5px;
+}
+.privacy svg { width: 11px; height: 11px; stroke: var(--dc); fill: none; stroke-width: 2; }
+
+/* ---------- summary strip ---------- */
+.topstrip {
+background: var(--panel);
+border: 1px solid var(--border2);
+border-left: 2px solid var(--dc);
+border-radius: 2px;
+padding: 14px 18px;
+display: flex;
+flex-direction: column;
+gap: 12px;
+}
+.versions { display: grid; grid-template-columns: 1fr auto 1fr; gap: 14px; align-items: center; }
+@media (max-width: 720px) { .versions { grid-template-columns: 1fr; } .versions .vs-arrow { display: none; } }
+.ver-name { font-family: var(--mono); font-size: 13px; color: var(--text); word-break: break-all; }
+.ver-sub { font-family: var(--sans); font-size: 11px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+.ver-tag { font-family: var(--sans); font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--dc); margin-bottom: 3px; }
+.vs-arrow { color: var(--dc); font-size: 18px; }
+.counts { display: flex; flex-wrap: wrap; gap: 7px; }
+.count {
+display: inline-flex; align-items: baseline; gap: 6px;
+padding: 6px 11px; border-radius: 2px;
+font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: 0.3px;
+border: 1px solid var(--border2); color: var(--label);
+}
+.count b { font-family: var(--mono); font-size: 14px; font-weight: 400; }
+.count.changed { border-color: var(--dc); color: var(--dc2); background: var(--dc-dim); }
+.count.added { border-color: var(--ok); color: #7fd8ad; background: var(--ok-dim); }
+.count.deleted { border-color: var(--fail); color: #ff8a84; background: var(--fail-dim); }
+.count.moved { border-color: var(--blue); color: #a9c6ea; background: var(--blue-dim); }
+.count.critical { border-color: var(--warn); color: #e8bc5d; background: var(--warn-dim); }
+.note-line { font-family: var(--sans); font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+/* ---------- cards ---------- */
+.card {
+background: var(--panel);
+border: 1px solid var(--border2);
+border-radius: 2px;
+padding: 14px 18px;
+display: flex;
+flex-direction: column;
+gap: 8px;
+}
+.card-head {
+font-family: var(--sans);
+font-size: 11px; font-weight: 700;
+letter-spacing: 2px;
+text-transform: uppercase;
+color: var(--dc);
+padding-bottom: 8px;
+border-bottom: 1px solid var(--border);
+}
+
+/* ---------- toolbar ---------- */
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.fbtn, .btn {
+background: transparent;
+border: 1px solid var(--border2);
+color: var(--label);
+font-family: var(--sans);
+font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+text-transform: uppercase;
+padding: 8px 12px;
+border-radius: 2px;
+cursor: pointer;
+transition: all 0.15s;
+}
+.fbtn:hover, .btn:hover { border-color: var(--dc); color: var(--dc); }
+.fbtn.on { background: var(--dc); border-color: var(--dc); color: #241005; }
+.fbtn .n { opacity: 0.7; margin-left: 4px; font-family: var(--mono); font-weight: 400; }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.toggle { font-family: var(--sans); font-size: 11px; color: var(--label); display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; margin-right: 6px; }
+.toggle input { accent-color: var(--dc); }
+
+/* ---------- slide rows ---------- */
+.rows { display: flex; flex-direction: column; gap: 8px; }
+.srow {
+display: grid;
+grid-template-columns: 92px 1fr;
+background: var(--panel);
+border: 1px solid var(--border2);
+border-left: 2px solid var(--border2);
+border-radius: 2px;
+}
+.srow.st-changed { border-left-color: var(--dc); }
+.srow.st-added { border-left-color: var(--ok); }
+.srow.st-deleted { border-left-color: var(--fail); }
+.srow.st-moved { border-left-color: var(--blue); }
+.srow.st-unchanged { opacity: 0.6; }
+.slot {
+padding: 12px 10px;
+border-right: 1px solid var(--border);
+font-family: var(--mono); color: var(--label);
+display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 2px;
+}
+.slot .big { font-size: 20px; color: var(--text); line-height: 1.1; }
+.slot .small { font-size: 11px; color: var(--muted); text-align: center; line-height: 1.4; }
+.slot .gone { text-decoration: line-through; color: #ff8a84; }
+.rbody { padding: 11px 16px 12px; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.rhead { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
+.ttl { font-family: var(--sans); font-size: 14px; font-weight: 500; color: var(--text); word-break: break-word; }
+.ttl.none { color: var(--muted); font-style: italic; font-weight: 400; }
+.badge {
+display: inline-block; padding: 2px 7px; border-radius: 2px;
+font-family: var(--sans); font-size: 10px; font-weight: 700;
+letter-spacing: 0.5px; text-transform: uppercase;
+border: 1px solid;
+}
+.badge.changed { color: var(--dc2); border-color: var(--dc); background: var(--dc-dim); }
+.badge.added { color: #7fd8ad; border-color: var(--ok); background: var(--ok-dim); }
+.badge.deleted { color: #ff8a84; border-color: var(--fail); background: var(--fail-dim); }
+.badge.moved { color: #a9c6ea; border-color: var(--blue); background: var(--blue-dim); }
+.badge.unchanged { color: var(--muted); border-color: var(--border2); }
+.badge.probable { color: var(--muted); border-color: var(--border2); border-style: dashed; cursor: help; }
+.badge.hidden { color: var(--muted); border-color: var(--border2); }
+.chg { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+.chg li {
+font-family: var(--sans); font-size: 12.5px; color: var(--label); line-height: 1.5;
+display: grid; grid-template-columns: 74px 1fr; gap: 10px; align-items: baseline;
+}
+.chg li .ctext { word-break: break-word; min-width: 0; }
+.tag {
+font-family: var(--sans); font-size: 9.5px; font-weight: 700; letter-spacing: 1px;
+text-transform: uppercase; color: var(--muted);
+}
+.chg li.major .tag { color: var(--warn); }
+.chg li.major .ctext::before { content: '!'; color: var(--warn); font-weight: 700; margin-right: 6px; }
+.chg li.off { display: none; }
+.preview { font-family: var(--mono); font-size: 12px; color: var(--muted); white-space: pre-wrap; word-break: break-word; line-height: 1.5; }
+details.diffbox { margin-top: 5px; }
+details.diffbox summary {
+font-family: var(--sans); font-size: 10.5px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
+color: var(--muted); cursor: pointer; list-style: none; display: inline-block;
+}
+details.diffbox summary::-webkit-details-marker { display: none; }
+details.diffbox summary::before { content: '+ '; }
+details.diffbox[open] summary::before { content: '- '; }
+details.diffbox summary:hover { color: var(--dc); }
+.diff {
+margin-top: 6px;
+background: var(--bg);
+border: 1px solid var(--border);
+border-radius: 2px;
+padding: 10px 12px;
+font-family: var(--mono); font-size: 12px; line-height: 1.6;
+color: var(--label);
+white-space: pre-wrap; word-break: break-word;
+max-height: 340px; overflow: auto;
+}
+.diff del { background: var(--del); color: #ffb3ae; text-decoration: line-through; text-decoration-color: rgba(255,138,132,0.7); }
+.diff ins { background: var(--ins); color: #b4f0d2; text-decoration: none; }
+.empty-note, .loading-note, .err-note {
+background: var(--panel);
+border: 1px solid var(--border2);
+padding: 14px 18px;
+font-family: var(--sans); font-size: 12px;
+color: var(--muted);
+border-radius: 2px;
+display: flex; align-items: center; gap: 10px;
+line-height: 1.5;
+}
+.err-note { border-left: 2px solid var(--fail); color: var(--label); }
+.srow.off { display: none; }
+
+@media (max-width: 560px) {
+.srow { grid-template-columns: 62px 1fr; }
+.slot .big { font-size: 16px; }
+.chg li { grid-template-columns: 1fr; gap: 1px; }
+.rbody { padding: 10px 12px; }
+}
+
+/* ---------- print, for a PDF to hand round ---------- */
+.print-only { display: none; }
+@media print {
+@page { margin: 14mm; }
+:root { --text: #111; --label: #222; --muted: #666; --panel: #fff; --panel2: #fff; --bg: #fff; --border: #ccc; --border2: #bbb; }
+body { background: #fff; color: #111; }
+header .site-bar, .pair, .privacy, .toolbar, .intro, footer, #ss-toast { display: none !important; }
+header { background: #fff; border: 0; padding: 0 0 8px; }
+.logo-text { color: #111; }
+.wrap { padding: 0; max-width: none; }
+.srow, .card, .topstrip { break-inside: avoid; box-shadow: none; }
+.srow.st-unchanged { opacity: 1; }
+.badge, .count { background: #fff !important; }
+.diff { max-height: none; overflow: visible; }
+details.diffbox summary { display: none; }
+.print-only { display: block; font-family: var(--sans); font-size: 10px; color: #666; text-align: center; margin-top: 12px; }
+.print-only a { color: #E7302A; text-decoration: none; }
+}
+</style>
+</head>
+<body>
+
+<header>
+<div class="site-bar">
+<a class="brand" href="/" title="Slide Size home"><img src="aegfx-logo-white.svg" alt="AEGFX, Slide Size home" width="104" height="24"></a>
+<nav aria-label="Breadcrumb"><ol class="crumbs">
+<li><a href="/">Slide Size</a></li>
+<li aria-current="page">Deck Compare</li>
+</ol></nav>
+<a class="site-contact" href="mailto:slidesize@aegfx.com">slidesize@aegfx.com</a>
+</div>
+<div class="logo-mark"></div>
+<div class="logo-text">Deck <span>Compare</span></div>
+</header>
+
+<div class="wrap">
+
+<p class="intro">
+Drop two versions of the same <strong>.pptx</strong> and get a slide by slide list of what changed.
+Slides are tracked by PowerPoint's own slide IDs, so a slide that moved from 8 to 11 is still recognised
+as the same slide. Catches text edits word by word, swapped pictures and videos, playback settings,
+hidden slides, transitions, notes, fonts, moved, added and deleted slides. Export to TXT, CSV or print to PDF.
+</p>
+
+<div class="pair">
+<label class="drop" id="drop-a" for="file-a">
+<input type="file" id="file-a" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation" multiple>
+<div class="dz-tag">A &middot; Older version</div>
+<svg class="dz-icon" viewBox="0 0 24 24"><path d="M14 3v4a1 1 0 001 1h4M5 3h9l5 5v11a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/><path d="M9 13h6M9 17h6"/></svg>
+<div class="dz-big">Drop PPTX</div>
+<div class="dz-small">or tap to browse. Drop both decks here at once if you like</div>
+</label>
+<button class="swap" id="swap" type="button" title="Swap A and B" aria-label="Swap A and B" disabled>
+<svg viewBox="0 0 24 24"><path d="M7 7h13l-4-4M17 17H4l4 4"/></svg>
+</button>
+<label class="drop" id="drop-b" for="file-b">
+<input type="file" id="file-b" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation" multiple>
+<div class="dz-tag">B &middot; Newer version</div>
+<svg class="dz-icon" viewBox="0 0 24 24"><path d="M14 3v4a1 1 0 001 1h4M5 3h9l5 5v11a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/><path d="M9 13h6M9 17h6"/></svg>
+<div class="dz-big">Drop PPTX</div>
+<div class="dz-small">or tap to browse</div>
+</label>
+</div>
+<div class="privacy">
+<svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+Processed in your browser &middot; nothing uploaded
+</div>
+
+<div id="stage"></div>
+
+</div>
+
+<footer>
+<span>Created by Andrew Brandse &middot; AEGFX LTD</span>
+<span><a href="mailto:slidesize@aegfx.com">slidesize@aegfx.com</a></span>
+<span>Built with Claude (Anthropic)</span>
+<div class="footer-sep"></div>
+<span>Nothing uploaded &middot; everything stays in your browser</span>
+<a class="footer-brand" href="https://aegfx.com" target="_blank" rel="noopener" title="AEGFX"><img src="aegfx-logo-reversed.svg" alt="AEGFX" width="121" height="28"></a>
+</footer>
+
+<script src="shared.js"></script>
+<script src="deck-compare.js" charset="utf-8"></script>
+
+<script>
+(function(){
+'use strict';
+
+var EXPORT_CONTACT = 'deckcompare@aegfx.com';
+var esc = SS.esc;
+var state = { a: null, b: null, rep: null, filter: 'all', showSame: false, busy: false, token: 0 };
+
+var CATS = {
+all:      { label: 'All changes' },
+critical: { label: 'Show critical', test: function (c) { return c.major; } },
+text:     { label: 'Text', cats: { text: 1 } },
+media:    { label: 'Media & playback', cats: { media: 1, playback: 1 } },
+layout:   { label: 'Layout & format', cats: { layout: 1, format: 1 } },
+notes:    { label: 'Notes', cats: { notes: 1 } }
+};
+var TAGS = { text: 'Text', media: 'Media', playback: 'Playback', layout: 'Layout', format: 'Format', notes: 'Notes' };
+
+/* ---------- file intake ---------- */
+function isPptx(f) { return /\.pptx$/i.test(f.name || ''); }
+function natural(a, b) { return String(a.name).localeCompare(String(b.name), undefined, { numeric: true, sensitivity: 'base' }); }
+
+function take(files, slot) {
+var list = Array.prototype.slice.call(files || []);
+var bad = list.filter(function (f) { return !isPptx(f); });
+list = list.filter(isPptx);
+if (!list.length) {
+SS.showToast(bad.length && /\.ppt$/i.test(bad[0].name) ? 'Old .ppt file, save it as .pptx first' : 'Drop .pptx files');
+return;
+}
+if (list.length >= 2) {
+/* two at once, the lower version number (by name) is the older one */
+list.sort(natural);
+state.a = list[0]; state.b = list[1];
+if (list.length > 2) SS.showToast('Using the first two decks');
+} else if (slot === 'b') {
+state.b = list[0];
+} else if (slot === 'a') {
+state.a = list[0];
+} else {
+if (!state.a) state.a = list[0]; else state.b = list[0];
+}
+paintDrops();
+run();
+}
+
+function paintDrops() {
+['a', 'b'].forEach(function (k) {
+var f = state[k], el = document.getElementById('drop-' + k);
+var tag = k === 'a' ? 'A &middot; Older version' : 'B &middot; Newer version';
+var input = el.querySelector('input');
+Array.prototype.slice.call(el.children).forEach(function (c) { if (c !== input) c.remove(); });
+var html = '<div class="dz-tag">' + tag + '</div>';
+if (f) {
+html += '<div class="dz-file">' + esc(f.name) + '</div><div class="dz-small">' + SS.fmtBytes(f.size) +
+(f.lastModified ? ' &middot; modified ' + esc(new Date(f.lastModified).toLocaleString()) : '') + '</div>' +
+'<div class="dz-small">Tap or drop to replace</div>';
+} else {
+html += '<svg class="dz-icon" viewBox="0 0 24 24"><path d="M14 3v4a1 1 0 001 1h4M5 3h9l5 5v11a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/><path d="M9 13h6M9 17h6"/></svg>' +
+'<div class="dz-big">Drop PPTX</div><div class="dz-small">or tap to browse</div>';
+}
+el.insertAdjacentHTML('beforeend', html);
+el.classList.toggle('loaded', !!f);
+});
+document.getElementById('swap').disabled = !(state.a && state.b);
+}
+
+function wireDrop(k) {
+var el = document.getElementById('drop-' + k);
+var input = document.getElementById('file-' + k);
+input.addEventListener('change', function () { take(input.files, k); input.value = ''; });
+['dragenter', 'dragover'].forEach(function (ev) {
+el.addEventListener(ev, function (e) { e.preventDefault(); el.classList.add('drag'); });
+});
+['dragleave', 'drop'].forEach(function (ev) {
+el.addEventListener(ev, function (e) {
+e.preventDefault();
+if (ev === 'drop' || !el.contains(e.relatedTarget)) el.classList.remove('drag');
+});
+});
+el.addEventListener('drop', function (e) { take(e.dataTransfer && e.dataTransfer.files, k); });
+}
+wireDrop('a'); wireDrop('b');
+/* a drop that misses the zones should not open the deck in the browser */
+['dragover', 'drop'].forEach(function (ev) { window.addEventListener(ev, function (e) { e.preventDefault(); }); });
+document.getElementById('swap').addEventListener('click', function () {
+var t = state.a; state.a = state.b; state.b = t;
+paintDrops(); run();
+});
+
+/* ---------- run ---------- */
+var stage = document.getElementById('stage');
+var deckCache = new WeakMap();
+
+function parseFile(f) {
+if (deckCache.has(f)) return deckCache.get(f);
+var p = SS.loadJSZip().then(function (JSZip) {
+return JSZip.loadAsync(f);
+}).then(function (zip) {
+return DeckCompare.parse(zip, { name: f.name, size: f.size });
+}).catch(function (e) {
+deckCache.delete(f);
+var msg = (e && e.message) || String(e);
+if (/end of central directory|zip/i.test(msg)) msg = f.name + ' is not a .pptx PowerPoint can open. If it is password protected, remove the password first.';
+throw new Error(msg);
+});
+deckCache.set(f, p);
+return p;
+}
+
+function run() {
+if (!state.a || !state.b) {
+stage.innerHTML = state.a || state.b ? '<div class="empty-note">Now drop the ' + (state.a ? 'newer version in B' : 'older version in A') + '.</div>' : '';
+return;
+}
+var token = ++state.token;
+stage.innerHTML = '<div class="loading-note"><span class="spinner"></span><span id="load-msg">Reading ' + esc(state.a.name) + '</span></div>';
+SS.hideHandoffOverlay();
+var A;
+parseFile(state.a).then(function (d) {
+A = d;
+var m = document.getElementById('load-msg');
+if (m) m.textContent = 'Reading ' + state.b.name;
+return parseFile(state.b);
+}).then(function (B) {
+if (token !== state.token) return;
+state.rep = DeckCompare.compare(A, B);
+render();
+}).catch(function (e) {
+if (token !== state.token) return;
+stage.innerHTML = '<div class="err-note">' + esc(e.message || e) + '</div>';
+});
+}
+
+/* ---------- render ---------- */
+function rowVisible(r) {
+if (r.status === 'unchanged' && !state.showSame) return false;
+if (state.filter === 'all') return true;
+if (r.status === 'added' || r.status === 'deleted') return true;
+if (state.filter === 'layout' && r.moved) return true;
+return r.changes.some(changeOn);
+}
+function changeOn(c) {
+var f = CATS[state.filter];
+if (!f || state.filter === 'all') return true;
+if (f.test) return f.test(c);
+return !!f.cats[c.cat];
+}
+function filterCount(key) {
+var keep = state.filter, n = 0;
+state.filter = key;
+state.rep.rows.forEach(function (r) { if (r.status !== 'unchanged' && rowVisible(r)) n++; });
+state.filter = keep;
+return n;
+}
+
+function fmtDate(iso) {
+if (!iso) return '';
+var d = new Date(iso);
+return isNaN(d) ? iso : d.toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+function verBlock(tag, v) {
+var bits = [v.slides + ' slides' + (v.hidden ? ' (' + v.hidden + ' hidden)' : ''), SS.fmtBytes(v.size)];
+var saved = v.savedAt ? 'Saved ' + fmtDate(v.savedAt) + (v.savedBy ? ' by ' + v.savedBy : '') : '';
+return '<div><div class="ver-tag">' + tag + '</div><div class="ver-name">' + esc(v.name) + '</div>' +
+'<div class="ver-sub">' + esc(bits.join(' · ')) + (saved ? '<br>' + esc(saved) : '') + '</div></div>';
+}
+
+function render() {
+var rep = state.rep, c = rep.counts;
+var critical = rep.rows.filter(function (r) { return r.status === 'added' || r.status === 'deleted' || r.changes.some(function (x) { return x.major; }); }).length
++ (rep.deck.some(function (x) { return x.major; }) ? 1 : 0);
+var html = '<div class="topstrip">' +
+'<div class="versions">' + verBlock('A · Older', rep.a) + '<div class="vs-arrow">→</div>' + verBlock('B · Newer', rep.b) + '</div>' +
+'<div class="counts">' +
+count('changed', c.changed, 'changed') + count('added', c.added, 'added') + count('deleted', c.deleted, 'deleted') +
+count('moved', c.moved, 'moved') + count('critical', critical, 'critical') + count('', c.unchanged, 'unchanged') +
+'</div>';
+var notes = [];
+if (!rep.idsTrusted && rep.idPairs) notes.push('These decks do not look like versions of each other, so slide IDs were only used where the content also matched.');
+if (c.probable) notes.push(c.probable + ' slide' + (c.probable > 1 ? 's were' : ' was') + ' paired on content rather than slide ID, usually a slide pasted back in from another deck. Marked as probable match.');
+if (!c.changed && !c.added && !c.deleted && !c.moved && !rep.deck.length) notes.push('No differences found. These decks match slide for slide.');
+notes.forEach(function (n) { html += '<div class="note-line">' + esc(n) + '</div>'; });
+html += '</div>';
+
+if (rep.deck.length) {
+html += '<div class="card"><div class="card-head">Whole deck</div><ul class="chg">' +
+rep.deck.map(changeLi).join('') + '</ul></div>';
+}
+
+html += '<div class="toolbar"><div class="filters" role="group" aria-label="Filter changes">';
+Object.keys(CATS).forEach(function (k) {
+html += '<button class="fbtn' + (state.filter === k ? ' on' : '') + '" data-f="' + k + '" type="button">' + esc(CATS[k].label) + '<span class="n">' + filterCount(k) + '</span></button>';
+});
+html += '</div><div class="actions">' +
+'<label class="toggle"><input type="checkbox" id="show-same"' + (state.showSame ? ' checked' : '') + '> Show unchanged</label>' +
+'<button class="btn" id="expand" type="button">Expand text</button>' +
+'<button class="btn" id="dl-txt" type="button">TXT</button>' +
+'<button class="btn" id="dl-csv" type="button">CSV</button>' +
+'<button class="btn" id="dl-pdf" type="button">Print / PDF</button>' +
+'</div></div>';
+
+html += '<div class="rows" id="rows">' + rep.rows.map(rowHtml).join('') + '</div>';
+html += '<div class="empty-note" id="none-note" style="display:none">Nothing in this filter.</div>';
+html += '<div class="print-only">Deck Compare by SlideSize &middot; slidesize.com &middot; <a href="mailto:' + EXPORT_CONTACT + '">' + EXPORT_CONTACT + '</a> &middot; AEGFX LTD</div>';
+stage.innerHTML = html;
+applyFilter();
+wireToolbar();
+}
+function count(cls, n, label) {
+return '<span class="count ' + cls + '"><b>' + n + '</b>' + label + '</span>';
+}
+
+function rowHtml(r, i) {
+var st = r.status;
+var slot;
+if (r.a && r.b) {
+slot = '<div class="big">' + r.b.num + '</div>' + (r.a.num !== r.b.num ? '<div class="small">was ' + r.a.num + '</div>' : '');
+} else if (r.b) {
+slot = '<div class="big">' + r.b.num + '</div><div class="small">new</div>';
+} else {
+slot = '<div class="big gone">' + r.a.num + '</div><div class="small">old deck</div>';
+}
+var title = DeckCompare.titleOf(r);
+var badges = '<span class="badge ' + st + '">' + st + '</span>';
+if (r.moved && st !== 'moved') badges += '<span class="badge moved">moved</span>';
+if (r.match === 'content') badges += '<span class="badge probable" title="Paired on content, not slide ID. Usually a slide pasted in from another copy of the deck.">probable match</span>';
+var s = r.b || r.a;
+if (s && s.hidden && !r.changes.some(function (c) { return /hidden/.test(c.text); })) badges += '<span class="badge hidden">hidden</span>';
+var body = '';
+if (r.changes.length) body = '<ul class="chg">' + r.changes.map(changeLi).join('') + '</ul>';
+else if (st === 'added' || st === 'deleted') body = slidePreview(s);
+return '<div class="srow st-' + st + '" data-i="' + i + '">' +
+'<div class="slot">' + slot + '</div>' +
+'<div class="rbody"><div class="rhead">' + badges + '<span class="ttl' + (title ? '' : ' none') + '">' + esc(title || 'Untitled slide') + '</span></div>' + body + '</div></div>';
+}
+function slidePreview(s) {
+var text = s.shapes.map(function (x) { return x.text; }).filter(Boolean).slice(1).join('\n').replace(/\n{2,}/g, '\n');
+var media = s.shapes.filter(function (x) { return x.kind === 'video' || x.kind === 'audio' || x.kind === 'picture'; });
+var bits = [];
+if (text) bits.push(text.length > 280 ? text.slice(0, 277) + '...' : text);
+var kinds = {};
+media.forEach(function (x) { kinds[x.kind] = (kinds[x.kind] || 0) + 1; });
+var mk = Object.keys(kinds).map(function (k) { return kinds[k] + ' ' + k + (kinds[k] > 1 ? 's' : ''); });
+if (mk.length) bits.push('[' + mk.join(', ') + ']');
+if (s.layout) bits.push('Layout ' + s.layout);
+return bits.length ? '<div class="preview">' + esc(bits.join('\n')) + '</div>' : '';
+}
+function changeLi(c) {
+var html = '<li class="c-' + c.cat + (c.major ? ' major' : '') + '" data-cat="' + c.cat + '" data-major="' + (c.major ? 1 : 0) + '">' +
+'<span class="tag">' + (TAGS[c.cat] || c.cat) + '</span><span class="ctext">' + esc(c.text);
+if (c.diff && c.diff.length) {
+html += '<details class="diffbox"><summary>Full text</summary><div class="diff">' + c.diff.map(function (o) {
+var t = esc(o[1]);
+return o[0] === '+' ? '<ins>' + t + '</ins>' : o[0] === '-' ? '<del>' + t + '</del>' : t;
+}).join('') + '</div></details>';
+}
+return html + '</span></li>';
+}
+
+function applyFilter() {
+var rows = state.rep.rows, shown = 0;
+Array.prototype.forEach.call(document.querySelectorAll('#rows .srow'), function (el) {
+var r = rows[+el.getAttribute('data-i')];
+var vis = rowVisible(r);
+el.classList.toggle('off', !vis);
+if (vis) shown++;
+Array.prototype.forEach.call(el.querySelectorAll('.chg li'), function (li, j) {
+li.classList.toggle('off', !changeOn(r.changes[j]));
+});
+});
+var note = document.getElementById('none-note');
+if (note) note.style.display = shown ? 'none' : 'flex';
+}
+
+function wireToolbar() {
+Array.prototype.forEach.call(document.querySelectorAll('.fbtn'), function (b) {
+b.addEventListener('click', function () {
+state.filter = b.getAttribute('data-f');
+Array.prototype.forEach.call(document.querySelectorAll('.fbtn'), function (x) { x.classList.toggle('on', x === b); });
+applyFilter();
+});
+});
+document.getElementById('show-same').addEventListener('change', function (e) { state.showSame = e.target.checked; applyFilter(); });
+var exp = document.getElementById('expand');
+exp.addEventListener('click', function () {
+var boxes = document.querySelectorAll('details.diffbox');
+var open = !Array.prototype.some.call(boxes, function (d) { return d.open; });
+Array.prototype.forEach.call(boxes, function (d) { d.open = open; });
+exp.textContent = open ? 'Collapse text' : 'Expand text';
+});
+document.getElementById('dl-txt').addEventListener('click', function () {
+var t = DeckCompare.toText(state.rep, { all: state.showSame });
+t += '\r\nDeck Compare by SlideSize, slidesize.com, ' + EXPORT_CONTACT + ', AEGFX LTD\r\n';
+SS.download(t, baseName() + '.txt', 'text/plain;charset=utf-8');
+});
+document.getElementById('dl-csv').addEventListener('click', function () {
+SS.download('﻿' + DeckCompare.toCSV(state.rep), baseName() + '.csv', 'text/csv;charset=utf-8');
+});
+document.getElementById('dl-pdf').addEventListener('click', function () {
+/* print everything, with full text open, then put the view back */
+var keep = { filter: state.filter, same: state.showSame };
+var boxes = Array.prototype.slice.call(document.querySelectorAll('details.diffbox'));
+var wasOpen = boxes.map(function (d) { return d.open; });
+state.filter = 'all'; applyFilter();
+boxes.forEach(function (d) { d.open = true; });
+var title = document.title;
+document.title = baseName();
+window.print();
+document.title = title;
+state.filter = keep.filter; state.showSame = keep.same; applyFilter();
+boxes.forEach(function (d, i) { d.open = wasOpen[i]; });
+});
+}
+function baseName() {
+function strip(n) { return n.replace(/\.pptx$/i, ''); }
+return 'Compare ' + strip(state.a.name) + ' vs ' + strip(state.b.name);
+}
+
+/* ---------- handoff from the launchpad tile ---------- */
+SS.consumeHandoff(function (files) { take(files, null); });
+
+})();
+</script>
+</body>
+</html>
