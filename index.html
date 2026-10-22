@@ -519,6 +519,7 @@ margin: 0;
 .tools-grid .pdf-tool    { --emf: #D96EB0; --emf2: #e689c0; --emf-dim: rgba(217,110,176,0.12); }
 .tools-grid .montage-link{ --emf: #A6CE4E; --emf2: #bfe070; --emf-dim: rgba(166,206,78,0.12); }
 .tools-grid .compare-tool{ --emf: #F07C30; --emf2: #f69a5a; --emf-dim: rgba(240,124,48,0.12); }
+.tools-grid .stone-tool  { --emf: #CDA873; --emf2: #e0c294; --emf-dim: rgba(205,168,115,0.12); }
 /* EMF Extractor uses the default --emf teal already set on .other-tools */
 .other-tools-head {
 display: flex;
@@ -1143,6 +1144,17 @@ by PowerPoint's own IDs, so reordering does not throw it.
 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
 </a>
 
+<a class="emf-tool tool-link stone-tool" href="/rosina-stone.html">
+<div class="emf-tool-title">Rosina Stone <span class="emf-chip">Script v1 vs v2</span></div>
+<p class="emf-intro">
+Drop two versions of a script and get the new one with every change marked. Added words in green, cuts
+struck through, moved paragraphs flagged and numbered so prompt ops can find them fast. Reads TXT, Word,
+PDF, PowerPoint notes, RTF and Final Draft.
+</p>
+<div class="go-row"><span>Open Rosina Stone</span>
+<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+</a>
+
 <a class="emf-tool tool-link vt-tool" href="/vt-inspector.html">
 <div class="emf-tool-title">VT Inspector <span class="emf-chip">Playback check</span></div>
 <p class="emf-intro">
@@ -1478,6 +1490,7 @@ if (!window.SS || !SS.wireTileDrop) return;
 var map = {
 '/ppt-report.html':      ['pptx'],
 '/deck-compare.html':    ['pptx'],
+'/rosina-stone.html':    ['txt','text','md','docx','pdf','pptx','rtf','odt','fdx','fountain','html','htm','srt','vtt'],
 '/vt-inspector.html':    ['mp4','mov','m4v','m4a'],
 '/media-extractor.html': ['pptx'],
 '/emf-extractor.html':   ['emf','pptx'],
