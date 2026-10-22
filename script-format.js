@@ -64,7 +64,47 @@ function decide(w, next, first){
 }
 
 /* ---------- build the formatted model ---------- */
-const SPEAKER_RE = /^[\p{Lu}][\p{Lu}0-9 .'&-]{0,30}:$/u;
+/* Speaker names and roles followed by : or ;  ANDREW:  VOICE OF GOD;  DR. PATEL:
+   In capitals they are found anywhere in a paragraph. At the start of a paragraph a
+   short Title Case name also counts (Sarah:  Voice of God:). */
+const CAPS_WORD = /^[(\["'“]*[\p{Lu}0-9][\p{Lu}0-9.'’&\-/()]*$/u;
+const hasLetter = w => /\p{L}/u.test(w);
+function findLabels(words){
+  const starts = new Map();   // start index -> end index
+  for (let i = 0; i < words.length; i++){
+    const w = SR.canon(words[i].w);
+    const m = /^(.*?)[:;]$/.exec(w);
+    if (!m || !m[1] || !hasLetter(m[1])) continue;
+    let start = -1;
+    if (CAPS_WORD.test(m[1])){
+      start = i;
+      // walk back over the rest of a multi word name in capitals
+      while (start > 0 && i - start < 4){
+        const prev = SR.canon(words[start - 1].w);
+        if (words[start - 1].slide || !CAPS_WORD.test(prev) || !hasLetter(prev) || /[.!?:;,]$/.test(prev) && !/^\p{Lu}{1,4}\.$/u.test(prev)) break;
+        start--;
+      }
+    } else if (i <= 3 && /^\p{Lu}/u.test(m[1])){
+      const name = words.slice(0, i + 1).map(x => x.w).join(' ');
+      const ok = words.slice(0, i).every(x => /^(\p{Lu}|of$|the$|and$|for$|de$|van$)/u.test(x.w));
+      if (ok && name.length <= 30) start = 0;
+    }
+    if (start >= 0 && i < words.length - 1) starts.set(start, i);
+  }
+  return starts;
+}
+
+/* Slide cues: SLIDE 3, Slide 12a, [SLIDE 4], slides 5-7, NEXT SLIDE, SLIDE CHANGE */
+const SLIDE_RE = /[\[(]?\b(?:(?:next|new|change)\s+slides?\b|slides?\s*(?:#|no\.?|number)?\s*\d+[a-z]?(?:\s*(?:-|–|to|&|and)\s*\d+[a-z]?)?|slides?\s+(?:change|up)\b)[\])]?/gi;
+function markSlides(words){
+  let text = '', starts = [];
+  words.forEach((w, i) => { if (i) text += ' '; starts.push(text.length); text += w.w; });
+  let m; SLIDE_RE.lastIndex = 0;
+  while ((m = SLIDE_RE.exec(text))){
+    const a = m.index, b = a + m[0].length;
+    words.forEach((w, i) => { const s = starts[i], e = s + w.w.length; if (s < b && e > a) w.slide = true; });
+  }
+}
 function build(){
   const src = state.src;
   if (!src){ state.model = null; return; }
@@ -75,19 +115,24 @@ function build(){
   paras.forEach((p, pi) => {
     const lines = [];
     let line = [];
-    const words = p.words;
+    const words = p.words.map(w => ({ w: w.w, f: w.f }));
+    markSlides(words);
+    const labels = speakers ? findLabels(words) : new Map();
+    const labelEnds = new Set(labels.values());
     for (let i = 0; i < words.length; i++){
       const w = words[i];
-      line.push({ w: w.w, f: w.f });
-      // speaker label on its own line
-      if (speakers && i === 0 && SPEAKER_RE.test(w.w) && words.length > 1){
-        line[line.length - 1].cut = { id: 'p' + pi + 'w' + i, split: true, sure: true, why: 'speaker name', spk: true };
-        lines.push(line); line = []; continue;
+      line.push({ w: w.w, f: w.f, slide: w.slide });
+      const id = 'p' + pi + 'w' + i;
+      if (speakers && i < words.length - 1 && (labels.has(i + 1) || labelEnds.has(i))){
+        // break before a speaker name and again straight after its colon; a click undoes it
+        const why = labels.has(i + 1) ? 'speaker name follows' : 'speaker name';
+        if (!state.flips.has(id)){ line[line.length - 1].cut = { id, split: true, sure: true, why, spk: true }; lines.push(line); line = []; continue; }
+        line[line.length - 1].cut = { id, split: false, sure: true, why, spk: true, flipped: true };
+        continue;
       }
       if (i === words.length - 1) break;
       const d = decide(w.w, words[i + 1].w, i === 0);
       if (!d) continue;
-      const id = 'p' + pi + 'w' + i;
       const flipped = state.flips.has(id);
       const split = flipped ? !d.split : d.split;
       line[line.length - 1].cut = { id, split, sure: d.sure || flipped, auto: d.split, why: d.why, flipped };
@@ -98,6 +143,15 @@ function build(){
     model.push(lines);
   });
   state.model = model;
+}
+
+/* ---------- slide cue colour ---------- */
+const slideOn = () => $('optSlide').checked;
+function slideStyle(){
+  const c = $('slideColour').value, hl = $('slideMode').value === 'highlight';
+  if (!hl) return 'color:' + c + ';font-weight:700';
+  const r = parseInt(c.slice(1,3),16), g = parseInt(c.slice(3,5),16), b = parseInt(c.slice(5,7),16);
+  return 'background:' + c + ';color:' + ((r*299+g*587+b*114)/1000 > 128 ? '#111' : '#fff') + ';font-weight:700;border-radius:2px;padding:0 2px';
 }
 
 /* ---------- render ---------- */
@@ -116,10 +170,10 @@ function render(){
       n++;
       let t = '';
       line.forEach((w, wi) => {
-        const st = showHl ? SR.fmtStyle(w.f) : '';
+        const st = w.slide && slideOn() ? slideStyle() : (showHl ? SR.fmtStyle(w.f) : '');
         t += (wi ? ' ' : '') + (st ? '<span class="w" style="' + st + '">' + esc(w.w) + '</span>' : esc(w.w));
         const c = w.cut;
-        if (!c || c.spk) return;
+        if (!c) return;
         if (!c.sure) toCheck++;
         if (c.flipped) flips++;
         const cls = 'cut' + (c.split ? ' is-split' : ' is-joined') + (c.sure ? '' : ' unsure') + (c.flipped ? ' flipped' : '');
@@ -187,6 +241,7 @@ function asText(){ return outputLines().map(l => l.map(w => w.w).join(' ')).join
 function xmlEsc(s){ return s.replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c])); }
 function rPr(key){
   if (!key) return '';
+  if (key === 'slide'){ const c = $('slideColour').value.slice(1).toUpperCase(); return '<w:rPr><w:b/>' + ($('slideMode').value === 'highlight' ? '<w:shd w:val="clear" w:color="auto" w:fill="' + c + '"/>' : '<w:color w:val="' + c + '"/>') + '</w:rPr>'; }
   const o = SR.parseKey(key); let x = '';
   if (o.b) x += '<w:b/>';
   if (o.i) x += '<w:i/>';
@@ -204,7 +259,7 @@ async function asDocx(){
     if (!line.length) return '<w:p/>';
     const runs = []; let cur = null;
     line.forEach((w, i) => {
-      const k = w.f || '';
+      const k = (w.slide && slideOn()) ? 'slide' : (w.f || '');
       const text = (i ? ' ' : '') + w.w;
       if (cur && cur.k === k) cur.t += text;
       else { if (cur && i) { /* space belongs to the earlier run */ } cur = { k, t: text }; runs.push(cur); }
@@ -268,6 +323,9 @@ $('pasteBtn').addEventListener('click', () => { const ta = $('paste'); ta.hidden
 let deb;
 $('paste').addEventListener('input', () => { clearTimeout(deb); deb = setTimeout(() => { const v = $('paste').value; setNotice(''); setSource(v.trim() ? SR.fromText(v) : null); }, 250); });
 ['optJoin', 'optSpk'].forEach(id => $(id).addEventListener('change', () => { state.flips = new Map(); render(); }));
+['optSlide', 'slideColour', 'slideMode'].forEach(id => $(id).addEventListener('input', () => { saveSlidePrefs(); render(); }));
+function saveSlidePrefs(){ try { localStorage.setItem('ss-script-format-slide', JSON.stringify({ on: $('optSlide').checked, c: $('slideColour').value, m: $('slideMode').value })); } catch (e) {} }
+try { const p = JSON.parse(localStorage.getItem('ss-script-format-slide') || 'null'); if (p){ $('optSlide').checked = !!p.on; if (/^#[0-9a-f]{6}$/i.test(p.c)) $('slideColour').value = p.c; if (p.m) $('slideMode').value = p.m; } } catch (e) {}
 $('prev').addEventListener('click', () => go(-1));
 $('next').addEventListener('click', () => go(1));
 document.addEventListener('keydown', e => {
@@ -277,7 +335,7 @@ document.addEventListener('keydown', e => {
 });
 
 /* ---------- example ---------- */
-const EX = `SARAH: Good evening and welcome to the launch of the new U.S.A. programme. It's 7 p.m. here in London and 2 p.m. in New York. Tonight we'll hear from Dr. Anita Patel, our Chief Scientist. She joined us from No. 10 in 2019, e.g. working on the U.K. space strategy. Are you ready? Let's begin.
+const EX = `SARAH: Good evening and welcome to the launch of the new U.S.A. programme. [SLIDE 1] It's 7 p.m. here in London and 2 p.m. in New York. Tonight we'll hear from Dr. Anita Patel, our Chief Scientist. She joined us from No. 10 in 2019, e.g. working on the U.K. space strategy. Are you ready? Let's begin. NEXT SLIDE ANITA; Thank you Sarah. Slide 2 shows where we started.
 
 VOICE OF GOD: Please welcome to the stage J. K. Rowling's favourite illustrator, Mr. Tom Hughes. He has worked with Apple Inc. and the B.B.C. for over 20 years. His new book is out on Oct. 14 at 9 a.m. The queue starts at the front doors...
 
