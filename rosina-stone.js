@@ -47,213 +47,10 @@ PRIYA: The winner of Innovation of the Year is...
 
 SARAH: And finally, a huge thank you to our production team, who have made tonight possible.`;
 
-/* ---------- Script loaders (lazy) ---------- */
-const loaded={};
-function loadScript(src){
-  if(loaded[src])return loaded[src];
-  return loaded[src]=new Promise((res,rej)=>{const s=document.createElement("script");s.src=src;s.onload=res;s.onerror=()=>{delete loaded[src];rej(new Error("Couldn't load a helper library. Check your internet connection and try again."))};document.head.appendChild(s)});
-}
-function getZip(){return SS.loadJSZip()}
-async function getPdf(){
-  await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js");
-  await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js");
-  const lib=window.pdfjsLib;lib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-  return lib;
-}
-
-/* ---------- Text extraction ---------- */
-function decodeText(buf){
-  let t=new TextDecoder("utf-8").decode(buf);
-  if((t.match(/\uFFFD/g)||[]).length>3)t=new TextDecoder("windows-1252").decode(buf);
-  return t.replace(/^﻿/,"");
-}
-const xml=s=>new DOMParser().parseFromString(s,"application/xml");
-const byTag=(n,t)=>Array.from(n.getElementsByTagName(t));
-
-function rtfToText(s){
-  const skipDest=new Set(["fonttbl","colortbl","stylesheet","info","pict","header","footer","headerl","headerr","footerl","footerr","themedata","datastore","latentstyles","xmlnstbl","listtable","listoverridetable","rsidtbl","generator","mmathPr","object","fldinst","filetbl","revtbl","listtext","pntext","pntxtb","pntxta"]);
-  let out="",i=0,depth=0,skipAt=-1,uc=1,pendingSkip=0;const n=s.length;
-  while(i<n){
-    const c=s[i];
-    if(c==="{"){depth++;i++;continue}
-    if(c==="}"){if(skipAt===depth)skipAt=-1;depth--;i++;continue}
-    if(c==="\\"){
-      const d=s[i+1];
-      if(d==="\\"||d==="{"||d==="}"){if(skipAt<0)out+=d;i+=2;continue}
-      if(d==="*"){if(skipAt<0)skipAt=depth;i+=2;continue}
-      if(d==="'"){const h=parseInt(s.substr(i+2,2),16);if(pendingSkip>0)pendingSkip--;else if(skipAt<0)out+=String.fromCharCode(h);i+=4;continue}
-      if(d==="~"){if(skipAt<0)out+=" ";i+=2;continue}
-      if(d==="-"||d==="_"){if(skipAt<0&&d==="_")out+="-";i+=2;continue}
-      if(d==="\n"||d==="\r"){if(skipAt<0)out+="\n\n";i+=2;continue}
-      const m=/^([a-zA-Z]+)(-?\d+)? ?/.exec(s.slice(i+1,i+40));
-      if(!m){i+=2;continue}
-      i+=1+m[0].length;const w=m[1],p=m[2];
-      if(skipDest.has(w)){if(skipAt<0)skipAt=depth;continue}
-      if(skipAt>=0)continue;
-      if(w==="par"||w==="sect"||w==="page")out+="\n\n";
-      else if(w==="line")out+="\n";
-      else if(w==="tab"||w==="cell")out+="\t";
-      else if(w==="row")out+="\n";
-      else if(w==="uc")uc=+p||1;
-      else if(w==="u"){let v=+p;if(v<0)v+=65536;out+=String.fromCharCode(v);pendingSkip=uc}
-      else if(w==="emdash"||w==="endash")out+="-";
-      else if(w==="lquote"||w==="rquote")out+="'";
-      else if(w==="ldblquote"||w==="rdblquote")out+='"';
-      continue;
-    }
-    if(c==="\n"||c==="\r"){i++;continue}
-    if(skipAt<0){if(pendingSkip>0)pendingSkip--;else out+=c}
-    i++;
-  }
-  return out;
-}
-
-function htmlToText(s){
-  const doc=new DOMParser().parseFromString(s,"text/html");
-  doc.querySelectorAll("script,style,noscript,head").forEach(e=>e.remove());
-  const block=/^(P|DIV|H[1-6]|LI|TR|BLOCKQUOTE|SECTION|ARTICLE|HEADER|FOOTER|PRE|TABLE|UL|OL|DT|DD)$/;
-  let out="";
-  (function walk(n){
-    for(const c of n.childNodes){
-      if(c.nodeType===3)out+=c.nodeValue.replace(/\s+/g," ");
-      else if(c.nodeType===1){
-        if(c.tagName==="BR"){out+="\n";continue}
-        const b=block.test(c.tagName);if(b)out+="\n\n";walk(c);if(b)out+="\n\n";
-      }
-    }
-  })(doc.body||doc);
-  return out;
-}
-
-function docxParas(x){
-  const body=x.getElementsByTagName("w:body")[0]||x;
-  const parts=[];
-  for(const p of byTag(body,"w:p")){
-    let t="";
-    (function walk(n){
-      for(const c of n.childNodes){
-        if(c.nodeType!==1)continue;
-        const tn=c.tagName;
-        if(tn==="w:t")t+=c.textContent;
-        else if(tn==="w:tab")t+="\t";
-        else if(tn==="w:br"||tn==="w:cr")t+="\n";
-        else if(tn==="w:noBreakHyphen")t+="-";
-        else if(tn==="w:del"||tn==="w:delText"||tn==="w:instrText"||tn==="w:p")continue;
-        else walk(c);
-      }
-    })(p);
-    parts.push(t);
-  }
-  return parts.join("\n\n");
-}
-
-async function pptxText(buf){
-  const JSZip=await getZip();const zip=await JSZip.loadAsync(buf);
-  const slides=Object.keys(zip.files).filter(f=>/^ppt\/slides\/slide\d+\.xml$/.test(f)).sort((a,b)=>+a.match(/\d+/)[0]-+b.match(/\d+/)[0]);
-  // Use presentation order when available
-  try{
-    const pres=xml(await zip.file("ppt/presentation.xml").async("string"));
-    const rels=xml(await zip.file("ppt/_rels/presentation.xml.rels").async("string"));
-    const map={};byTag(rels,"Relationship").forEach(r=>map[r.getAttribute("Id")]=r.getAttribute("Target"));
-    const ordered=byTag(pres,"p:sldId").map(s=>"ppt/"+map[s.getAttribute("r:id")]).filter(f=>zip.file(f));
-    if(ordered.length)slides.splice(0,slides.length,...ordered);
-  }catch(e){}
-  const paraText=p=>{let t="";for(const c of byTag(p,"*")){if(c.tagName==="a:t")t+=c.textContent;else if(c.tagName==="a:br")t+="\n"}return t};
-  let out=[];
-  for(let i=0;i<slides.length;i++){
-    const f=slides[i];
-    const x=xml(await zip.file(f).async("string"));
-    out.push("SLIDE "+(i+1));
-    byTag(x,"a:p").forEach(p=>{const t=paraText(p);if(t.trim())out.push(t)});
-    const relF=f.replace("slides/","slides/_rels/")+".rels";
-    if(zip.file(relF)){
-      const r=xml(await zip.file(relF).async("string"));
-      const nr=byTag(r,"Relationship").find(e=>/notesSlide$/.test(e.getAttribute("Type")));
-      if(nr){
-        const nf="ppt/"+nr.getAttribute("Target").replace(/^\.\.\//,"");
-        if(zip.file(nf)){
-          const nx=xml(await zip.file(nf).async("string"));
-          const notes=[];
-          byTag(nx,"p:sp").forEach(sp=>{const ph=sp.getElementsByTagName("p:ph")[0];if(ph&&ph.getAttribute("type")==="body")byTag(sp,"a:p").forEach(p=>{const t=paraText(p);if(t.trim())notes.push(t)})});
-          if(notes.length){out.push("NOTES (slide "+(i+1)+")");out.push(...notes)}
-        }
-      }
-    }
-  }
-  return out.join("\n\n");
-}
-
-async function pdfText(buf){
-  const lib=await getPdf();
-  const pdf=await lib.getDocument({data:new Uint8Array(buf)}).promise;
-  const paras=[];let cur="";
-  for(let p=1;p<=pdf.numPages;p++){
-    const page=await pdf.getPage(p);const tc=await page.getTextContent();
-    const lines=[];let line="",lastY=null,lastH=12;
-    for(const it of tc.items){
-      if(!("str" in it))continue;
-      const y=it.transform[5];const h=Math.abs(it.transform[3])||lastH;
-      if(lastY!==null&&Math.abs(y-lastY)>h*0.5){lines.push({t:line,y:lastY,h:lastH});line=""}
-      line+=it.str;lastY=y;lastH=h;
-      if(it.hasEOL){lines.push({t:line,y,h});line="";lastY=null}
-    }
-    if(line)lines.push({t:line,y:lastY,h:lastH});
-    const L=lines.filter(l=>l.t.trim());
-    const gaps=[];for(let i=1;i<L.length;i++)gaps.push(Math.abs(L[i-1].y-L[i].y));
-    const med=gaps.length?gaps.slice().sort((a,b)=>a-b)[Math.floor(gaps.length/2)]:12;
-    for(let i=0;i<L.length;i++){
-      if(i>0){const g=Math.abs(L[i-1].y-L[i].y);if(g>med*1.45||g<0.1){if(cur.trim())paras.push(cur);cur=""}}
-      cur+=(cur?" ":"")+L[i].t.trim();
-    }
-    if(cur.trim()&&/[.!?:"')\]]$/.test(cur.trim())){paras.push(cur);cur=""}
-  }
-  if(cur.trim())paras.push(cur);
-  return paras.join("\n\n");
-}
-
-async function extract(file){
-  const name=file.name;const ext=(name.split(".").pop()||"").toLowerCase();
-  const buf=await file.arrayBuffer();
-  let text="",kind=ext.toUpperCase(),flow=false;
-  if(ext==="docx"||ext==="docm"||ext==="dotx"){
-    const JSZip=await getZip();const z=await JSZip.loadAsync(buf);
-    text=docxParas(xml(await z.file("word/document.xml").async("string")));kind="Word";
-  }else if(ext==="pptx"||ext==="pptm"||ext==="ppsx"){text=await pptxText(buf);kind="PowerPoint"}
-  else if(ext==="pdf"){text=await pdfText(buf);kind="PDF";flow=true}
-  else if(ext==="odt"){
-    const JSZip=await getZip();const z=await JSZip.loadAsync(buf);
-    const x=xml(await z.file("content.xml").async("string"));
-    const ps=byTag(x,"*").filter(e=>e.tagName==="text:p"||e.tagName==="text:h");
-    text=ps.map(p=>{let t="";(function w(n){for(const c of n.childNodes){if(c.nodeType===3)t+=c.nodeValue;else if(c.nodeType===1){if(c.tagName==="text:s")t+=" ".repeat(+c.getAttribute("text:c")||1);else if(c.tagName==="text:tab")t+="\t";else if(c.tagName==="text:line-break")t+="\n";else if(c.tagName!=="text:note")w(c)}}})(p);return t}).join("\n\n");kind="OpenDocument";
-  }else if(ext==="rtf"){text=rtfToText(decodeText(buf));kind="RTF"}
-  else if(ext==="fdx"){
-    const x=xml(decodeText(buf));
-    text=byTag(x,"Paragraph").map(p=>{const ty=p.getAttribute("Type")||"";const t=byTag(p,"Text").map(e=>e.textContent).join("");return ty==="Character"||ty==="Scene Heading"?t.toUpperCase():t}).join("\n\n");kind="Final Draft";
-  }else if(ext==="html"||ext==="htm"){text=htmlToText(decodeText(buf));kind="HTML"}
-  else if(ext==="doc"||ext==="ppt"||ext==="pages"||ext==="key"){
-    throw new Error(name+" is an older or Apple format this page can't read. Save it as ."+(ext==="ppt"||ext==="key"?"pptx":"docx")+" or PDF and drop it again.");
-  }else{
-    text=decodeText(buf);kind=ext?ext.toUpperCase():"Text";
-    if(/\0/.test(text.slice(0,2000)))throw new Error(name+" doesn't look like a text file. Try saving it as .txt, .docx or PDF.");
-  }
-  if(!text.trim())throw new Error("Couldn't find any text in "+name+". If it's a scanned PDF it has no real text to compare.");
-  return {name,kind,text,flow,modified:file.lastModified};
-}
-
-/* ---------- Normalising and splitting ---------- */
-function canon(s){
-  return s.replace(/[‘’‚′]/g,"'").replace(/[“”„″]/g,'"')
-    .replace(/[–—−]/g,"-").replace(/…/g,"...").replace(/[   ]/g," ");
-}
-function splitParas(src,ignoreLB){
-  const t=src.text.replace(/\r\n?/g,"\n");
-  let raw;
-  if(ignoreLB||src.flow)raw=t.split(/\n\s*\n/).map(p=>p.replace(/\s*\n\s*/g," "));
-  else raw=t.split(/\n/);
-  return raw.map(p=>p.replace(/[ \t]+/g," ").trim()).filter(Boolean);
-}
+/* ---------- Reading files: shared with Script Format, see script-read.js ---------- */
+const SR=window.ScriptRead;
 function keyOf(w,loose){
-  let k=canon(w);
+  let k=SR.canon(w);
   if(loose){k=k.toLowerCase().replace(/[^\p{L}\p{N}]+/gu,"")}
   return k;
 }
@@ -310,11 +107,13 @@ function sim(x,y){
 }
 const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function compare(A,B,opt){
-  const pa=splitParas(A,opt.lb),pb=splitParas(B,opt.lb);
-  const tok=p=>p.split(" ");
-  const wa=pa.map(p=>tok(p).map(w=>keyOf(w,opt.loose)));
-  const wb=pb.map(p=>tok(p).map(w=>keyOf(w,opt.loose)));
+  const PA=SR.paragraphs(A,opt.lb),PB=SR.paragraphs(B,opt.lb);
+  const pa=PA.map(p=>p.text),pb=PB.map(p=>p.text);
+  const wa=PA.map(p=>p.words.map(x=>keyOf(x.w,opt.loose)));
+  const wb=PB.map(p=>p.words.map(x=>keyOf(x.w,opt.loose)));
   const ka=wa.map(w=>w.join(" ")),kb=wb.map(w=>w.join(" "));
+  // Formatting is compared only when both files carry it (Word and PowerPoint)
+  const fmtBoth=!!(A.fmt&&B.fmt),showB=!!B.fmt;
   const ops=diff(ka,kb,0);
 
   const groups=[];let h=null;
@@ -352,24 +151,39 @@ function compare(A,B,opt){
   }
 
   const out=[];let lastB=-1,chgId=0;
-  const stats={add:0,rem:0,moved:0,paras:0};
+  const stats={add:0,rem:0,moved:0,fmt:0,paras:0};
+  // one word of B, shown with its highlight and weight
+  const wordB=(x)=>{const st=showB?SR.fmtStyle(x.f):"";return st?'<span class="w" style="'+st+'">'+esc(x.w)+'</span>':esc(x.w)};
 
   function wordPara(a,b,note,moved){
-    const ta=tok(pa[a]),tb=tok(pb[b]);
-    let w=diff(wa[a],wb[b],2000);w=cleanup(w,tb);
-    const p={n:b+1,changed:false,moved,ids:[],was:pa[a],now:pb[b],html:note?'<span class="note">'+note+'</span>':""};
-    let inChg=false,first=true;
+    const ta=PA[a].words,tb=PB[b].words;
+    let w=diff(wa[a],wb[b],2000);w=cleanup(w,tb.map(x=>x.w));
+    const p={n:b+1,changed:false,moved,ids:[],fmts:[],was:pa[a],now:pb[b],html:note?'<span class="note">'+note+'</span>':""};
+    let mode="",curFmt="",fmtWords=[],first=true;
     const sp=()=>{const r=first?"":" ";first=false;return r};
+    const close=()=>{
+      if(mode==="chg")p.html+="</span>";
+      else if(mode==="fmt"){p.html+='</span><span class="fmt-tag">'+esc(curFmt)+'</span>';p.fmts.push({text:fmtWords.join(" "),desc:curFmt});stats.fmt++}
+      mode="";fmtWords=[];
+    };
     for(const [t,ai,bi] of w){
-      if(t==="="){if(inChg){p.html+="</span>";inChg=false}p.html+=sp()+esc(tb[bi]);continue}
-      if(!inChg){const id=chgId++;p.ids.push(id);p.html+=sp()+'<span class="chg" id="c'+id+'">';inChg=true;first=true}
-      if(t==="-"){p.html+=sp()+"<del>"+esc(ta[ai])+"</del>";stats.rem++}
-      else{p.html+=sp()+"<ins>"+esc(tb[bi])+"</ins>";stats.add++}
+      if(t==="="){
+        const d=fmtBoth?SR.describeFmt(ta[ai].f,tb[bi].f):"";
+        if(d){
+          if(mode!=="fmt"||curFmt!==d){close();const id=chgId++;p.ids.push(id);p.html+=sp()+'<span class="chg fmtchg" id="c'+id+'" title="'+esc(d)+'">';first=true;mode="fmt";curFmt=d}
+          p.html+=sp()+wordB(tb[bi]);fmtWords.push(tb[bi].w);
+        }else{close();p.html+=sp()+wordB(tb[bi])}
+        continue;
+      }
+      if(mode!=="chg"){close();const id=chgId++;p.ids.push(id);p.html+=sp()+'<span class="chg" id="c'+id+'">';first=true;mode="chg"}
+      if(t==="-"){p.html+=sp()+"<del>"+esc(ta[ai].w)+"</del>";stats.rem++}
+      else{p.html+=sp()+"<ins>"+esc(tb[bi].w)+"</ins>";stats.add++}
     }
-    if(inChg)p.html+="</span>";
+    close();
     p.html=p.html.replace(/<\/del> <del>/g," ").replace(/<\/ins> <ins>/g," ");
     if(moved&&!p.ids.length){const id=chgId++;p.ids.push(id);p.html=p.html.replace(/(<\/span>)/,'$1<span class="chg" id="c'+id+'">')+"</span>"}
     p.changed=p.ids.length>0;
+    p.textChanged=ka[a]!==kb[b];
     if(p.changed)stats.paras++;
     if(moved)stats.moved++;
     return p;
@@ -382,9 +196,14 @@ function compare(A,B,opt){
     const id=chgId++;stats.add+=wb[b].length;stats.paras++;
     return {n:b+1,changed:true,ids:[id],was:"",now:pb[b],html:'<span class="chg" id="c'+id+'"><ins>'+esc(pb[b])+'</ins></span>'};
   }
+  const fmtDiffers=(a,b)=>fmtBoth&&PA[a].words.some((x,i)=>x.f!==PB[b].words[i].f);
 
   groups.forEach((g,gi)=>{
-    if(g.eq){out.push({n:g.b+1,html:esc(pb[g.b]),changed:false});lastB=g.b;return}
+    if(g.eq){
+      if(fmtDiffers(g.a,g.b))out.push(wordPara(g.a,g.b,"",false));
+      else out.push({n:g.b+1,html:PB[g.b].words.map(wordB).join(" "),changed:false});
+      lastB=g.b;return;
+    }
     // A paragraphs from this hunk that belong elsewhere now
     const leftovers=[];
     for(const a of g.dels){
@@ -411,7 +230,7 @@ function compare(A,B,opt){
     }
     while(leftovers.length)out.push(removedPara(leftovers.shift()));
   });
-  return {out,count:chgId,stats,paraCountA:pa.length,paraCountB:pb.length};
+  return {out,count:chgId,stats,fmtBoth,paraCountA:pa.length,paraCountB:pb.length};
 }
 function trunc(s,n){return s.length>n?s.slice(0,n).replace(/\s+\S*$/,"")+"…":s}
 
@@ -452,7 +271,8 @@ function render(){
       +'<span class="chip">'+s.paras+' ¶ affected</span>'
       +(s.add?'<span class="chip add">+'+s.add+' words</span>':"")
       +(s.rem?'<span class="chip rem">−'+s.rem+' words</span>':"")
-      +(s.moved?'<span class="chip mov">'+s.moved+' moved</span>':"");
+      +(s.moved?'<span class="chip mov">'+s.moved+' moved</span>':"")
+      +(s.fmt?'<span class="chip fmt">'+s.fmt+' formatting</span>':"");
   }
   let html="";
   if(state.view==="chg"){
@@ -498,8 +318,12 @@ function changeList(){
     if(p.moved){lines.push("¶ "+p.n+"  MOVED here","Now  "+p.now,"");continue}
     if(p.gone){lines.push("Cut (after ¶ "+(p.afterN||0)+")","Was  "+p.was,"");continue}
     lines.push("¶ "+p.n);
-    if(p.was)lines.push("Was  "+p.was);
-    lines.push("Now  "+(p.now||"(removed)"),"");
+    if(p.textChanged!==false){
+      if(p.was)lines.push("Was  "+p.was);
+      lines.push("Now  "+(p.now||"(removed)"));
+    }
+    (p.fmts||[]).forEach(f=>lines.push("Formatting  \""+trunc(f.text,60)+"\"  "+f.desc));
+    lines.push("");
   }
   return lines.join("\n");
 }
@@ -535,11 +359,11 @@ async function loadFiles(files,side){
   document.body.classList.add("busy");setNotice("Reading "+files.map(f=>f.name).join(" and ")+"…");
   try{
     if(files.length===2){
-      const [x,y]=await Promise.all(files.map(extract));
+      const [x,y]=await Promise.all(files.map(SR.extract));
       const older=x.modified<=y.modified?[x,y]:[y,x];
       state.A=older[0];state.B=older[1];closePaste("A");closePaste("B");
     }else{
-      state[side]=await extract(files[0]);closePaste(side);
+      state[side]=await SR.extract(files[0]);closePaste(side);
     }
     setNotice("");
   }catch(e){setNotice(escapeT(e.message||String(e)),true)}
@@ -560,7 +384,7 @@ function nextEmpty(){return !state.A?"A":!state.B?"B":"B"}
   const ta=$("paste"+side);let deb;
   ta.addEventListener("input",()=>{clearTimeout(deb);deb=setTimeout(()=>{
     if(state.example)clearExample();
-    const v=ta.value;state[side]=v.trim()?{name:"Pasted text",kind:"Pasted",text:v,flow:false,modified:Date.now()}:null;showSlot(side);render()},250)});
+    const v=ta.value;state[side]=v.trim()?SR.fromText(v):null;showSlot(side);render()},250)});
 });
 function openPaste(side){
   clearExample();
@@ -587,6 +411,7 @@ $("dl").addEventListener("click",()=>{
 $("optDel").addEventListener("change",e=>document.body.classList.toggle("hide-del",!e.target.checked));
 $("optCase").addEventListener("change",render);
 $("optLB").addEventListener("change",render);
+$("optHl").addEventListener("change",e=>document.body.classList.toggle("no-hl",!e.target.checked));
 document.addEventListener("keydown",e=>{
   if(e.target.closest("textarea,input"))return;
   if(e.key==="n"||e.key==="j"){go(1);e.preventDefault()}
@@ -594,8 +419,15 @@ document.addEventListener("keydown",e=>{
 });
 
 /* ---------- Start with the example ---------- */
-state.A={name:"awards-script-v3.txt",kind:"Example",text:EX_A,flow:false,example:true};
-state.B={name:"awards-script-v4.txt",kind:"Example",text:EX_B,flow:false,example:true};
+// Example files carry highlights like a colour coded Word script, to show formatting changes
+function exampleSrc(name,text,marks){
+  const keys=[""],fmt=new Int32Array(text.length);
+  marks.forEach(([str,key])=>{let id=keys.indexOf(key);if(id<0){id=keys.length;keys.push(key)}
+    let i=text.indexOf(str);while(i>=0){fmt.fill(id,i,i+str.length);i=text.indexOf(str,i+str.length)}});
+  return {name,kind:"Example",text,fmt,fmtKeys:keys,flow:false,example:true};
+}
+state.A=exampleSrc("awards-script-v3.docx",EX_A,[["SARAH:","h=FFFF00"],["JAMES:","h=00FF00"],["VOICE OF GOD:","h=00FFFF"]]);
+state.B=exampleSrc("awards-script-v4.docx",EX_B,[["SARAH:","h=FFFF00"],["PRIYA:","h=00FF00"],["VOICE OF GOD:","h=FF00FF"],["fantastic","b"]]);
 showSlot("A");showSlot("B");
 setNotice('<span class="tag">Example</span> Two versions of a sample awards script are loaded. Drop your own files to replace them.');
 render();

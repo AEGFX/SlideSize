@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Script Format &middot; SlideSize</title>
+<meta name="description" content="Put every sentence of a script on its own line for the prompter. Sentence ends are judged in context, so U.S.A., Dr. Patel and 9 a.m. stay intact. Keeps Word highlights and colours. Runs entirely in your browser.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%236FC3E8'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+/* Page accent override. shared.css provides base header, footer, body, logo and .intro. Script Format is sky blue. */
+:root {
+--accent: #6FC3E8;
+--accent2: #96d4ef;
+--rs: #6FC3E8;
+--rs2: #96d4ef;
+--rs-dim: rgba(111,195,232,0.12);
+--rs-glow: rgba(111,195,232,0.32);
+--ok: #4caf82;
+--ok-dim: rgba(76,175,130,0.18);
+--fail: #E7302A;
+--fail-dim: rgba(231,48,42,0.18);
+--blue: #6a96d0;
+--blue-dim: rgba(74,120,181,0.18);
+--ins-bg: rgba(76,175,130,0.24);
+--ins-fg: #9fe3bf;
+--del-bg: rgba(231,48,42,0.22);
+--del-fg: #ff9d97;
+}
+
+.wrap {
+width: 100%;
+max-width: 1100px;
+padding: 24px 20px 48px;
+display: flex;
+flex-direction: column;
+gap: 18px;
+}
+
+/* ---------- the two inputs ---------- */
+.slots { display: grid; grid-template-columns: 1fr; gap: 12px; }
+@media (max-width: 720px) {
+.slots { grid-template-columns: 1fr; }
+.swap { justify-self: center; transform: rotate(90deg); }
+}
+.slot {
+border: 1px dashed var(--border2);
+border-radius: 3px;
+background: var(--panel);
+padding: 18px;
+display: flex;
+flex-direction: column;
+gap: 8px;
+min-width: 0;
+min-height: 150px;
+transition: all 0.15s;
+}
+.slot.over { border-color: var(--rs); background: var(--rs-dim); box-shadow: 0 0 0 3px var(--rs-glow); }
+.slot.filled { border-style: solid; border-top: 2px solid var(--rs); }
+.slot-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.slot-label { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--rs); }
+.slot-label b { font-weight: 700; }
+.slot-meta { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.file-name { font-family: var(--mono); font-size: 14px; color: var(--text); word-break: break-all; min-height: 1.4em; }
+.file-name.empty { font-family: var(--sans); font-size: 14px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--label); }
+.slot-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: auto; }
+textarea.paste {
+width: 100%; min-height: 140px; resize: vertical;
+background: var(--bg); color: var(--text);
+border: 1px solid var(--border2); border-radius: 2px;
+padding: 10px; font-family: var(--sans); font-size: 13px; line-height: 1.5;
+}
+textarea.paste:focus { outline: none; border-color: var(--rs); }
+.swap {
+align-self: center;
+width: 38px; height: 38px;
+border-radius: 50%;
+border: 1px solid var(--border2);
+background: var(--panel);
+color: var(--label);
+cursor: pointer;
+display: flex; align-items: center; justify-content: center;
+transition: all 0.15s;
+}
+.swap:hover { border-color: var(--rs); color: var(--rs); }
+.swap svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; }
+.privacy {
+font-size: 11px; color: var(--rs);
+display: flex; align-items: center; justify-content: center; gap: 5px; text-align: center; flex-wrap: wrap;
+}
+.privacy svg { width: 11px; height: 11px; stroke: var(--rs); fill: none; stroke-width: 2; }
+.formats { font-size: 11px; color: var(--muted); text-align: center; line-height: 1.7; }
+.formats code { font-family: var(--mono); font-size: 11px; color: var(--label); border: 1px solid var(--border2); border-radius: 2px; padding: 0 4px; }
+
+/* ---------- buttons ---------- */
+.btn {
+background: transparent;
+border: 1px solid var(--border2);
+color: var(--label);
+font-family: var(--sans);
+font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+text-transform: uppercase;
+padding: 8px 12px;
+border-radius: 2px;
+cursor: pointer;
+transition: all 0.15s;
+}
+.btn:hover:not(:disabled) { border-color: var(--rs); color: var(--rs); }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn.primary { background: var(--rs); border-color: var(--rs); color: #08222e; }
+.btn.primary:hover:not(:disabled) { background: var(--rs2); border-color: var(--rs2); color: #08222e; }
+.btn.ghost { border-color: transparent; color: var(--muted); }
+:focus-visible { outline: 2px solid var(--rs); outline-offset: 2px; }
+
+/* ---------- sticky toolbar ---------- */
+.toolbar {
+position: sticky; top: 0; z-index: 5;
+background: var(--panel);
+border: 1px solid var(--border2);
+border-left: 2px solid var(--rs);
+border-radius: 2px;
+padding: 12px 16px;
+display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between;
+box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+}
+.stats { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
+.chip {
+display: inline-flex; align-items: baseline; gap: 6px;
+padding: 5px 10px; border-radius: 2px;
+font-size: 11px; font-weight: 600; letter-spacing: 0.3px;
+border: 1px solid var(--border2); color: var(--label);
+font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.chip.big { border-color: var(--rs); color: var(--rs2); background: var(--rs-dim); font-size: 12px; }
+.chip.add { border-color: var(--ok); color: #7fd8ad; background: var(--ok-dim); }
+.chip.rem { border-color: var(--fail); color: #ff8a84; background: var(--fail-dim); }
+.chip.mov { border-color: var(--blue); color: #a9c6ea; background: var(--blue-dim); }
+.chip.fmt { border-color: #d98ad0; color: #f0b6e8; background: rgba(217,110,176,0.16); }
+.chip.same { border-color: var(--ok); color: #7fd8ad; background: var(--ok-dim); font-size: 12px; }
+.controls { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.seg { display: inline-flex; }
+.seg .btn { border-radius: 0; }
+.seg .btn:first-child { border-radius: 2px 0 0 2px; }
+.seg .btn:last-child { border-radius: 0 2px 2px 0; border-left: 0; }
+.seg .btn[aria-pressed="true"] { background: var(--rs); border-color: var(--rs); color: #08222e; }
+.nav { display: inline-flex; align-items: center; gap: 4px; }
+.nav .count { font-family: var(--mono); font-size: 13px; color: var(--label); min-width: 5.2em; text-align: center; }
+.opts { display: flex; flex-wrap: wrap; gap: 6px 16px; flex-basis: 100%; }
+.opts label { font-size: 11px; color: var(--label); display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
+.opts input { accent-color: var(--rs); }
+
+/* ---------- notices ---------- */
+.notice {
+background: var(--panel); border: 1px solid var(--border2); border-radius: 2px;
+padding: 10px 14px; font-size: 12px; color: var(--label);
+display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+}
+.notice.err { border-color: var(--fail); color: #ff8a84; }
+.notice .tag { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #08222e; background: var(--rs); padding: 2px 7px; border-radius: 2px; }
+#notice:empty { display: none; }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 11px; color: var(--muted); align-items: center; }
+.legend .chip { padding: 1px 7px; }
+
+/* ---------- the script ---------- */
+.result { background: var(--panel); border: 1px solid var(--border2); border-radius: 2px; padding: 8px 0; }
+.para {
+display: grid; grid-template-columns: 4.4em 1fr; gap: 0 14px;
+padding: 8px 20px 8px 0;
+border-left: 3px solid transparent;
+font-size: 17px; line-height: 1.65; color: var(--text);
+}
+.para .n { font-family: var(--mono); font-size: 12px; color: var(--muted); text-align: right; padding-top: 0.35em; user-select: none; }
+.para .t { min-width: 0; overflow-wrap: anywhere; }
+.para.changed { border-left-color: var(--rs); background: rgba(111,195,232,0.06); }
+.para.changed .n { color: var(--rs); }
+.para.moved { border-left-color: var(--blue); background: var(--blue-dim); }
+.para.moved .n { color: #a9c6ea; }
+.para .note { display: block; font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #a9c6ea; margin-bottom: 2px; }
+.para.gone .note { color: #ff8a84; }
+ins, del { text-decoration: none; border-radius: 2px; padding: 0 2px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+ins { background: var(--ins-bg); color: var(--ins-fg); border-bottom: 2px solid var(--ok); }
+del { background: var(--del-bg); color: var(--del-fg); text-decoration: line-through; text-decoration-thickness: 1.5px; }
+.hide-del del, .hide-del .para.gone { display: none; }
+.w { border-radius: 2px; padding: 0 2px; }
+.no-hl .w { background: none !important; color: inherit !important; font-weight: inherit !important; font-style: inherit !important; text-decoration: none !important; padding: 0; }
+.fmtchg { outline: 1.5px dashed #d98ad0; outline-offset: 2px; }
+.fmtchg.current { outline: 2px solid var(--rs); }
+.fmt-tag {
+display: inline-block; margin-left: 6px; vertical-align: 2px;
+font-family: var(--sans); font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+color: #f0b6e8; background: rgba(217,110,176,0.16); border: 1px solid #d98ad0; border-radius: 2px; padding: 0 5px; line-height: 1.6;
+}
+.chg { scroll-margin: 140px; border-radius: 2px; }
+.chg.current { outline: 2px solid var(--rs); outline-offset: 3px; }
+.gap {
+display: flex; align-items: center; gap: 10px;
+color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;
+padding: 6px 20px 6px calc(4.4em + 17px);
+}
+.gap::before, .gap::after { content: ""; flex: 1; border-top: 1px dashed var(--border2); }
+.empty-state { padding: 40px 20px; text-align: center; color: var(--muted); font-size: 13px; }
+.empty-state strong { display: block; font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--label); margin-bottom: 6px; }
+.busy { opacity: 0.55; pointer-events: none; }
+@media (max-width: 560px) {
+.para { grid-template-columns: 3em 1fr; font-size: 16px; padding-right: 12px; }
+.gap { padding-left: calc(3em + 17px); }
+.toolbar { position: static; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* ---------- formatted lines ---------- */
+.line { display: grid; grid-template-columns: 4.4em 1fr; gap: 0 14px; padding: 7px 20px 7px 0; border-left: 3px solid transparent; font-size: 17px; line-height: 1.6; color: var(--text); }
+.line + .line { border-top: 1px solid var(--border); }
+.line .n { font-family: var(--mono); font-size: 12px; color: var(--muted); text-align: right; padding-top: 0.35em; user-select: none; }
+.line .t { min-width: 0; overflow-wrap: anywhere; }
+.line.current { border-left-color: var(--rs); background: var(--rs-dim); }
+.pgap { height: 14px; border-top: 1px dashed var(--border2); margin-top: 6px; }
+.cut {
+display: inline-flex; align-items: center; justify-content: center;
+min-width: 18px; height: 18px; margin-left: 3px; padding: 0 3px; vertical-align: 1px;
+font-family: var(--mono); font-size: 12px; line-height: 1;
+border-radius: 2px; border: 1px solid transparent; background: transparent; color: var(--muted);
+cursor: pointer; opacity: 0.55; transition: all 0.15s;
+}
+.cut:hover, .cut:focus-visible { opacity: 1; border-color: var(--rs); color: var(--rs); }
+.cut.is-split { color: var(--rs); opacity: 0.35; }
+.cut.is-joined:not(.unsure):not(.flipped) { opacity: 0; }
+.line:hover .cut.is-joined, .cut.is-joined:focus-visible { opacity: 0.55; }
+.cut.unsure { opacity: 1; color: #e8bc5d; border-color: var(--warn); background: rgba(224,160,32,0.14); }
+.cut.flipped { opacity: 1; color: var(--rs); border-color: var(--rs); background: var(--rs-dim); }
+.chip.warn { border-color: var(--warn); color: #e8bc5d; background: rgba(224,160,32,0.14); }
+.chip.ok { border-color: var(--ok); color: #7fd8ad; background: var(--ok-dim); }
+.opts select { background: var(--bg); color: var(--text); border: 1px solid var(--border2); border-radius: 2px; font: inherit; font-size: 11px; padding: 3px 6px; }
+@media (max-width: 560px) { .line { grid-template-columns: 3em 1fr; font-size: 16px; padding-right: 12px; } }
+</style>
+</head>
+<body>
+
+<header>
+<div class="site-bar">
+<a class="brand" href="/" title="Slide Size home"><img src="aegfx-logo-white.svg" alt="AEGFX, Slide Size home" width="104" height="24"></a>
+<nav aria-label="Breadcrumb"><ol class="crumbs">
+<li><a href="/">Slide Size</a></li>
+<li aria-current="page">Script Format</li>
+</ol></nav>
+<a class="site-contact" href="mailto:slidesize@aegfx.com">slidesize@aegfx.com</a>
+</div>
+<div class="logo-mark"></div>
+<div class="logo-text">Script <span>Format</span></div>
+</header>
+
+<div class="wrap">
+
+<p class="intro">
+Drop or paste a script and get <strong>every sentence on its own line</strong>, ready for the prompter.
+It reads each full stop in context, so U.S.A., Dr. Patel, 9 a.m., e.g. and J. K. Rowling stay in one piece.
+Calls it isn't sure about are flagged amber, and any break can be added or removed with a click.
+Copy it, or save as TXT or Word. Word files keep their highlights, colours and bold.
+</p>
+
+<div class="slots">
+<div class="slot" id="slot">
+<div class="slot-head"><span class="slot-label">Script</span><span class="slot-meta" id="meta"></span></div>
+<div class="file-name empty" id="name">Drop a script here</div>
+<textarea class="paste" id="paste" placeholder="Paste the script here" hidden></textarea>
+<div class="slot-actions">
+<button class="btn" type="button" id="pick">Choose file</button>
+<button class="btn ghost" type="button" id="pasteBtn">Paste text</button>
+<input type="file" id="file" hidden>
+</div>
+</div>
+</div>
+<div class="privacy">
+<svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+Processed in your browser &middot; nothing uploaded
+</div>
+<p class="formats">Reads <code>TXT</code> <code>DOCX</code> <code>PDF</code> <code>PPTX</code> slides and notes <code>RTF</code> <code>ODT</code> <code>FDX</code> <code>FOUNTAIN</code> <code>HTML</code> <code>MD</code></p>
+
+<div class="toolbar" id="toolbar">
+<div class="stats" id="stats"></div>
+<div class="controls">
+<div class="nav">
+<button class="btn" type="button" id="prev" title="Previous one to check (P)" aria-label="Previous one to check">&uarr;</button>
+<span class="count" id="count">0 / 0</span>
+<button class="btn" type="button" id="next" title="Next one to check (N)" aria-label="Next one to check">&darr;</button>
+</div>
+<button class="btn primary" type="button" id="copy">Copy script</button>
+<button class="btn" type="button" id="dlTxt">TXT</button>
+<button class="btn" type="button" id="dlDocx">Word</button>
+</div>
+<div class="opts">
+<label>Between sentences <select id="optGap"><option value="blank">Blank line</option><option value="line">New line</option></select></label>
+<label><input type="checkbox" id="optPara"> Extra gap between original paragraphs</label>
+<label><input type="checkbox" id="optSpk"> Speaker names on their own line</label>
+<label><input type="checkbox" id="optJoin"> Join hard-wrapped lines</label>
+</div>
+</div>
+
+<div id="notice"></div>
+<div class="legend" aria-hidden="true">
+<span><span class="cut is-split" style="opacity:1">&crarr;</span> new line</span>
+<span><span class="cut is-joined" style="opacity:1">&middot;</span> kept together</span>
+<span><span class="cut unsure">&middot;</span> worth a check</span>
+<span>Click any marker to flip it &middot; N and P keys jump between the ones to check</span>
+</div>
+<div class="result" id="result"></div>
+
+</div>
+
+<footer>
+<span>Created by Andrew Brandse &middot; AEGFX LTD</span>
+<span><a href="mailto:slidesize@aegfx.com">slidesize@aegfx.com</a></span>
+<span>Built with Claude (Anthropic)</span>
+<div class="footer-sep"></div>
+<span>Nothing uploaded &middot; everything stays in your browser</span>
+<a class="footer-brand" href="https://aegfx.com" target="_blank" rel="noopener" title="AEGFX"><img src="aegfx-logo-reversed.svg" alt="AEGFX" width="121" height="28"></a>
+</footer>
+
+<script src="shared.js"></script>
+<script src="script-read.js" charset="utf-8"></script>
+<script src="script-format.js" charset="utf-8"></script>
+</body>
+</html>
