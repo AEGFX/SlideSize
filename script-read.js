@@ -1,4 +1,4 @@
-/* script-read.js — shared script reader for the prompting tools (Script Comparison, Script Format)
+/* script-read.js — shared script reader for the prompting tools (Script Compare, Script Format)
  *
  * window.ScriptRead
  *   extract(file)              -> promise of { name, kind, text, fmt, fmtKeys, flow, modified }

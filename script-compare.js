@@ -1,4 +1,4 @@
-/* script-comparison.js — Script Comparison, script version compare for SlideSize
+/* script-compare.js — Script Compare, script version compare for SlideSize
  *
  * Two versions of a script in, the new version out with every change marked.
  * Paragraphs are aligned with a Myers diff, changed paragraphs are paired by
@@ -406,7 +406,7 @@ $("next").addEventListener("click",()=>go(1));
 $("copy").addEventListener("click",copyList);
 $("dl").addEventListener("click",()=>{
   const base=(state.B&&state.B.name||"script").replace(/\.[^.]+$/,"");
-  SS.download(changeList()+"\n\nMade with Script Comparison, slidesize.com\n","changes-"+base+".txt","text/plain;charset=utf-8");
+  SS.download(changeList()+"\n\nMade with Script Compare, slidesize.com\n","changes-"+base+".txt","text/plain;charset=utf-8");
 });
 $("optDel").addEventListener("change",e=>document.body.classList.toggle("hide-del",!e.target.checked));
 $("optCase").addEventListener("change",render);
@@ -432,6 +432,6 @@ showSlot("A");showSlot("B");
 setNotice('<span class="tag">Example</span> Two versions of a sample awards script are loaded. Drop your own files to replace them.');
 render();
 
-/* Files dropped on the Script Comparison tile on the home page */
+/* Files dropped on the Script Compare tile on the home page */
 SS.consumeHandoff(files=>{clearExample();loadFiles(files,"A")});
 })();
