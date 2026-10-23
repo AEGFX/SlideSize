@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Script Format &middot; SlideSize</title>
-<meta name="description" content="Put every sentence of a script on its own line for the prompter. Sentence ends are judged in context, so U.S.A., Dr. Patel and 9 a.m. stay intact. Keeps Word highlights and colours. Runs entirely in your browser.">
+<meta name="description" content="Put every sentence of a script on its own line for the prompter. Sentence ends are judged in context, so U.S.A., Dr. Pullen and 9 a.m. stay intact. Keeps Word highlights and colours. Runs entirely in your browser.">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%236FC3E8'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -233,6 +233,9 @@ cursor: pointer; opacity: 0.55; transition: all 0.15s;
 .chip.warn { border-color: var(--warn); color: #e8bc5d; background: rgba(224,160,32,0.14); }
 .chip.ok { border-color: var(--ok); color: #7fd8ad; background: var(--ok-dim); }
 .opts input[type="color"] { width: 30px; height: 22px; padding: 0 2px; border: 1px solid var(--border2); border-radius: 2px; background: var(--bg); cursor: pointer; vertical-align: middle; }
+.opts.cues { gap: 8px 22px; padding-top: 8px; border-top: 1px solid var(--border); }
+.cue-row { display: inline-flex; align-items: center; gap: 6px; }
+.line.soft + .line { border-top-color: transparent; }
 .opts select { background: var(--bg); color: var(--text); border: 1px solid var(--border2); border-radius: 2px; font: inherit; font-size: 11px; padding: 3px 6px; }
 @media (max-width: 560px) { .line { grid-template-columns: 3em 1fr; font-size: 16px; padding-right: 12px; } }
 </style>
@@ -256,9 +259,10 @@ cursor: pointer; opacity: 0.55; transition: all 0.15s;
 
 <p class="intro">
 Drop or paste a script and get <strong>every sentence on its own line</strong>, ready for the prompter.
-It reads each full stop in context, so U.S.A., Dr. Patel, 9 a.m., e.g. and J. K. Rowling stay in one piece.
+It reads each full stop in context, so U.S.A., Dr. Pullen, 9 a.m., e.g. and J. K. Rowling stay in one piece.
 Calls it isn't sure about are flagged amber, and any break can be added or removed with a click.
-Speaker names like ANDREW: or VOICE OF GOD; get their own line, and slide cues such as SLIDE 3 or NEXT SLIDE are coloured in a colour you pick.
+Speaker names like ROSINA: or VOICE OF GOD; get a line of their own. Slide cues such as [SLIDE 3] or NEXT SLIDE,
+directions like [PAUSE] and speaker names can each be coloured or highlighted in a colour you pick.
 Copy it, or save as TXT or Word. Word files keep their highlights, colours and bold.
 </p>
 
@@ -293,12 +297,27 @@ Processed in your browser &middot; nothing uploaded
 <button class="btn" type="button" id="dlDocx">Word</button>
 </div>
 <div class="opts">
-<label>Between sentences <select id="optGap"><option value="blank">Blank line</option><option value="line">New line</option></select></label>
-<label><input type="checkbox" id="optPara"> Extra gap between original paragraphs</label>
-<label><input type="checkbox" id="optSpk" checked> Line break after speaker names</label>
-<label><input type="checkbox" id="optSlide" checked> Colour slide cues</label>
-<label class="slide-pick">as <select id="slideMode"><option value="text">text colour</option><option value="highlight">highlight</option></select> <input type="color" id="slideColour" value="#E7302A" aria-label="Slide cue colour"></label>
+<label>Between sentences <select id="optGap"><option value="line" selected>New line</option><option value="blank">Blank line</option></select></label>
+<label><input type="checkbox" id="optPara"> Blank line between original paragraphs</label>
+<label><input type="checkbox" id="optSpk" checked> Line return after speaker names</label>
 <label><input type="checkbox" id="optJoin"> Join hard-wrapped lines</label>
+</div>
+<div class="opts cues">
+<div class="cue-row">
+<label><input type="checkbox" id="cue-slide-on" checked> Slide cues</label>
+<select id="cue-slide-mode" aria-label="Slide cues style"><option value="text" selected>Text colour</option><option value="highlight">Highlight</option></select>
+<input type="color" id="cue-slide-col" value="#E7302A" aria-label="Slide cues colour">
+</div>
+<div class="cue-row">
+<label><input type="checkbox" id="cue-dir-on" checked> Directions like [PAUSE]</label>
+<select id="cue-dir-mode" aria-label="Directions like [PAUSE] style"><option value="text" selected>Text colour</option><option value="highlight">Highlight</option></select>
+<input type="color" id="cue-dir-col" value="#4A90E2" aria-label="Directions like [PAUSE] colour">
+</div>
+<div class="cue-row">
+<label><input type="checkbox" id="cue-name-on"> Speaker names</label>
+<select id="cue-name-mode" aria-label="Speaker names style"><option value="text">Text colour</option><option value="highlight" selected>Highlight</option></select>
+<input type="color" id="cue-name-col" value="#FFFF00" aria-label="Speaker names colour">
+</div>
 </div>
 </div>
 

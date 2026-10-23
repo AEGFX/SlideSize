@@ -81,7 +81,7 @@ function findLabels(words){
       // walk back over the rest of a multi word name in capitals
       while (start > 0 && i - start < 4){
         const prev = SR.canon(words[start - 1].w);
-        if (words[start - 1].slide || !CAPS_WORD.test(prev) || !hasLetter(prev) || /[.!?:;,]$/.test(prev) && !/^\p{Lu}{1,4}\.$/u.test(prev)) break;
+        if (words[start - 1].cue || !CAPS_WORD.test(prev) || !hasLetter(prev) || /[.!?:;,]$/.test(prev) && !/^\p{Lu}{1,4}\.$/u.test(prev)) break;
         start--;
       }
     } else if (i <= 3 && /^\p{Lu}/u.test(m[1])){
@@ -94,15 +94,45 @@ function findLabels(words){
   return starts;
 }
 
-/* Slide cues: SLIDE 3, Slide 12a, [SLIDE 4], slides 5-7, NEXT SLIDE, SLIDE CHANGE */
+/* ---------- cues: slide cues, directions and speaker names ----------
+   Each word can carry w.cue = 'slide' | 'dir' | 'name', coloured from the options.
+   Slide cues count only when they are cues rather than part of a sentence:
+   in brackets [SLIDE 1], in capitals SLIDE 2 / NEXT SLIDE, or on a line of their own.
+   "Slide 2 shows where we started" is left alone. */
 const SLIDE_RE = /[\[(]?\b(?:(?:next|new|change)\s+slides?\b|slides?\s*(?:#|no\.?|number)?\s*\d+[a-z]?(?:\s*(?:-|–|to|&|and)\s*\d+[a-z]?)?|slides?\s+(?:change|up)\b)[\])]?/gi;
-function markSlides(words){
+/* Directions: anything in square brackets, parentheses that hold capitals or a stage
+   direction word (pause), and stand-alone capital words like PAUSE or BEAT. */
+const DIR_WORDS = 'pause|beat|beats|applause|laugh|laughs|laughter|breath|breathe|smile|smiles|music|sting|play|playout|walk|walks|walk-on|walk-off|exit|exits|enter|enters|stand|sit|look|looks|gesture|gestures|turn|turns|vt|video|cue|cues|wait|slowly|slow|emphasis|stress|ad-lib|ad lib|adlib|aside|off mic|on mic|lights|blackout|stinger|bumper|lectern|reveal|award|winner';
+const PAREN_DIR_RE = new RegExp('^\\(\\s*(?:' + DIR_WORDS + ')\\b', 'i');
+const CAPS_DIR_RE = new RegExp('^(?:' + DIR_WORDS.toUpperCase() + ')[.!,]*$');
+function spanText(words){
   let text = '', starts = [];
   words.forEach((w, i) => { if (i) text += ' '; starts.push(text.length); text += w.w; });
-  let m; SLIDE_RE.lastIndex = 0;
+  return { text, starts };
+}
+function markRange(words, starts, a, b, cue){
+  words.forEach((w, i) => { const s = starts[i], e = s + w.w.length; if (s < b && e > a) w.cue = cue; });
+}
+function markCues(words){
+  const { text, starts } = spanText(words);
+  let m;
+  // directions in brackets
+  const BR = /\[[^\]]{1,80}\]|\([^)]{1,80}\)/g;
+  while ((m = BR.exec(text))){
+    const t = m[0];
+    const inner = t.slice(1, -1);
+    const isDir = t[0] === '[' || (inner === inner.toUpperCase() && /\p{Lu}/u.test(inner)) || PAREN_DIR_RE.test(t);
+    if (isDir) markRange(words, starts, m.index, m.index + t.length, 'dir');
+  }
+  words.forEach(w => { if (!w.cue && CAPS_DIR_RE.test(w.w.replace(/^[(\[]+|[)\]]+$/g, ''))) w.cue = 'dir'; });
+  // slide cues
+  SLIDE_RE.lastIndex = 0;
   while ((m = SLIDE_RE.exec(text))){
-    const a = m.index, b = a + m[0].length;
-    words.forEach((w, i) => { const s = starts[i], e = s + w.w.length; if (s < b && e > a) w.slide = true; });
+    const t = m[0];
+    const bracketed = /^[\[(]/.test(t) || /[\])]$/.test(t) || text[m.index - 1] === '[' || text[m.index - 1] === '(';
+    const caps = /\p{Lu}/u.test(t) && t === t.toUpperCase();
+    const alone = text.slice(0, m.index).trim() === '' && /^[\s.:!\-–—]*$/.test(text.slice(m.index + t.length));
+    if (bracketed || caps || alone) markRange(words, starts, m.index, m.index + t.length, 'slide');
   }
 }
 function build(){
@@ -116,23 +146,32 @@ function build(){
     const lines = [];
     let line = [];
     const words = p.words.map(w => ({ w: w.w, f: w.f }));
-    markSlides(words);
-    const labels = speakers ? findLabels(words) : new Map();
+    markCues(words);
+    const labels = findLabels(words);
+    for (const [a, b] of labels) for (let k = a; k <= b; k++) words[k].cue = 'name';
+    if (!speakers) labels.clear();
     const labelEnds = new Set(labels.values());
     for (let i = 0; i < words.length; i++){
       const w = words[i];
-      line.push({ w: w.w, f: w.f, slide: w.slide });
+      line.push({ w: w.w, f: w.f, cue: w.cue });
       const id = 'p' + pi + 'w' + i;
       if (speakers && i < words.length - 1 && (labels.has(i + 1) || labelEnds.has(i))){
         // break before a speaker name and again straight after its colon; a click undoes it
         const why = labels.has(i + 1) ? 'speaker name follows' : 'speaker name';
-        if (!state.flips.has(id)){ line[line.length - 1].cut = { id, split: true, sure: true, why, spk: true }; lines.push(line); line = []; continue; }
+        if (!state.flips.has(id)){
+          line[line.length - 1].cut = { id, split: true, sure: true, why, spk: true };
+          // after a name the break is a line return, not a new paragraph
+          if (labelEnds.has(i)) line.soft = true;
+          lines.push(line); line = []; continue;
+        }
         line[line.length - 1].cut = { id, split: false, sure: true, why, spk: true, flipped: true };
         continue;
       }
       if (i === words.length - 1) break;
-      const d = decide(w.w, words[i + 1].w, i === 0);
+      let d = decide(w.w, words[i + 1].w, i === 0);
       if (!d) continue;
+      // a bracketed cue after a full stop starts the next line, as in  ...9 a.m.  [PAUSE] The queue...
+      if (!d.split && /^[\[(]/.test(words[i + 1].w) && words[i + 1].cue && !/[,;:]$/.test(w.w)) d = { split: true, sure: true, why: 'cue starts the next line' };
       const flipped = state.flips.has(id);
       const split = flipped ? !d.split : d.split;
       line[line.length - 1].cut = { id, split, sure: d.sure || flipped, auto: d.split, why: d.why, flipped };
@@ -145,13 +184,27 @@ function build(){
   state.model = model;
 }
 
-/* ---------- slide cue colour ---------- */
-const slideOn = () => $('optSlide').checked;
-function slideStyle(){
-  const c = $('slideColour').value, hl = $('slideMode').value === 'highlight';
-  if (!hl) return 'color:' + c + ';font-weight:700';
-  const r = parseInt(c.slice(1,3),16), g = parseInt(c.slice(3,5),16), b = parseInt(c.slice(5,7),16);
-  return 'background:' + c + ';color:' + ((r*299+g*587+b*114)/1000 > 128 ? '#111' : '#fff') + ';font-weight:700;border-radius:2px;padding:0 2px';
+/* ---------- cue colours ---------- */
+const CUES = ['slide', 'dir', 'name'];
+const cueId = (c, part) => 'cue-' + c + '-' + part;
+const cueOn = c => !!c && $(cueId(c, 'on')).checked;
+const cueColour = c => $(cueId(c, 'col')).value;
+const cueHl = c => $(cueId(c, 'mode')).value === 'highlight';
+function inkFor(hex){ const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16); return (r*299+g*587+b*114)/1000 > 128 ? '#111' : '#fff'; }
+function cueStyle(c){
+  const col = cueColour(c);
+  return cueHl(c) ? 'background:' + col + ';color:' + inkFor(col) + ';font-weight:700;border-radius:2px;padding:0 2px' : 'color:' + col + ';font-weight:700';
+}
+const CUE_KEY = 'ss-script-format-cues';
+function saveCues(){
+  const o = {}; CUES.forEach(c => o[c] = { on: cueOn(c), m: $(cueId(c, 'mode')).value, col: cueColour(c) });
+  try { localStorage.setItem(CUE_KEY, JSON.stringify(o)); } catch (e) {}
+}
+function loadCues(){
+  try {
+    const o = JSON.parse(localStorage.getItem(CUE_KEY) || 'null'); if (!o) return;
+    CUES.forEach(c => { const v = o[c]; if (!v) return; $(cueId(c, 'on')).checked = !!v.on; if (v.m) $(cueId(c, 'mode')).value = v.m; if (/^#[0-9a-f]{6}$/i.test(v.col)) $(cueId(c, 'col')).value = v.col; });
+  } catch (e) {}
 }
 
 /* ---------- render ---------- */
@@ -165,12 +218,12 @@ function render(){
   const showHl = !!state.src.fmt;
   let html = '', n = 0, toCheck = 0, flips = 0;
   state.model.forEach((lines, pi) => {
-    if (pi > 0) html += '<div class="pgap" aria-hidden="true"></div>';
+    if (pi > 0 && $('optPara').checked) html += '<div class="pgap" aria-hidden="true"></div>';
     lines.forEach((line, li) => {
       n++;
       let t = '';
       line.forEach((w, wi) => {
-        const st = w.slide && slideOn() ? slideStyle() : (showHl ? SR.fmtStyle(w.f) : '');
+        const st = cueOn(w.cue) ? cueStyle(w.cue) : (showHl ? SR.fmtStyle(w.f) : '');
         t += (wi ? ' ' : '') + (st ? '<span class="w" style="' + st + '">' + esc(w.w) + '</span>' : esc(w.w));
         const c = w.cut;
         if (!c) return;
@@ -180,7 +233,7 @@ function render(){
         const label = c.split ? 'New line here. Click to join with the next sentence' : 'Kept together. Click to start a new line here';
         t += '<button type="button" class="' + cls + '" data-id="' + c.id + '" title="' + esc(label + ' (' + c.why + ')') + '" aria-label="' + esc(label) + '">' + (c.split ? '&crarr;' : '&middot;') + '</button>';
       });
-      html += '<div class="line"><span class="n">' + n + '</span><div class="t">' + t + '</div></div>';
+      html += '<div class="line' + (line.soft ? ' soft' : '') + '"><span class="n">' + n + '</span><div class="t">' + t + '</div></div>';
     });
   });
   out.innerHTML = html;
@@ -219,29 +272,28 @@ $('result').addEventListener('click', e => {
   if (nb) window.scrollBy(0, nb.getBoundingClientRect().top - y);
 });
 
-/* ---------- output ---------- */
+/* ---------- output ----------
+   Each output line is { words, soft }. soft means it ends in a line return
+   (after a speaker name) rather than a paragraph return. Blank lines are { words: [] }. */
 function outputLines(){
-  const gap = $('optGap').value, keepPara = $('optPara').checked;
-  const out = [];
-  state.model.forEach((lines, pi) => {
-    if (pi > 0 && keepPara) out.push(null);
-    lines.forEach(line => out.push(line));
-  });
-  // null marks an extra blank line between original paragraphs
+  const blank = $('optGap').value === 'blank', keepPara = $('optPara').checked;
   const res = [];
-  out.forEach((l, i) => {
-    if (l === null){ res.push([]); return; }
-    if (res.length && gap === 'blank' && res[res.length - 1].length) res.push([]);
-    res.push(l);
+  state.model.forEach((lines, pi) => {
+    if (pi > 0 && keepPara) res.push({ words: [] });
+    lines.forEach(line => {
+      const prev = res[res.length - 1];
+      if (blank && prev && prev.words.length && !prev.soft) res.push({ words: [] });
+      res.push({ words: line, soft: !!line.soft });
+    });
   });
   return res;
 }
-function asText(){ return outputLines().map(l => l.map(w => w.w).join(' ')).join('\n') + '\n'; }
+function asText(){ return outputLines().map(l => l.words.map(w => w.w).join(' ')).join('\n') + '\n'; }
 
 function xmlEsc(s){ return s.replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c])); }
 function rPr(key){
   if (!key) return '';
-  if (key === 'slide'){ const c = $('slideColour').value.slice(1).toUpperCase(); return '<w:rPr><w:b/>' + ($('slideMode').value === 'highlight' ? '<w:shd w:val="clear" w:color="auto" w:fill="' + c + '"/>' : '<w:color w:val="' + c + '"/>') + '</w:rPr>'; }
+  if (key.indexOf('cue:') === 0){ const c = key.slice(4), col = cueColour(c).slice(1).toUpperCase(); return '<w:rPr><w:b/>' + (cueHl(c) ? '<w:shd w:val="clear" w:color="auto" w:fill="' + col + '"/>' : '<w:color w:val="' + col + '"/>') + '</w:rPr>'; }
   const o = SR.parseKey(key); let x = '';
   if (o.b) x += '<w:b/>';
   if (o.i) x += '<w:i/>';
@@ -255,17 +307,24 @@ function rPr(key){
 }
 async function asDocx(){
   const JSZip = await SS.loadJSZip();
-  const body = outputLines().map(line => {
-    if (!line.length) return '<w:p/>';
+  const runsXml = line => {
     const runs = []; let cur = null;
     line.forEach((w, i) => {
-      const k = (w.slide && slideOn()) ? 'slide' : (w.f || '');
+      const k = cueOn(w.cue) ? 'cue:' + w.cue : (w.f || '');
       const text = (i ? ' ' : '') + w.w;
-      if (cur && cur.k === k) cur.t += text;
-      else { if (cur && i) { /* space belongs to the earlier run */ } cur = { k, t: text }; runs.push(cur); }
+      if (cur && cur.k === k) cur.t += text; else { cur = { k, t: text }; runs.push(cur); }
     });
-    return '<w:p>' + runs.map(r => '<w:r>' + rPr(r.k) + '<w:t xml:space="preserve">' + xmlEsc(r.t) + '</w:t></w:r>').join('') + '</w:p>';
-  }).join('');
+    return runs.map(r => '<w:r>' + rPr(r.k) + '<w:t xml:space="preserve">' + xmlEsc(r.t) + '</w:t></w:r>').join('');
+  };
+  // soft lines join the next line in the same Word paragraph with a line break (Shift+Enter)
+  let body = '', open = '';
+  outputLines().forEach(l => {
+    if (!l.words.length){ if (open){ body += '<w:p>' + open + '</w:p>'; open = ''; } body += '<w:p/>'; return; }
+    open += runsXml(l.words);
+    if (l.soft) open += '<w:r><w:br/></w:r>';
+    else { body += '<w:p>' + open + '</w:p>'; open = ''; }
+  });
+  if (open) body += '<w:p>' + open + '</w:p>';
   const zip = new JSZip();
   zip.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>');
   zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
@@ -323,9 +382,9 @@ $('pasteBtn').addEventListener('click', () => { const ta = $('paste'); ta.hidden
 let deb;
 $('paste').addEventListener('input', () => { clearTimeout(deb); deb = setTimeout(() => { const v = $('paste').value; setNotice(''); setSource(v.trim() ? SR.fromText(v) : null); }, 250); });
 ['optJoin', 'optSpk'].forEach(id => $(id).addEventListener('change', () => { state.flips = new Map(); render(); }));
-['optSlide', 'slideColour', 'slideMode'].forEach(id => $(id).addEventListener('input', () => { saveSlidePrefs(); render(); }));
-function saveSlidePrefs(){ try { localStorage.setItem('ss-script-format-slide', JSON.stringify({ on: $('optSlide').checked, c: $('slideColour').value, m: $('slideMode').value })); } catch (e) {} }
-try { const p = JSON.parse(localStorage.getItem('ss-script-format-slide') || 'null'); if (p){ $('optSlide').checked = !!p.on; if (/^#[0-9a-f]{6}$/i.test(p.c)) $('slideColour').value = p.c; if (p.m) $('slideMode').value = p.m; } } catch (e) {}
+loadCues();
+CUES.forEach(c => ['on', 'mode', 'col'].forEach(part => $(cueId(c, part)).addEventListener('input', () => { saveCues(); render(); })));
+['optGap', 'optPara'].forEach(id => $(id).addEventListener('input', render));
 $('prev').addEventListener('click', () => go(-1));
 $('next').addEventListener('click', () => go(1));
 document.addEventListener('keydown', e => {
@@ -337,7 +396,7 @@ document.addEventListener('keydown', e => {
 /* ---------- example ---------- */
 const EX = `SARAH: Good evening and welcome to the launch of the new U.S.A. programme. [SLIDE 1] It's 7 p.m. here in London and 2 p.m. in New York. Tonight we'll hear from Dr. Anita Patel, our Chief Scientist. She joined us from No. 10 in 2019, e.g. working on the U.K. space strategy. Are you ready? Let's begin. NEXT SLIDE ANITA; Thank you Sarah. Slide 2 shows where we started.
 
-VOICE OF GOD: Please welcome to the stage J. K. Rowling's favourite illustrator, Mr. Tom Hughes. He has worked with Apple Inc. and the B.B.C. for over 20 years. His new book is out on Oct. 14 at 9 a.m. The queue starts at the front doors...
+VOICE OF GOD: Please welcome to the stage J. K. Rowling's favourite illustrator, Mr. Tom Hughes. He has worked with Apple Inc. and the B.B.C. for over 20 years. His new book is out on Oct. 14 at 9 a.m. [PAUSE] The queue starts at the front doors...
 
 SARAH: Thank you, Tom! And finally, a huge thank you to everyone at Acme Ltd. We couldn't have done it without you.`;
 state.src = Object.assign(SR.fromText(EX, 'example-script.txt'), { kind: 'Example' });
