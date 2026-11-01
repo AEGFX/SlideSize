@@ -576,13 +576,18 @@ window.KI = (function () {
     return a.width * a.height * bytes * (ch > 0 ? 1 : 1);
   }
 
-  function assessImage(a) {
+  function assessImage(a, ctx) {
     const f = [];
     const add = (sev, code, title, detail) => f.push({ sev, code, title, detail });
     const mp = a.width && a.height ? a.width * a.height : 0;
     const side = Math.max(a.width || 0, a.height || 0);
+    const slide = ctx && ctx.slideSize;
+    const poster = /^posterImage-\d+\.(png|jpe?g)$/i.test(a.name || '');
 
-    if (a.float) add('red', 'float', 'Floating-point image (' + a.format + (a.bits ? ', ' + a.bits + '-bit' : '') + ')',
+    if (poster && (a.deep || a.float || a.hdr)) {
+      add('red', 'poster-deep', 'Keynote-generated poster frame, ' + (a.bits || 16) + '-bit',
+        'Keynote made this still from a movie on the slide, and made it 16-bit because the movie is 10-bit or HDR. Fix the movie (8-bit, BT.709) and Keynote regenerates the poster on its own. Do not replace the PNG by hand.');
+    } else if (a.float) add('red', 'float', 'Floating-point image (' + a.format + (a.bits ? ', ' + a.bits + '-bit' : '') + ')',
       'Keynote renders this through its HDR path (RGBAf16). Convert to 8-bit sRGB PNG or JPEG.');
     else if (a.hdr) add('red', 'hdr', 'HDR image (' + a.hdr + ')',
       'Gain map or PQ/HLG content is decoded as 16-bit float and composited through Keynote\'s HDR headroom path. Export an SDR copy, 8-bit sRGB, no gain map.');
@@ -598,7 +603,15 @@ window.KI = (function () {
     if (a.wideGamut && !a.hdr) add('info', 'gamut', a.wideGamut + ' primaries', 'Wide-gamut SDR. Fine on a Mac display, may shift on a projector.');
     if (a.icc && /^(CMYK)$/.test(a.iccSpace || '')) { /* already flagged */ }
 
-    if (side > 8192) add('red', 'huge', 'Over 8192 px on a side (' + a.width + ' × ' + a.height + ')',
+    if (side > 16384) add('red', 'huge', 'Over 16384 px on a side (' + a.width + ' × ' + a.height + ')',
+      'Past the Metal texture limit on Apple silicon. Keynote has to tile or downsample it on every draw. Resample to the slide size.');
+    else if (slide) {
+      const lim = 2 * Math.max(slide.width, slide.height), limMp = 2 * slide.width * slide.height;
+      if (side > lim || mp > limMp) add('amber', 'large', 'Large raster (' + a.width + ' × ' + a.height + ', ' + fmtPixels(mp) + ')',
+        'More than twice the slide size (' + Math.round(slide.width) + ' × ' + Math.round(slide.height) + '). Resample to the slide size, or 2x for zoomed builds.');
+      else if (side > 8192) add('info', 'big', 'Big raster (' + a.width + ' × ' + a.height + ')', 'Over 8192 px on a side. In proportion for this slide size, but each one is ' + fmtBytes(mp * 4) + ' decoded.');
+    }
+    else if (side > 8192) add('red', 'huge', 'Over 8192 px on a side (' + a.width + ' × ' + a.height + ')',
       'Past the safe texture size for most GPUs and heavier than any screen it will play on. Resample to the slide size at 2x at most.');
     else if (side > 4096 || mp > 16e6) add('amber', 'large', 'Large raster (' + a.width + ' × ' + a.height + ', ' + fmtPixels(mp) + ')',
       'Bigger than a 4K canvas. Resample to the slide size, or 2x the slide size for zoomed builds.');
@@ -626,7 +639,7 @@ window.KI = (function () {
     return f;
   }
 
-  function assessVideo(a) {
+  function assessVideo(a, ctx) {
     const f = [];
     const add = (sev, code, title, detail) => f.push({ sev, code, title, detail });
     const v = a.video;
@@ -634,9 +647,11 @@ window.KI = (function () {
     const codec = (v.codec && v.codec.string) || '';
     if (/^dv(h1|he|a1|av)/i.test(codec)) add('red', 'dolby-vision', 'Dolby Vision video', 'Composited through the HDR path. Re-encode as SDR H.264 or HEVC (BT.709).');
     else if (v.colour && (v.colour.transferIdc === 16 || v.colour.transferIdc === 18)) add('red', 'hdr-video', 'HDR video (' + v.colour.transfer + ')', 'Composited through the HDR headroom path. Tone-map to SDR BT.709 on export.');
-    if (v.bitDepth && v.bitDepth > 8) add('amber', 'video-depth', v.bitDepth + '-bit video', '8-bit 4:2:0 is the safe target for Keynote playback.');
+    if (v.bitDepth && v.bitDepth > 8) add('red', 'video-depth', v.bitDepth + '-bit video (' + ((v.codec && v.codec.name) || '') + (v.profile ? ', ' + v.profile : '') + ')',
+      'Keynote treats 10-bit video as deep colour, generates 16-bit poster frames from it and composites the slide through the RGBAf16 path. Re-encode as 8-bit 4:2:0 BT.709. For 8K-wide content use HEVC Main (8-bit), which Apple silicon decodes in hardware: ffmpeg -i in.mov -c:v hevc_videotoolbox -profile:v main -pix_fmt yuv420p -b:v 25M -tag:v hvc1 -an out.mov');
     const w = v.cropped ? v.cropped.width : (v.coded ? v.coded.width : 0);
-    if (w > 3840) add('amber', 'video-size', 'Video wider than 4K (' + w + ' px)', 'Scale to the canvas size on export.');
+    const slide = ctx && ctx.slideSize;
+    if (slide ? w > 2 * slide.width : w > 3840) add('amber', 'video-size', 'Video wider than ' + (slide ? 'twice the slide' : '4K') + ' (' + w + ' px)', 'Scale to the slide size on export.');
     if (v.frameRate && v.frameRate.mode && v.frameRate.mode !== 'CFR') add('amber', 'vfr', 'Variable frame rate', 'Conform to a constant frame rate on export.');
     if (v.interlaced && v.interlaced.flag) add('amber', 'interlaced', 'Interlaced video', 'Deinterlace on export.');
     if (/^(ap4h|ap4x)$/i.test(codec)) add('info', 'prores-4444', 'ProRes 4444', 'Plays, but very high bitrate. ProRes 422 or H.264 unless the alpha is needed.');
@@ -835,7 +850,7 @@ window.KI = (function () {
         } else if ((a.type === 5 || a.type === 6) && a.id != null) {
           let name = null;
           for (const f of pbFields(b, a.bodyStart, a.bodyEnd)) if (f.field === 10 && f.wire === 2) name = pbStr(b, f);
-          slideArchives[a.id] = { name, comp, master: a.type === 6 || /^MasterSlide/.test(comp) };
+          slideArchives[a.id] = { name, comp, master: a.type === 6 || /^(MasterSlide|TemplateSlide)/.test(comp) };
         }
       }
     }
@@ -867,6 +882,12 @@ window.KI = (function () {
     const compLabel = {};
     ordered.forEach(sl => { if (sl.comp) (compLabel[sl.comp] = compLabel[sl.comp] || []).push(sl); });
     const masters = Object.keys(slideArchives).filter(id => slideArchives[id].master).map(id => slideArchives[id]);
+    /* how many slides each master backs, via SlideArchive refs into a master component */
+    const masterUse = {};
+    ordered.forEach(sl => {
+      const o = objects[sl.slideId];
+      (o && o.refs || []).forEach(rid => { const t = objects[rid]; if (t && /^(MasterSlide|TemplateSlide)/.test(t.comp)) masterUse[t.comp] = (masterUse[t.comp] || 0) + 1; });
+    });
 
     /* data id -> file -> slides */
     const fileSlides = map.fileSlides;
@@ -879,9 +900,9 @@ window.KI = (function () {
       const sls = compLabel[comp];
       if (sls) {
         for (const d of compDataRefs[comp]) sls.forEach(sl => touch(d, { key: 'slide:' + sl.num, kind: 'slide', num: sl.num, name: sl.name, skipped: sl.skipped }));
-      } else if (/^MasterSlide/.test(comp)) {
+      } else if (/^(MasterSlide|TemplateSlide)/.test(comp)) {
         const m = masters.find(x => x.comp === comp);
-        for (const d of compDataRefs[comp]) touch(d, { key: 'master:' + comp, kind: 'master', name: (m && m.name) || comp });
+        for (const d of compDataRefs[comp]) touch(d, { key: 'master:' + comp, kind: 'master', name: (m && m.name) || comp, uses: masterUse[comp] || 0 });
       } else {
         for (const d of compDataRefs[comp]) touch(d, { key: 'doc:' + comp, kind: 'document', name: comp });
       }
@@ -994,13 +1015,13 @@ window.KI = (function () {
 
       if (IMAGE_KINDS.indexOf(a.kind) >= 0) {
         report.totals.images++;
-        a.findings = assessImage(a);
+        a.findings = assessImage(a, { slideSize: slideMap.showSize });
         a.decoded = estimateDecoded(a);
         report.totals.decodedBytes += a.decoded;
         if ((a.deep || a.float) && !a.hdr) report.totals.deepCount++;
         if (a.hdr) report.totals.hdrCount++;
       } else if (a.kind === 'pdf') { report.totals.pdfs++; a.findings = assessPDF(a); }
-      else if (a.kind === 'isobmff') { report.totals.videos++; a.findings = assessVideo(a); if (a.hdr) report.totals.hdrCount++; }
+      else if (a.kind === 'isobmff') { report.totals.videos++; a.findings = assessVideo(a, { slideSize: slideMap.showSize }); if (a.hdr) report.totals.hdrCount++; }
       else if (a.kind === 'audio') report.totals.audio++;
       else report.totals.other++;
       report.totals.mediaBytes += a.size;
@@ -1020,6 +1041,8 @@ window.KI = (function () {
     if (!report.isKeynote) add('amber', 'not-keynote', 'This does not look like a Keynote document', 'No Index/Document.iwa found. The media scan still ran on anything under Data/.');
     if (report.legacy) add('amber', 'legacy', 'Keynote \'09 format', 'Old XML-based document. Open in Keynote and Save As to upgrade before anything else.');
     if (t.hdrCount) add('red', 'deck-hdr', t.hdrCount + ' HDR asset' + (t.hdrCount > 1 ? 's' : ''), 'Any HDR content puts the whole slide through Keynote\'s float compositing path. Replace every one.');
+    const deepVid = report.assets.filter(a => a.kind === 'isobmff' && a.video && a.video.bitDepth > 8);
+    if (deepVid.length) add('red', 'deck-10bit-video', deepVid.length + ' ten-bit video' + (deepVid.length > 1 ? 's' : ''), 'The most likely trigger for a TSDrawables crash on a deck like this. Re-encode to 8-bit, then let Keynote regenerate its poster frames.');
     if (t.deepCount) add('red', 'deck-deep', t.deepCount + ' image' + (t.deepCount > 1 ? 's' : '') + ' over 8 bits per channel', 'Convert each to 8-bit sRGB. Listed below.');
     if (t.decodedBytes > 3 * 1073741824) add('red', 'deck-memory', 'About ' + fmtBytes(t.decodedBytes) + ' of decoded image data', 'If Keynote decodes every image (light table, export, thumbnails) this is what it holds in RAM. Resample the big ones.');
     else if (t.decodedBytes > 1.5 * 1073741824) add('amber', 'deck-memory', 'About ' + fmtBytes(t.decodedBytes) + ' of decoded image data', 'Heavy. Resample images to the slide size.');
@@ -1100,7 +1123,7 @@ window.KI = (function () {
     const slides = a.where.filter(w => w.kind === 'slide').map(w => w.num).sort((x, y) => x - y);
     const parts = [];
     if (slides.length) parts.push((slides.length === 1 ? 'Slide ' : 'Slides ') + slides.join(', '));
-    a.where.filter(w => w.kind === 'master').forEach(w => parts.push('Master "' + w.name + '"'));
+    a.where.filter(w => w.kind === 'master').forEach(w => parts.push('Master "' + w.name + '"' + (w.uses ? ' (' + w.uses + ' slide' + (w.uses > 1 ? 's' : '') + ')' : '')));
     a.where.filter(w => w.kind === 'document').forEach(w => parts.push(w.name === 'Document' ? 'Document' : w.name));
     if (a.where.some(w => w.kind === 'thumbnail')) parts.push('navigator thumbnail');
     return parts.join(' · ');
