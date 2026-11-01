@@ -523,7 +523,7 @@ margin: 0;
 .tools-grid .stone-tool  { --emf: #CDA873; --emf2: #e0c294; --emf-dim: rgba(205,168,115,0.12); }
 .tools-grid .format-tool { --emf: #6FC3E8; --emf2: #96d4ef; --emf-dim: rgba(111,195,232,0.12); }
 /* Second section sits a clear gap below the first */
-.prompt-tools { margin-top: 28px; }
+.tools-next { margin-top: 28px; }
 /* EMF Extractor uses the default --emf teal already set on .other-tools */
 .other-tools-head {
 display: flex;
@@ -1123,7 +1123,7 @@ Standard Presets Reference
 </div>
 </div>
 <div class="other-tools">
-<div class="other-tools-head"><span class="ot-label">Other Tools</span></div>
+<div class="other-tools-head"><span class="ot-label">PPT Tools</span></div>
 <div class="tools-grid">
 
 <a class="emf-tool tool-link report-tool" href="/ppt-report.html">
@@ -1145,39 +1145,6 @@ swapped pictures and videos, playback settings, hidden, moved, added and deleted
 by PowerPoint's own IDs, so reordering does not throw it.
 </p>
 <div class="go-row"><span>Open Deck Compare</span>
-<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
-</a>
-
-<a class="emf-tool tool-link vt-tool" href="/vt-inspector.html">
-<div class="emf-tool-title">VT Inspector <span class="emf-chip">Playback check</span></div>
-<p class="emf-intro">
-Inspect MP4, MOV, M4V and M4A video down to the bitstream. Catches misdeclared H.264 levels, VFR,
-odd pixel aspect, HDR tags, edit lists and more. Gives the ffmpeg fix, and rewrites header-only
-fixes right here with no re-encode.
-</p>
-<div class="go-row"><span>Open VT Inspector</span>
-<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
-</a>
-
-<a class="emf-tool tool-link keynote-tool" href="/keynote-inspector.html">
-<div class="emf-tool-title">Keynote Inspector <span class="emf-chip">Crash check</span></div>
-<p class="emf-intro">
-Drop a .key file and find the content that makes Keynote crash or crawl. 16-bit and float images, HDR
-gain maps, HEIC, CMYK, oversized rasters, HDR video, heavy PDFs and the RAM the deck needs with
-everything decoded. Reads headers only, so a multi-gigabyte deck takes seconds.
-</p>
-<div class="go-row"><span>Open Keynote Inspector</span>
-<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
-</a>
-
-<a class="emf-tool tool-link media-tool" href="/media-extractor.html">
-<div class="emf-tool-title">Media Extractor <span class="emf-chip">PPTX / KEY <div class="emf-tool-title">Media Extractor <span class="emf-chip">PPTX &rarr; files</span></div>rarr; files</span></div>
-<p class="emf-intro">
-Pull every embedded asset out of a PowerPoint or Keynote deck as thumbnails with pixel dimensions and
-per-file metadata. Images, EMF, WMF, HEIC, video, audio and fonts. Pick the ones you want or save them all to a folder of your choice. No renaming to
-.zip and digging through folders.
-</p>
-<div class="go-row"><span>Open Media Extractor</span>
 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
 </a>
 
@@ -1203,6 +1170,53 @@ it starts.
 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
 </a>
 
+</div>
+</div>
+
+<div class="other-tools tools-next">
+<div class="other-tools-head"><span class="ot-label">Keynote Tools</span></div>
+<div class="tools-grid">
+
+<a class="emf-tool tool-link keynote-tool" href="/keynote-inspector.html">
+<div class="emf-tool-title">Keynote Inspector <span class="emf-chip">Crash check</span></div>
+<p class="emf-intro">
+Drop a .key file and find the content that makes Keynote crash or crawl. 16-bit and float images, HDR
+gain maps, HEIC, CMYK, oversized rasters, HDR video, heavy PDFs and the RAM the deck needs with
+everything decoded. Reads headers only, so a multi-gigabyte deck takes seconds.
+</p>
+<div class="go-row"><span>Open Keynote Inspector</span>
+<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+</a>
+
+</div>
+</div>
+
+<div class="other-tools tools-next">
+<div class="other-tools-head"><span class="ot-label">Other Tools</span></div>
+<div class="tools-grid">
+
+<a class="emf-tool tool-link media-tool" href="/media-extractor.html">
+<div class="emf-tool-title">Media Extractor <span class="emf-chip">PPT / KEY &rarr; files</span></div>
+<p class="emf-intro">
+Pull every embedded asset out of a PowerPoint or Keynote deck as thumbnails with pixel dimensions and
+per-file metadata. Images, EMF, WMF, HEIC, video, audio and fonts. Pick the ones you want or save them all to a folder of your choice. No renaming to
+.zip and digging through folders.
+</p>
+<div class="go-row"><span>Open Media Extractor</span>
+<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+</a>
+
+<a class="emf-tool tool-link vt-tool" href="/vt-inspector.html">
+<div class="emf-tool-title">VT Inspector <span class="emf-chip">Playback check</span></div>
+<p class="emf-intro">
+Inspect MP4, MOV, M4V and M4A video down to the bitstream. Catches misdeclared H.264 levels, VFR,
+odd pixel aspect, HDR tags, edit lists and more. Gives the ffmpeg fix, and rewrites header-only
+fixes right here with no re-encode.
+</p>
+<div class="go-row"><span>Open VT Inspector</span>
+<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+</a>
+
 <a class="emf-tool tool-link montage-link" href="/photo-montage.html" id="montage-link">
 <div class="emf-tool-title">Photo Montage <span class="emf-chip">Looping video</span></div>
 <p class="emf-intro">
@@ -1217,7 +1231,7 @@ Picks up the pixel size from the calculator.
 </div>
 </div>
 
-<div class="other-tools prompt-tools">
+<div class="other-tools tools-next prompt-tools">
 <div class="other-tools-head"><span class="ot-label">Prompting Tools</span></div>
 <div class="tools-grid">
 
