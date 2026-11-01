@@ -646,6 +646,30 @@ window.KI = (function () {
   /* ------------------------------------------------------------------
      Main
      ------------------------------------------------------------------ */
+  /* Header-only probe of a single file or blob. Used by Media Extractor for
+     instant dimensions without decoding. Returns {kind, format, width, height, bits, ...} */
+  async function probeReader(r, name) {
+    const head = await r.read(0, Math.min(r.size, 64));
+    const kind = sniff(head, name || '');
+    let info = { kind, format: ((name || '').match(/\.([a-z0-9]+)$/i) || [, '?'])[1].toUpperCase() };
+    let parsed = null;
+    if (kind === 'png') parsed = await parsePNG(r);
+    else if (kind === 'jpeg') parsed = await parseJPEG(r);
+    else if (kind === 'tiff') parsed = await parseTIFF(r);
+    else if (kind === 'exr') parsed = await parseEXR(r);
+    else if (kind === 'psd') parsed = await parsePSD(r);
+    else if (kind === 'gif') parsed = await parseGIF(r);
+    else if (kind === 'webp') parsed = await parseWebP(r);
+    else if (kind === 'bmp') parsed = await parseBMP(r);
+    else if (kind === 'heif') parsed = await parseHEIF(r);
+    else if (kind === 'pdf') parsed = await parsePDF(r);
+    if (parsed) Object.assign(info, parsed);
+    return info;
+  }
+  async function probeBlob(blob, name) {
+    return probeReader(blobReader(blob, 0, blob.size), name || blob.name || '');
+  }
+
   async function inspect(source, opts = {}) {
     const MI = opts.MI || null;
     const progress = opts.onProgress || function () {};
@@ -812,5 +836,5 @@ window.KI = (function () {
     return parts.join(' · ');
   }
 
-  return { openSource, inspect, textReport, describe, fmtBytes, fmtPixels, rank };
+  return { openSource, inspect, probeBlob, probeReader, textReport, describe, fmtBytes, fmtPixels, rank };
 })();

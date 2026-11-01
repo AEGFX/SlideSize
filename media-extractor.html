@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Media Extractor &middot; SlideSize</title>
-<meta name="description" content="Drop a PowerPoint deck and pull out every embedded image, video, audio or EMF with thumbnails and metadata. Runs entirely in your browser.">
+<meta name="description" content="Drop a PowerPoint or Keynote deck and pull out every embedded image, video, audio or EMF with thumbnails, pixel dimensions and metadata. Runs entirely in your browser.">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23E0A020'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -191,7 +191,9 @@ background: var(--panel);
 font-family: var(--mono); font-size: 11px; color: var(--label);
 white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.tile-size { font-family: var(--sans); font-size: 10px; color: var(--muted); }
+.tile-size { font-family: var(--sans); font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile-dims { font-family: var(--mono); font-size: 10px; color: var(--label); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 13px; }
+.tile-thumb .ph .ph-sub { font-size: 9px; opacity: 0.7; }
 .tile-vid-btn {
 position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
 background: transparent; border: 0; color: var(--md); cursor: pointer;
@@ -301,7 +303,7 @@ display: flex; align-items: center; gap: 10px;
 <div class="wrap">
 
 <p class="intro">
-Drop a <strong>.pptx</strong> and see every embedded asset as a thumbnail. The filenames inside a deck
+Drop a <strong>.pptx</strong> or a <strong>.key</strong> and see every embedded asset as a thumbnail with its pixel size. The filenames inside a deck
 are flat and non-descriptive (<code>image1.png</code>, <code>image47.jpg</code>) so this gives you a
 visual way to find the one you need. Click any tile for its metadata and a per-file save, or save the
 lot into a folder of your choice. Nothing is uploaded, it all runs in your browser.
@@ -311,7 +313,7 @@ lot into a folder of your choice. Nothing is uploaded, it all runs in your brows
 <svg class="dz-icon" viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
 <div class="dz-big">Drop PPTX</div>
 <div class="dz-small">or tap to browse</div>
-<input type="file" id="file" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation">
+<input type="file" id="file" accept=".pptx,.key,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/zip">
 <div class="privacy">
 <svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
 Processed in your browser &middot; nothing uploaded
@@ -332,6 +334,7 @@ Processed in your browser &middot; nothing uploaded
 </footer>
 
 <script src="shared.js"></script>
+<script src="key-inspect.js"></script>
 <script>
 (function(){
 'use strict';
@@ -380,7 +383,7 @@ function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').rep
 
 var TYPE_MAP = {
 png:'PNG', jpg:'JPG', jpeg:'JPG', gif:'GIF', bmp:'BMP', tiff:'TIFF', tif:'TIFF', svg:'SVG',
-emf:'EMF', wmf:'WMF', webp:'WEBP', ico:'ICO',
+emf:'EMF', wmf:'WMF', webp:'WEBP', ico:'ICO', heic:'HEIC', heif:'HEIC', psd:'PSD', exr:'EXR', pdf:'PDF', avif:'AVIF',
 mp4:'MP4', mov:'MOV', avi:'AVI', wmv:'WMV', m4v:'M4V', mkv:'MKV', webm:'WEBM',
 mp3:'MP3', wav:'WAV', m4a:'M4A', wma:'WMA', aac:'AAC', ogg:'OGG',
 ttf:'FONT', otf:'FONT', fntdata:'FONT'
@@ -388,13 +391,16 @@ ttf:'FONT', otf:'FONT', fntdata:'FONT'
 var MIME_MAP = {
 png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg', gif:'image/gif', bmp:'image/bmp',
 tiff:'image/tiff', tif:'image/tiff', svg:'image/svg+xml', webp:'image/webp',
+heic:'image/heic', heif:'image/heif', psd:'image/vnd.adobe.photoshop', exr:'image/x-exr', pdf:'application/pdf', avif:'image/avif',
 emf:'image/x-emf', wmf:'image/x-wmf',
 mp4:'video/mp4', mov:'video/quicktime', avi:'video/x-msvideo', wmv:'video/x-ms-wmv',
 m4v:'video/x-m4v', mkv:'video/x-matroska', webm:'video/webm',
 mp3:'audio/mpeg', wav:'audio/wav', m4a:'audio/mp4', wma:'audio/x-ms-wma',
 aac:'audio/aac', ogg:'audio/ogg'
 };
-var IMAGE_PREVIEWABLE = { png:1, jpg:1, jpeg:1, gif:1, bmp:1, webp:1, svg:1 };
+var IMAGE_PREVIEWABLE = { png:1, jpg:1, jpeg:1, gif:1, bmp:1, webp:1, svg:1, heic:1, heif:1, tiff:1, tif:1, psd:1, exr:1, avif:1 };
+/* formats the browser's <img> can usually decode; the rest get header-only dims and a placeholder */
+var IMAGE_DECODABLE = { png:1, jpg:1, jpeg:1, gif:1, bmp:1, webp:1, svg:1, avif:1 };
 var VIDEO_PREVIEWABLE = { mp4:1, m4v:1, webm:1, mov:1 };
 var AUDIO_PREVIEWABLE = { mp3:1, wav:1, m4a:1, aac:1, ogg:1 };
 function extOf(name){ var m = name.match(/\.([a-z0-9]+)$/i); return m ? m[1].toLowerCase() : ''; }
@@ -404,7 +410,7 @@ function kindOf(ext){
 if (IMAGE_PREVIEWABLE[ext]) return 'image';
 if (VIDEO_PREVIEWABLE[ext]) return 'video';
 if (AUDIO_PREVIEWABLE[ext]) return 'audio';
-if (ext === 'emf' || ext === 'wmf') return 'vector';
+if (ext === 'emf' || ext === 'wmf' || ext === 'pdf') return 'vector';
 if (ext === 'ttf' || ext === 'otf') return 'font';
 return 'other';
 }
@@ -414,6 +420,7 @@ return 'other';
 var S = {
 files: [],         /* [{ name, blob, size, ext, type, kind, url, meta, thumbUrl, selected }] */
 deckBase: '',
+deckExt: 'pptx',
 filter: 'ALL',
 selectedIdx: -1
 };
@@ -433,30 +440,104 @@ if (ev === 'drop' || e.target === drop) drop.classList.remove('drag');
 });
 drop.addEventListener('drop', function(e){
 e.preventDefault(); drop.classList.remove('drag');
+var items = e.dataTransfer.items ? Array.prototype.slice.call(e.dataTransfer.items) : [];
+var dir = items.map(function(it){ return it.webkitGetAsEntry ? it.webkitGetAsEntry() : null; }).filter(function(en){ return en && en.isDirectory; })[0];
+if (dir) { handlePackage(dir); return; }
 var f = e.dataTransfer.files && e.dataTransfer.files[0];
 if (f) handleFile(f);
 });
+
+/* A Keynote package dragged straight from Finder arrives as a directory entry */
+function readEntries(reader) {
+return new Promise(function(res, rej){
+var all = [];
+(function next(){ reader.readEntries(function(batch){ if (!batch.length) { res(all); return; } all = all.concat(Array.prototype.slice.call(batch)); next(); }, rej); })();
+});
+}
+function walkEntry(entry, prefix, out) {
+if (entry.isFile) return new Promise(function(res, rej){ entry.file(function(f){ out.push({ path: prefix + entry.name, file: f }); res(); }, rej); });
+if (entry.isDirectory) return readEntries(entry.createReader()).then(function(kids){
+return kids.reduce(function(p, k){ return p.then(function(){ return walkEntry(k, prefix + entry.name + '/', out); }); }, Promise.resolve());
+});
+return Promise.resolve();
+}
+function handlePackage(dir) {
+var out = [];
+walkEntry(dir, '', out).then(function(){
+out.forEach(function(x){ x.path = x.path.slice(dir.name.length + 1); });
+out.rootName = dir.name;
+if (!out.some(function(x){ return /^Index\//.test(x.path); })) { showError('That folder does not look like a Keynote package (no Index/ inside it).'); return; }
+startLoad({ name: dir.name, size: out.reduce(function(a, x){ return a + x.file.size; }, 0) }, 'key');
+return KI.openSource(out).then(loadKeynoteSource);
+}).catch(function(e){ showError('Could not read the folder. ' + (e && e.message ? '(' + e.message + ')' : '')); });
+}
 fileInput.addEventListener('change', function(){
 if (fileInput.files && fileInput.files[0]) handleFile(fileInput.files[0]);
 fileInput.value = '';
 });
 
-function handleFile(file) {
-if (!/\.pptx$/i.test(file.name)) {
-showError('That looks like a ' + (extOf(file.name).toUpperCase() || 'non-PPTX') + ' file. Drop a .pptx deck instead.');
-return;
-}
+function startLoad(file, ext) {
 /* release any previous blob URLs */
 S.files.forEach(function(f){
 if (f.url) URL.revokeObjectURL(f.url);
 if (f.thumbUrl && f.thumbUrl !== f.url) URL.revokeObjectURL(f.thumbUrl);
 });
 S.files = []; S.selectedIdx = -1; S.filter = 'ALL';
-S.deckBase = file.name.replace(/\.pptx$/i, '');
-
+S.deckExt = ext;
+S.deckBase = file.name.replace(/\.(pptx|key)$/i, '');
 compactDrop(file);
 var stage = document.getElementById('stage');
 stage.innerHTML = '<div class="loading-note"><span class="spinner"></span>Reading <strong style="color:var(--label);font-weight:500">' + esc(file.name) + '</strong>&hellip;</div>';
+}
+
+function makeEntry(name, blob) {
+var ext = extOf(name);
+var typedBlob = blob.type ? blob : new Blob([blob], { type: mimeOf(name) });
+return {
+name: name, blob: typedBlob, size: typedBlob.size,
+ext: ext, type: typeOf(name), kind: kindOf(ext),
+url: URL.createObjectURL(typedBlob),
+meta: null,       /* { width, height, duration, ... } populated on demand */
+thumbUrl: null    /* for video thumbs, generated on demand */
+};
+}
+
+function finishLoad(files) {
+S.files = files;
+render();
+/* header-only probes are near free, so run them for every image and vector up front */
+files.forEach(function(f, i){ if (f.kind === 'image' || f.kind === 'vector') probeImage(i); });
+}
+
+/* Keynote: Data/ holds every asset. Stored (not deflated) in a single-file .key, so
+   KI hands back zero-copy Blob slices and a 400 MB deck opens in a second or two. */
+function loadKeynoteSource(src) {
+var entries = src.entries.filter(function(e){ return /^(?:.*\/)?Data\//.test(e.path); });
+if (!entries.length) { showError('No media found in this document (Data/ is empty).'); return; }
+entries.sort(function(a, b){ return a.path < b.path ? -1 : a.path > b.path ? 1 : 0; });
+return Promise.all(entries.map(function(e){
+return src.getReader(e).then(function(r){
+var name = e.path.replace(/^(?:.*\/)?Data\//, '');
+var b = r.slice(0);
+return makeEntry(name, new Blob([b], { type: mimeOf(name) }));
+});
+})).then(finishLoad);
+}
+
+function handleFile(file) {
+var ext = extOf(file.name);
+if (ext !== 'pptx' && ext !== 'key') {
+showError('That looks like a ' + (ext.toUpperCase() || 'non-deck') + ' file. Drop a .pptx or .key deck instead.');
+return;
+}
+startLoad(file, ext);
+
+if (ext === 'key') {
+KI.openSource(file).then(loadKeynoteSource).catch(function(e){
+showError('Could not read this Keynote file. ' + (e && e.message ? '(' + e.message + ')' : '') + ' If it is a package rather than a single file, drag the .key straight from Finder.');
+});
+return;
+}
 
 loadJSZip().then(function(JSZip){
 return file.arrayBuffer().then(function(ab){ return JSZip.loadAsync(ab); });
@@ -477,25 +558,9 @@ return;
 }
 return Promise.all(entries.map(function(entry){
 return entry.async('blob').then(function(blob){
-var name = entry.name.replace(/^ppt\/media\//i, '');
-var ext = extOf(name);
-var mime = mimeOf(name);
-/* Blob from JSZip has no type; wrap in a typed Blob so previews work */
-var typedBlob = new Blob([blob], { type: mime });
-return {
-name: name, blob: typedBlob, size: typedBlob.size,
-ext: ext, type: typeOf(name), kind: kindOf(ext),
-url: URL.createObjectURL(typedBlob),
-meta: null,       /* { width, height, duration, ... } populated on demand */
-thumbUrl: null    /* for video thumbs, generated on demand */
-};
+return makeEntry(entry.name.replace(/^ppt\/media\//i, ''), blob);
 });
-})).then(function(files){
-S.files = files;
-render();
-/* kick off image meta probing in the background so the panel is ready instantly */
-files.forEach(function(f, i){ if (f.kind === 'image') probeImage(i); });
-});
+})).then(finishLoad);
 }).catch(function(e){
 showError('Could not read this deck. ' + (e && e.message ? '(' + e.message + ')' : ''));
 });
@@ -512,7 +577,7 @@ drop.innerHTML =
 '</div>' +
 '</div>' +
 '<button type="button" class="replace-btn" id="replace-btn">Drop another deck</button>' +
-'<input type="file" id="file" accept=".pptx">';
+'<input type="file" id="file" accept=".pptx,.key">';
 var btn = document.getElementById('replace-btn');
 btn.addEventListener('click', function(){ document.getElementById('file').click(); });
 var newInput = document.getElementById('file');
@@ -551,7 +616,7 @@ var saveNote = supportsFS
 stage.innerHTML =
 '<div class="topbar">' +
 '<div class="topbar-info">' +
-'<div class="topbar-title">' + esc(S.deckBase) + '.pptx</div>' +
+'<div class="topbar-title">' + esc(S.deckBase) + '.' + S.deckExt + '</div>' +
 '<div class="topbar-summary"><strong>' + S.files.length + '</strong> media file' + (S.files.length === 1 ? '' : 's') + ' &middot; ' + fmtBytes(totalBytes) + '</div>' +
 '</div>' +
 '<div class="topbar-actions">' +
@@ -612,8 +677,10 @@ function tileHtml(f, idx) {
 var sel = idx === S.selectedIdx ? ' selected' : '';
 var dur = f.meta && f.meta.duration ? '<div class="tile-dur">' + fmtDuration(f.meta.duration) + '</div>' : '';
 var thumb;
-if (f.kind === 'image') {
-thumb = '<img src="' + esc(f.url) + '" alt="" loading="lazy">';
+if (f.kind === 'image' && IMAGE_DECODABLE[f.ext]) {
+thumb = '<img src="' + esc(f.url) + '" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'"><div class="ph" style="display:none">' + placeholderIcon('image') + '<div>' + f.type + '</div></div>';
+} else if (f.kind === 'image') {
+thumb = '<div class="ph">' + placeholderIcon('image') + '<div>' + f.type + '</div><div class="ph-sub">no browser preview</div></div>';
 } else if (f.kind === 'video' && f.thumbUrl) {
 thumb = '<img src="' + esc(f.thumbUrl) + '" alt="" loading="lazy">';
 } else if (f.kind === 'video') {
@@ -631,8 +698,24 @@ thumb + dur +
 '<div class="tile-foot">' +
 '<div class="tile-name" title="' + esc(f.name) + '">' + esc(f.name) + '</div>' +
 '<div class="tile-size">' + fmtBytes(f.size) + '</div>' +
+'<div class="tile-dims">' + dimsOf(f) + '</div>' +
 '</div>' +
 '</div>';
+}
+
+function dimsOf(f) {
+if (!f.meta) return '';
+var bits = [];
+if (f.meta.width && f.meta.height) bits.push(f.meta.width + '\u00d7' + f.meta.height);
+if (f.meta.pages) bits.push(f.meta.pages + ' pg');
+if (f.meta.bits && f.meta.bits > 8) bits.push(f.meta.bits + '-bit');
+if (f.meta.hdr) bits.push('HDR');
+if (f.meta.cmyk) bits.push('CMYK');
+return bits.join(' \u00b7 ');
+}
+function updateTileDims(i) {
+var el = document.querySelector('.tile[data-idx="' + i + '"] .tile-dims');
+if (el) el.textContent = dimsOf(S.files[i]);
 }
 
 function placeholderIcon(kind) {
@@ -640,6 +723,7 @@ if (kind === 'audio') return '<svg class="ph-icon" viewBox="0 0 24 24" fill="non
 if (kind === 'video') return '<svg class="ph-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M10 9l5 3-5 3V9z"/></svg>';
 if (kind === 'vector') return '<svg class="ph-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l6-6 4 4 8-8"/><circle cx="3" cy="17" r="1.5"/><circle cx="21" cy="7" r="1.5"/></svg>';
 if (kind === 'font') return '<svg class="ph-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 20V6h12M9 13h7M9 20h4"/></svg>';
+if (kind === 'image') return '<svg class="ph-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 16l-5-5-9 9"/></svg>';
 return '<svg class="ph-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 3v4a1 1 0 001 1h4M5 3h9l5 5v11a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/></svg>';
 }
 
@@ -671,7 +755,20 @@ var rows = [
 ['Size', fmtBytes(f.size)]
 ];
 if (f.meta) {
+if (f.meta.format && f.meta.format !== '?') rows.push(['Format', esc(f.meta.format + (f.meta.codec ? ' (' + f.meta.codec + ')' : ''))]);
 if (f.meta.width && f.meta.height) rows.push(['Dimensions', f.meta.width + ' x ' + f.meta.height + ' px']);
+if (f.meta.width && f.meta.height && f.kind === 'image') rows.push(['Pixels', (f.meta.width * f.meta.height / 1e6).toFixed(f.meta.width * f.meta.height < 1e6 ? 2 : 1) + ' MP']);
+if (f.meta.bits && f.kind === 'image') rows.push(['Bit depth', f.meta.bits + (f.meta.float ? ' float' : '') + ' per channel']);
+if (f.meta.hdr) rows.push(['HDR', esc(f.meta.hdr)]);
+if (f.meta.cmyk) rows.push(['Colour', 'CMYK']);
+else if (f.meta.lab) rows.push(['Colour', 'Lab']);
+else if (f.meta.grey) rows.push(['Colour', 'Greyscale']);
+else if (f.meta.wideGamut) rows.push(['Colour', esc(f.meta.wideGamut)]);
+else if (f.meta.icc) rows.push(['Colour', 'ICC profile embedded']);
+if (f.meta.alpha) rows.push(['Alpha', 'yes']);
+if (f.meta.animated) rows.push(['Animated', 'yes']);
+if (f.meta.pages) rows.push(['Pages', f.meta.pages]);
+if (f.meta.mode) rows.push(['Mode', esc(f.meta.mode)]);
 if (f.meta.duration != null) rows.push(['Duration', fmtDuration(f.meta.duration)]);
 if (f.meta.aspect) rows.push(['Aspect', f.meta.aspect]);
 if (f.meta.error) rows.push(['Note', esc(f.meta.error)]);
@@ -705,18 +802,31 @@ return '<div class="ph">No preview available</div>';
 function probeImage(i) {
 var f = S.files[i];
 if (!f || f.meta) return Promise.resolve();
+/* Header read first: instant, no decode, and it works for HEIC, TIFF, PSD, EXR and PDF
+   that the browser cannot draw. Falls back to decoding only if the header gave nothing. */
+var hdr = (window.KI && KI.probeBlob) ? KI.probeBlob(f.blob, f.name).catch(function(){ return null; }) : Promise.resolve(null);
+return hdr.then(function(info){
+if (info && info.width && info.height) {
+info.aspect = aspectOf(info.width, info.height);
+f.meta = info;
+updateTileDims(i);
+if (S.selectedIdx === i) renderMeta();
+return;
+}
+if (info && info.kind === 'pdf') { f.meta = info; updateTileDims(i); if (S.selectedIdx === i) renderMeta(); return; }
+if (f.kind !== 'image') return;
+if (!IMAGE_DECODABLE[f.ext]) { f.meta = { error: 'Could not read dimensions from the file header' }; return; }
 return new Promise(function(res){
 var img = new Image();
 img.onload = function(){
-f.meta = {
-width: img.naturalWidth,
-height: img.naturalHeight,
-aspect: aspectOf(img.naturalWidth, img.naturalHeight)
-};
+f.meta = { width: img.naturalWidth, height: img.naturalHeight, aspect: aspectOf(img.naturalWidth, img.naturalHeight) };
+updateTileDims(i);
+if (S.selectedIdx === i) renderMeta();
 res();
 };
 img.onerror = function(){ f.meta = { error: 'Image failed to decode (unsupported format)' }; res(); };
 img.src = f.url;
+});
 });
 }
 
@@ -740,6 +850,7 @@ height: v.videoHeight || null,
 duration: v.duration,
 aspect: (v.videoWidth && v.videoHeight) ? aspectOf(v.videoWidth, v.videoHeight) : null
 };
+updateTileDims(i);
 finish(true);
 };
 v.onerror = function(){
