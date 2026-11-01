@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Link Matrix &middot; SlideSize</title>
+<meta name="description" content="Will this canvas fit down this cable? Type a resolution, refresh and bit depth and see which HDMI, DisplayPort and Thunderbolt versions carry it, and which MacBook can output it. Bandwidth tables for every current link standard.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%237FD1AE'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+:root {
+--accent: #7FD1AE;
+--accent2: #9fe0c4;
+--rp-dim: rgba(127,209,174,0.12);
+}
+.wrap { width: 100%; max-width: 1180px; padding: 24px 20px 48px; display: flex; flex-direction: column; gap: 18px; }
+
+/* calculator */
+.calc {
+background: var(--panel); border: 1px solid var(--border2); border-left: 2px solid var(--accent); border-radius: 2px;
+padding: 16px 18px; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px 14px;
+}
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label { font-family: var(--sans); font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+.field input, .field select {
+background: var(--bg); color: var(--text); border: 1px solid var(--border2); border-radius: 2px;
+font-family: var(--mono); font-size: 13px; padding: 9px 10px; width: 100%;
+}
+.field select { appearance: none; cursor: pointer;
+background-image: linear-gradient(45deg, transparent 50%, var(--accent) 50%), linear-gradient(135deg, var(--accent) 50%, transparent 50%);
+background-position: calc(100% - 15px) 50%, calc(100% - 10px) 50%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; padding-right: 28px; }
+.field input:focus, .field select:focus { outline: none; border-color: var(--accent); }
+.presets { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+font-family: var(--mono); font-size: 10.5px; color: var(--label); background: var(--bg); border: 1px solid var(--border2);
+border-radius: 2px; padding: 4px 9px; cursor: pointer;
+}
+.chip:hover { border-color: var(--accent); color: var(--accent); }
+.result {
+grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px 18px;
+border-top: 1px solid var(--border); padding-top: 12px;
+}
+.stat .k { font-family: var(--sans); font-size: 9.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+.stat .v { font-family: var(--mono); font-size: 16px; color: var(--text); margin-top: 2px; }
+.stat .v small { font-size: 10.5px; color: var(--muted); margin-left: 5px; }
+
+.sec-head {
+font-family: var(--sans); font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+color: var(--label); display: flex; align-items: center; gap: 12px; margin-top: 6px;
+}
+.sec-head::after { content: ''; flex: 1; height: 1px; background: var(--border2); }
+.sec-sub { font-family: var(--sans); font-size: 11.5px; color: var(--muted); line-height: 1.55; margin-top: -8px; }
+
+/* tables */
+.table-wrap { background: var(--panel); border: 1px solid var(--border2); border-radius: 2px; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 11.5px; }
+th {
+text-align: left; font-family: var(--sans); font-size: 9.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+color: var(--muted); padding: 10px 10px; border-bottom: 1px solid var(--border2); white-space: nowrap;
+}
+td { padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--label); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+td.name { color: var(--text); font-family: var(--sans); font-size: 12px; font-weight: 600; white-space: nowrap; }
+td.num { white-space: nowrap; }
+td.note { font-family: var(--sans); font-size: 11px; color: var(--muted); line-height: 1.5; min-width: 220px; }
+td.fit { white-space: nowrap; }
+.ok { color: var(--green); } .no { color: var(--red); } .dsc { color: var(--warn); } .na { color: var(--muted); }
+.pill {
+display: inline-block; font-family: var(--sans); font-size: 9px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase;
+padding: 2px 7px; border-radius: 2px; border: 1px solid currentColor; white-space: nowrap;
+}
+tr.hl td { background: rgba(127,209,174,0.05); }
+
+.how {
+font-family: var(--sans); font-size: 11.5px; line-height: 1.6; color: var(--muted);
+background: var(--panel); border: 1px solid var(--border2); border-radius: 2px; padding: 12px 16px;
+}
+.how strong { color: var(--label); font-weight: 500; }
+.how code { font-family: var(--mono); font-size: 10.5px; color: var(--label); background: var(--bg); border: 1px solid var(--border); border-radius: 2px; padding: 1px 4px; }
+</style>
+</head>
+<body>
+<header>
+<div class="site-bar">
+<a class="brand" href="/" title="Slide Size home"><img src="aegfx-logo-white.svg" alt="AEGFX, Slide Size home" width="104" height="24"></a>
+<nav aria-label="Breadcrumb"><ol class="crumbs">
+<li><a href="/">Slide Size</a></li>
+<li aria-current="page">Link Matrix</li>
+</ol></nav>
+<a class="site-contact" href="mailto:slidesize@aegfx.com">slidesize@aegfx.com</a>
+</div>
+<div class="logo-mark"></div>
+<div class="logo-text">Link <span>Matrix</span></div>
+</header>
+
+<div class="wrap">
+
+<p class="intro">
+Will this canvas fit down this cable? Type a <strong>resolution, refresh and bit depth</strong> and see the bandwidth it needs,
+which <strong>HDMI, DisplayPort and Thunderbolt</strong> versions carry it uncompressed or with DSC, and which
+<strong>MacBook</strong> can actually output it. Below that, the reference tables for every link standard and every Apple silicon MacBook.
+</p>
+
+<div class="calc" id="calc">
+<div class="field"><label for="w">Width (px)</label><input id="w" type="number" min="1" value="8000"></div>
+<div class="field"><label for="h">Height (px)</label><input id="h" type="number" min="1" value="2160"></div>
+<div class="field"><label for="hz">Refresh (Hz)</label>
+<select id="hz"><option>24</option><option>25</option><option>30</option><option selected>50</option><option>60</option><option>100</option><option>120</option><option>144</option><option>240</option></select></div>
+<div class="field"><label for="bpc">Bit depth</label>
+<select id="bpc"><option value="8" selected>8-bit</option><option value="10">10-bit</option><option value="12">12-bit</option></select></div>
+<div class="field"><label for="chroma">Chroma</label>
+<select id="chroma"><option value="3" selected>RGB / 4:4:4</option><option value="2">4:2:2</option><option value="1.5">4:2:0</option></select></div>
+<div class="presets" id="presets"></div>
+<div class="result" id="result"></div>
+</div>
+
+<div class="sec-head">Does it fit</div>
+<p class="sec-sub">Effective payload bandwidth after line coding, against the canvas above at CVT reduced-blanking timing. DSC assumes a conservative 3:1. Green carries it uncompressed, amber needs Display Stream Compression at both ends, red does not fit.</p>
+<div class="table-wrap"><table id="fit-table"><thead><tr><th>Link</th><th>Effective</th><th>Fit</th><th>Headroom</th><th>Uncompressed max at this refresh</th></tr></thead><tbody></tbody></table></div>
+
+<div class="sec-head">Which MacBook</div>
+<p class="sec-sub">Apple silicon MacBooks, what their ports speak and Apple's own stated maximum per display. A port can have the raw bandwidth and still be capped by what macOS will negotiate, so the Apple cap is applied on top of the link maths.</p>
+<div class="table-wrap"><table id="mac-table"><thead><tr><th>MacBook</th><th>Thunderbolt</th><th>HDMI</th><th>External displays</th><th>Apple max per display</th><th>This canvas</th></tr></thead><tbody></tbody></table></div>
+
+<div class="sec-head">Link standards</div>
+<div class="table-wrap"><table id="link-table"><thead><tr><th>Standard</th><th>Raw</th><th>Effective</th><th>Coding</th><th>Typical uncompressed ceiling, 8-bit 4:4:4</th><th>With DSC</th><th>Notes</th></tr></thead><tbody></tbody></table></div>
+
+<div class="how">
+<strong>How the maths works.</strong> Data rate = pixel clock &times; bits per pixel. Pixel clock uses CVT-RBv2 timing, 80 px of horizontal blanking and a 460 &micro;s vertical blank,
+which is what a modern display or processor will ask for. Bits per pixel is 3 &times; depth for RGB, 2 &times; for 4:2:2, 1.5 &times; for 4:2:0. The link's raw rate is cut by its
+line coding, 8b/10b for HDMI up to 2.0 and DisplayPort up to 1.4 (80%), 16b/18b for HDMI 2.1 FRL (89%), 128b/132b for DisplayPort 2.x UHBR (97%). Real processors
+and EDIDs vary, so treat a fit under 10% headroom as marginal and try a lower refresh or 4:2:2 before show day. Thunderbolt carries DisplayPort inside it, so TB3 and
+TB4 behave as DP 1.4 and TB5 as DP 2.1. On Apple silicon, DSC is on whenever a 6K or 8K panel asks for it, but a video processor has to support it too, and many don't.
+</div>
+
+</div>
+
+<footer>
+<span>Created by Andrew Brandse &middot; AEGFX LTD</span>
+<span><a href="mailto:slidesize@aegfx.com">slidesize@aegfx.com</a></span>
+<span>Built with Claude (Anthropic)</span>
+<div class="footer-sep"></div>
+<span>Reference only. Check the processor's EDID and Apple's current spec page before relying on a marginal fit.</span>
+<a class="footer-brand" href="https://aegfx.com" target="_blank" rel="noopener" title="AEGFX"><img src="aegfx-logo-reversed.svg" alt="AEGFX" width="121" height="28"></a>
+</footer>
+
+<script src="shared.js"></script>
+<script>
+(function(){
+'use strict';
+var esc = SS.esc;
+
+/* ------------------------------------------------------------
+   Link standards. eff = effective payload Gbit/s after coding.
+   ------------------------------------------------------------ */
+var LINKS = [
+{ id: 'hdmi14',  name: 'HDMI 1.4',               raw: 10.2,  eff: 8.16,  code: '8b/10b',    dsc: false, ceil: '4K30, 1440p60, 1080p120', notes: 'Still on a lot of older processors and splitters. 4K only at 30 Hz.' },
+{ id: 'hdmi20',  name: 'HDMI 2.0 / 2.0b',        raw: 18,    eff: 14.4,  code: '8b/10b',    dsc: false, ceil: '4K60 8-bit, 4K60 10-bit only as 4:2:2', notes: 'The 2021 M1 Pro and M1 Max MacBook Pro HDMI port. Most Event Master and LED processor inputs.' },
+{ id: 'hdmi21',  name: 'HDMI 2.1 (FRL 6)',       raw: 48,    eff: 42.67, code: '16b/18b',   dsc: true,  ceil: '8K60 4:2:0, 8K30 4:4:4, 4K120 4:4:4 10-bit', dscCeil: '8K60 4:4:4 10-bit, 10K', notes: 'M2 Pro MacBook Pro (2023) onwards. Needs an Ultra High Speed cable. Many "HDMI 2.1" inputs only implement FRL 4 (24 Gbps), check the processor.' },
+{ id: 'dp12',    name: 'DisplayPort 1.2 (HBR2)', raw: 21.6,  eff: 17.28, code: '8b/10b',    dsc: false, ceil: '4K60 8-bit, 2560x1600 at 120', notes: 'Event Master E2/S3 DP inputs. Thunderbolt 2.' },
+{ id: 'dp14',    name: 'DisplayPort 1.4 (HBR3)', raw: 32.4,  eff: 25.92, code: '8b/10b',    dsc: true,  ceil: '5K60, 4K120 8-bit, 4K98 10-bit, 8K30', dscCeil: '8K60 4:4:4, 4K240', notes: 'What Thunderbolt 3 and 4 tunnel. Apple drives 6K and 8K panels over it with DSC.' },
+{ id: 'dp20_10', name: 'DisplayPort 2.1 UHBR10', raw: 40,    eff: 38.69, code: '128b/132b', dsc: true,  ceil: '8K30 10-bit 4:4:4, 4K144 10-bit', dscCeil: '8K120', notes: 'Entry UHBR rate. Many "DP 2.1" GPUs and docks stop here.' },
+{ id: 'dp20_13', name: 'DisplayPort 2.1 UHBR13.5', raw: 54,  eff: 52.22, code: '128b/132b', dsc: true,  ceil: '8K60 8-bit 4:4:4 (tight), 5K240', dscCeil: '8K144', notes: 'Passive DP80 cables are not required but the processor has to be rated for it.' },
+{ id: 'dp20_20', name: 'DisplayPort 2.1 UHBR20', raw: 80,    eff: 77.37, code: '128b/132b', dsc: true,  ceil: '8K60 10-bit 4:4:4, 8K85 8-bit, 4K240 10-bit', dscCeil: '16K60, 8K120 10-bit', notes: 'What Thunderbolt 5 tunnels. M4 Pro, M4 Max and M5 Pro/Max MacBook Pro.' }
+];
+var TB = {
+TB3: { name: 'Thunderbolt 3 / USB4', link: 'dp14', note: 'DP 1.4, one or two streams' },
+TB4: { name: 'Thunderbolt 4',        link: 'dp14', note: 'DP 1.4, two streams' },
+TB5: { name: 'Thunderbolt 5',        link: 'dp20_20', note: 'DP 2.1 UHBR20' }
+};
+var HDMI = { '2.0': 'hdmi20', '2.1': 'hdmi21' };
+
+/* Apple's stated per-display ceilings as pixel rates (px/s), used as caps */
+var CAP = {
+'4K60': 3840 * 2160 * 60,
+'6K60': 6016 * 3384 * 60,
+'8K60': 7680 * 4320 * 60
+};
+
+/* ------------------------------------------------------------
+   Apple silicon MacBooks. tbCap / hdmiCap are Apple's stated
+   single-display maxima over that port family.
+   ------------------------------------------------------------ */
+var MACS = [
+{ name: 'MacBook Air M1 (2020)',               tb: 'TB3', tbN: 2, hdmi: null,  ext: '1',  tbCap: '6K60' },
+{ name: 'MacBook Air M2 (2022)',               tb: 'TB3', tbN: 2, hdmi: null,  ext: '1',  tbCap: '6K60' },
+{ name: 'MacBook Air M3 (2024)',               tb: 'TB3', tbN: 2, hdmi: null,  ext: '1, or 2 with the lid closed', tbCap: '6K60' },
+{ name: 'MacBook Air M4 (2025)',               tb: 'TB4', tbN: 2, hdmi: null,  ext: '2, plus the built-in display', tbCap: '6K60' },
+{ name: 'MacBook Pro 13" M1 (2020) / M2 (2022)', tb: 'TB3', tbN: 2, hdmi: null, ext: '1', tbCap: '6K60' },
+{ name: 'MacBook Pro 14/16" M1 Pro (2021)',    tb: 'TB4', tbN: 3, hdmi: '2.0', ext: '2',  tbCap: '6K60', hdmiCap: '4K60' },
+{ name: 'MacBook Pro 14/16" M1 Max (2021)',    tb: 'TB4', tbN: 3, hdmi: '2.0', ext: '4 (3 TB + 1 HDMI)', tbCap: '6K60', hdmiCap: '4K60' },
+{ name: 'MacBook Pro 14/16" M2 Pro (2023)',    tb: 'TB4', tbN: 3, hdmi: '2.1', ext: '2',  tbCap: '6K60', hdmiCap: '8K60' },
+{ name: 'MacBook Pro 14/16" M2 Max (2023)',    tb: 'TB4', tbN: 3, hdmi: '2.1', ext: '4',  tbCap: '6K60', hdmiCap: '8K60' },
+{ name: 'MacBook Pro 14" M3 (2023)',           tb: 'TB3', tbN: 2, hdmi: '2.1', ext: '1 (2 with lid closed on later macOS)', tbCap: '6K60', hdmiCap: '8K60' },
+{ name: 'MacBook Pro 14/16" M3 Pro (2023)',    tb: 'TB4', tbN: 3, hdmi: '2.1', ext: '2',  tbCap: '6K60', hdmiCap: '8K60' },
+{ name: 'MacBook Pro 14/16" M3 Max (2023)',    tb: 'TB4', tbN: 3, hdmi: '2.1', ext: '4',  tbCap: '6K60', hdmiCap: '8K60' },
+{ name: 'MacBook Pro 14" M4 (2024)',           tb: 'TB4', tbN: 3, hdmi: '2.1', ext: '2',  tbCap: '6K60', hdmiCap: '8K60' },
+{ name: 'MacBook Pro 14/16" M4 Pro (2024)',    tb: 'TB5', tbN: 3, hdmi: '2.1', ext: '2',  tbCap: '6K60', hdmiCap: '8K60', note: 'Apple lists 6K60 over Thunderbolt 5 on this generation, 8K60 only over HDMI.' },
+{ name: 'MacBook Pro 14/16" M4 Max (2024)',    tb: 'TB5', tbN: 3, hdmi: '2.1', ext: '4',  tbCap: '6K60', hdmiCap: '8K60', note: 'As M4 Pro.' },
+{ name: 'MacBook Pro 14" M5 (2025)',           tb: 'TB4', tbN: 3, hdmi: '2.1', ext: '2',  tbCap: '8K60', hdmiCap: '8K60', note: 'Apple lists one 8K60 display over any port.' },
+{ name: 'MacBook Pro 14/16" M5 Pro (2026)',    tb: 'TB5', tbN: 3, hdmi: '2.1', ext: '3',  tbCap: '8K60', hdmiCap: '8K60', note: 'One 8K60 plus a 5K120, any combination of ports.' },
+{ name: 'MacBook Pro 14/16" M5 Max (2026)',    tb: 'TB5', tbN: 3, hdmi: '2.1', ext: '4',  tbCap: '8K60', hdmiCap: '8K60', note: 'Two 8K60 displays, any combination of ports.' }
+];
+
+var PRESETS = [
+['1920×1080', 1920, 1080], ['2560×1440', 2560, 1440], ['3840×1080', 3840, 1080], ['3840×2160', 3840, 2160],
+['4096×2160', 4096, 2160], ['5120×1440', 5120, 1440], ['5760×1080', 5760, 1080], ['7680×2160', 7680, 2160],
+['8000×2160', 8000, 2160], ['7680×4320', 7680, 4320], ['6016×3384', 6016, 3384]
+];
+
+function linkById(id) { for (var i = 0; i < LINKS.length; i++) if (LINKS[i].id === id) return LINKS[i]; return null; }
+
+/* CVT-RBv2 pixel clock */
+function pixelClock(w, h, hz) {
+var hTotal = w + 80;
+var vTotal = h / (1 - 460e-6 * hz);   /* 460 us minimum vertical blank */
+if (vTotal < h + 21) vTotal = h + 21;
+return hTotal * vTotal * hz;          /* Hz */
+}
+function fmtG(x) { return x.toFixed(x < 10 ? 2 : 1); }
+function fmtMpx(w, h) { return (w * h / 1e6).toFixed(1); }
+
+function maxVertical(link, w, hz, bpp) {
+/* largest 16:9-ish height that fits uncompressed at this width and refresh */
+var budget = link.eff * 1e9 / bpp;              /* pixel clock budget */
+var hTot = w + 80;
+var vTot = budget / (hTot * hz);
+var h = Math.floor(vTot * (1 - 460e-6 * hz));
+return h > 0 ? h : 0;
+}
+function maxHz(link, w, h, bpp) {
+var budget = link.eff * 1e9 / bpp;
+/* solve budget = (w+80) * h/(1-460e-6*hz) * hz approximately by iteration */
+var lo = 1, hi = 1000;
+for (var i = 0; i < 40; i++) { var mid = (lo + hi) / 2; if (pixelClock(w, h, mid) <= budget) lo = mid; else hi = mid; }
+return Math.floor(lo);
+}
+
+function render() {
+var w = parseInt(document.getElementById('w').value, 10) || 0;
+var h = parseInt(document.getElementById('h').value, 10) || 0;
+var hz = parseFloat(document.getElementById('hz').value) || 60;
+var bpc = parseInt(document.getElementById('bpc').value, 10) || 8;
+var chroma = parseFloat(document.getElementById('chroma').value) || 3;
+var bpp = bpc * chroma;
+var pc = pixelClock(w, h, hz);
+var gbps = pc * bpp / 1e9;
+var pxRate = w * h * hz;
+
+var r = document.getElementById('result');
+r.innerHTML =
+stat('Pixels', fmtMpx(w, h) + ' MP', (w / h).toFixed(2) + ':1') +
+stat('Pixel clock', (pc / 1e6).toFixed(0) + ' MHz', 'CVT-RB') +
+stat('Bits per pixel', bpp, bpc + '-bit × ' + chroma) +
+stat('Needs', fmtG(gbps) + ' Gbit/s', 'payload, uncompressed') +
+stat('With DSC 3:1', fmtG(gbps / 3) + ' Gbit/s', 'both ends must support') +
+stat('vs 4K60', (pxRate / CAP['4K60']).toFixed(2) + '×', 'pixel rate');
+
+/* fit table */
+var tb = document.querySelector('#fit-table tbody');
+tb.innerHTML = LINKS.map(function(L){
+var fit = gbps <= L.eff ? 'ok' : (L.dsc && gbps / 3 <= L.eff) ? 'dsc' : 'no';
+var head = (L.eff / gbps - 1) * 100;
+var fitTxt = fit === 'ok' ? '<span class="ok">&#10003; fits</span>' : fit === 'dsc' ? '<span class="dsc">needs DSC</span>' : '<span class="no">&#10007; no</span>';
+var headTxt = fit === 'ok' ? (head < 10 ? '<span class="dsc">' + head.toFixed(0) + '% (marginal)</span>' : '<span class="ok">' + head.toFixed(0) + '%</span>') : '<span class="na">' + (fit === 'dsc' ? 'DSC ' + ((L.eff / (gbps / 3) - 1) * 100).toFixed(0) + '%' : 'short by ' + fmtG(gbps - L.eff) + ' Gbit/s') + '</span>';
+var mv = maxVertical(L, w, hz, bpp);
+var mhz = maxHz(L, w, h, bpp);
+var ceiling = (mv >= h ? w + '×' + h + ' at ' + mhz + ' Hz max' : w + '×' + mv + ' at ' + hz + ' Hz, or ' + w + '×' + h + ' at ' + mhz + ' Hz');
+return '<tr class="' + (fit === 'ok' ? 'hl' : '') + '"><td class="name">' + esc(L.name) + '</td><td class="num">' + fmtG(L.eff) + ' Gbit/s</td><td class="fit">' + fitTxt + '</td><td class="num">' + headTxt + '</td><td>' + esc(ceiling) + '</td></tr>';
+}).join('');
+
+/* mac table */
+var mt = document.querySelector('#mac-table tbody');
+mt.innerHTML = MACS.map(function(M){
+var routes = [];
+var tbL = linkById(TB[M.tb].link);
+var tbFit = gbps <= tbL.eff ? 'ok' : (tbL.dsc && gbps / 3 <= tbL.eff) ? 'dsc' : 'no';
+var tbCapOk = pxRate <= CAP[M.tbCap] * 1.001;
+if (tbFit !== 'no' && tbCapOk) routes.push('<span class="' + (tbFit === 'ok' ? 'ok' : 'dsc') + '">' + M.tb + (tbFit === 'dsc' ? ' (DSC)' : '') + '</span>');
+else if (tbFit !== 'no' && !tbCapOk) routes.push('<span class="na">' + M.tb + ' over Apple cap</span>');
+if (M.hdmi) {
+var hL = linkById(HDMI[M.hdmi]);
+var hFit = gbps <= hL.eff ? 'ok' : (hL.dsc && gbps / 3 <= hL.eff) ? 'dsc' : 'no';
+var hCapOk = pxRate <= CAP[M.hdmiCap] * 1.001;
+if (hFit !== 'no' && hCapOk) routes.push('<span class="' + (hFit === 'ok' ? 'ok' : 'dsc') + '">HDMI' + (hFit === 'dsc' ? ' (DSC/4:2:0)' : '') + '</span>');
+else if (hFit !== 'no' && !hCapOk) routes.push('<span class="na">HDMI over Apple cap</span>');
+}
+var verdict = routes.length ? routes.join(' &middot; ') : '<span class="no">&#10007; no port carries it</span>';
+var caps = M.tbCap + ' over TB' + (M.hdmi ? ', ' + M.hdmiCap + ' over HDMI' : '');
+return '<tr><td class="name">' + esc(M.name) + '</td><td>' + M.tbN + '× ' + esc(TB[M.tb].name) + '<br><span class="na">' + esc(TB[M.tb].note) + '</span></td><td>' + (M.hdmi ? 'HDMI ' + M.hdmi : '<span class="na">none</span>') + '</td><td>' + esc(M.ext) + '</td><td class="note">' + esc(caps) + (M.note ? '<br>' + esc(M.note) : '') + '</td><td class="fit">' + verdict + '</td></tr>';
+}).join('');
+}
+function stat(k, v, sub) { return '<div class="stat"><div class="k">' + k + '</div><div class="v">' + v + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div></div>'; }
+
+/* link standards table, static */
+document.querySelector('#link-table tbody').innerHTML = LINKS.map(function(L){
+return '<tr><td class="name">' + esc(L.name) + '</td><td class="num">' + L.raw + ' Gbit/s</td><td class="num">' + fmtG(L.eff) + ' Gbit/s</td><td>' + esc(L.code) + '</td><td>' + esc(L.ceil) + '</td><td>' + (L.dsc ? esc(L.dscCeil || 'yes') : '<span class="na">no DSC</span>') + '</td><td class="note">' + esc(L.notes) + '</td></tr>';
+}).join('');
+
+/* presets */
+document.getElementById('presets').innerHTML = PRESETS.map(function(p){ return '<span class="chip" data-w="' + p[1] + '" data-h="' + p[2] + '">' + p[0] + '</span>'; }).join('');
+Array.prototype.forEach.call(document.querySelectorAll('#presets .chip'), function(c){
+c.addEventListener('click', function(){ document.getElementById('w').value = c.dataset.w; document.getElementById('h').value = c.dataset.h; render(); });
+});
+['w','h','hz','bpc','chroma'].forEach(function(id){ document.getElementById(id).addEventListener('input', render); document.getElementById(id).addEventListener('change', render); });
+
+/* ?w=&h=&hz= deep link */
+var qs = new URLSearchParams(location.search);
+if (qs.get('w')) document.getElementById('w').value = qs.get('w');
+if (qs.get('h')) document.getElementById('h').value = qs.get('h');
+if (qs.get('hz')) document.getElementById('hz').value = qs.get('hz');
+render();
+})();
+</script>
+</body>
+</html>
