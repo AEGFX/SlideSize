@@ -515,6 +515,7 @@ margin: 0;
    the right colour. --emf-dim is the hover background tint. */
 .tools-grid .report-tool { --emf: #4A78B5; --emf2: #6a96d0; --emf-dim: rgba(74,120,181,0.12); }
 .tools-grid .vt-tool     { --emf: #9B7BD4; --emf2: #b295e0; --emf-dim: rgba(155,123,212,0.12); }
+.tools-grid .keynote-tool{ --emf: #E8705F; --emf2: #f28c7d; --emf-dim: rgba(232,112,95,0.12); }
 .tools-grid .media-tool  { --emf: #E0A020; --emf2: #f0b840; --emf-dim: rgba(224,160,32,0.12); }
 .tools-grid .pdf-tool    { --emf: #D96EB0; --emf2: #e689c0; --emf-dim: rgba(217,110,176,0.12); }
 .tools-grid .montage-link{ --emf: #A6CE4E; --emf2: #bfe070; --emf-dim: rgba(166,206,78,0.12); }
@@ -1158,6 +1159,17 @@ fixes right here with no re-encode.
 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
 </a>
 
+<a class="emf-tool tool-link keynote-tool" href="/keynote-inspector.html">
+<div class="emf-tool-title">Keynote Inspector <span class="emf-chip">Crash check</span></div>
+<p class="emf-intro">
+Drop a .key file and find the content that makes Keynote crash or crawl. 16-bit and float images, HDR
+gain maps, HEIC, CMYK, oversized rasters, HDR video, heavy PDFs and the RAM the deck needs with
+everything decoded. Reads headers only, so a multi-gigabyte deck takes seconds.
+</p>
+<div class="go-row"><span>Open Keynote Inspector</span>
+<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+</a>
+
 <a class="emf-tool tool-link media-tool" href="/media-extractor.html">
 <div class="emf-tool-title">Media Extractor <span class="emf-chip">PPTX &rarr; files</span></div>
 <p class="emf-intro">
@@ -1514,6 +1526,7 @@ var map = {
 '/script-format.html':   ['txt','text','md','docx','pdf','pptx','rtf','odt','fdx','fountain','html','htm'],
 '/script-compare.html':    ['txt','text','md','docx','pdf','pptx','rtf','odt','fdx','fountain','html','htm','srt','vtt'],
 '/vt-inspector.html':    ['mp4','mov','m4v','m4a'],
+'/keynote-inspector.html': ['key'],
 '/media-extractor.html': ['pptx'],
 '/emf-extractor.html':   ['emf','pptx'],
 '/pdf.html':             ['pdf'],

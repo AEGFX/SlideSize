@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Keynote Inspector &middot; SlideSize</title>
+<meta name="description" content="Drop a Keynote file and find the content that makes Keynote crash or crawl. HDR and 16-bit images, HEIC, CMYK, oversized rasters, HDR video, heavy PDFs. Reads the file headers only, nothing uploaded, runs entirely in your browser.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23E8705F'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+/* Page accent override. shared.css provides base header, footer, body, logo and .intro. */
+:root {
+--accent: #E8705F;
+--accent2: #f28c7d;
+--rp-dim: rgba(232,112,95,0.12);
+--rp-glow: rgba(232,112,95,0.35);
+}
+
+.wrap {
+width: 100%; max-width: 1180px;
+padding: 24px 20px 48px;
+display: flex; flex-direction: column; gap: 18px;
+}
+
+/* Drop zone */
+.drop {
+border: 1px dashed var(--border2);
+border-radius: 3px; background: var(--panel);
+padding: 28px 20px;
+display: flex; flex-direction: column; align-items: center; gap: 7px;
+cursor: pointer; transition: all 0.15s; position: relative;
+}
+.drop:hover { border-color: var(--accent); background: var(--panel2); }
+.drop.drag { border-color: var(--accent); background: var(--rp-dim); box-shadow: 0 0 0 3px var(--rp-glow); }
+.drop svg.dz-icon { width: 34px; height: 34px; stroke: var(--accent); fill: none; stroke-width: 1.6; }
+.drop .dz-big { font-size: 14px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--text); }
+.drop .dz-small { font-size: 11px; color: var(--muted); text-align: center; line-height: 1.6; }
+.drop input[type="file"] { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.drop .alt {
+font-family: var(--sans); font-size: 11px; color: var(--label);
+background: transparent; border: 1px solid var(--border2); border-radius: 2px;
+padding: 6px 11px; cursor: pointer; margin-top: 4px;
+}
+.drop .alt:hover { border-color: var(--accent); color: var(--accent); }
+.privacy {
+font-family: var(--sans); font-size: 11px; color: var(--accent);
+display: flex; align-items: center; gap: 5px; margin-top: 4px;
+}
+.privacy svg { width: 11px; height: 11px; stroke: var(--accent); fill: none; stroke-width: 2; }
+
+.note {
+background: var(--panel); border: 1px solid var(--border2); padding: 12px 16px;
+font-family: var(--sans); font-size: 12px; color: var(--muted);
+border-radius: 2px; display: flex; align-items: center; gap: 10px;
+}
+.note.err { border-left: 2px solid var(--red); color: var(--label); }
+.note .path { font-family: var(--mono); font-size: 11px; color: var(--label); margin-left: auto; max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Summary */
+.summary {
+background: var(--panel); border: 1px solid var(--border2); border-left: 2px solid var(--accent);
+border-radius: 2px; padding: 16px 18px;
+display: grid; grid-template-columns: auto 1fr auto; gap: 16px 20px; align-items: start;
+}
+@media (max-width: 720px) { .summary { grid-template-columns: 1fr; } .summary .thumb { display: none; } }
+.summary .thumb {
+width: 160px; aspect-ratio: 16/9; background: var(--bg); border: 1px solid var(--border);
+border-radius: 2px; overflow: hidden; display: flex; align-items: center; justify-content: center;
+}
+.summary .thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.summary .head { font-family: var(--sans); font-size: 14px; font-weight: 600; color: var(--text); word-break: break-all; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.verdict {
+display: inline-block; font-family: var(--sans); font-size: 10px; font-weight: 700;
+letter-spacing: 1px; text-transform: uppercase; padding: 3px 9px; border-radius: 2px;
+border: 1px solid currentColor; white-space: nowrap;
+}
+.v-green { color: var(--green); } .v-amber { color: var(--warn); } .v-red { color: var(--red); } .v-info { color: var(--muted); }
+.stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px 18px; margin-top: 12px; }
+.stat .k { font-family: var(--sans); font-size: 9.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+.stat .v { font-family: var(--mono); font-size: 15px; color: var(--text); margin-top: 2px; }
+.stat .v small { font-size: 10.5px; color: var(--muted); margin-left: 4px; }
+.stat.warn .v { color: var(--warn); } .stat.bad .v { color: var(--red); }
+.versions { font-family: var(--mono); font-size: 10.5px; color: var(--muted); margin-top: 10px; line-height: 1.6; }
+.actions { display: flex; flex-direction: column; gap: 8px; }
+.btn {
+display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: 0.6px;
+color: var(--bg); background: var(--accent); border: 0; border-radius: 2px;
+padding: 8px 13px; cursor: pointer; white-space: nowrap;
+}
+.btn:hover { background: var(--accent2); }
+.btn.ghost { background: transparent; color: var(--label); border: 1px solid var(--border2); }
+.btn.ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Sections */
+.sec-head {
+font-family: var(--sans); font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+color: var(--label); display: flex; align-items: center; gap: 12px; margin-top: 6px;
+}
+.sec-head::after { content: ''; flex: 1; height: 1px; background: var(--border2); }
+.sec-head .count { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 0; text-transform: none; }
+
+/* Findings */
+.find { border-left: 2px solid var(--border2); padding: 7px 0 7px 12px; }
+.find.sev-red   { border-left-color: var(--red); }
+.find.sev-amber { border-left-color: var(--warn); }
+.find.sev-info  { border-left-color: var(--border2); }
+.find-title { font-family: var(--sans); font-size: 12.5px; font-weight: 600; color: var(--label); }
+.find-detail { font-family: var(--sans); font-size: 11px; line-height: 1.55; color: var(--muted); margin-top: 3px; }
+.deck-findings { background: var(--panel); border: 1px solid var(--border2); border-radius: 2px; padding: 10px 16px; display: flex; flex-direction: column; gap: 6px; }
+
+/* Asset cards */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 12px; }
+.card {
+background: var(--panel); border: 1px solid var(--border2); border-left: 2px solid var(--border2);
+border-radius: 2px; padding: 12px 14px;
+}
+.card.sev-red { border-left-color: var(--red); } .card.sev-amber { border-left-color: var(--warn); }
+.card-head { display: flex; align-items: center; gap: 8px; font-family: var(--sans); font-size: 12.5px; font-weight: 600; color: var(--text); word-break: break-all; }
+.card-spec { font-family: var(--mono); font-size: 11px; color: var(--muted); margin: 4px 0 8px; line-height: 1.6; }
+.card .find { margin-top: 5px; }
+
+/* Table */
+details.all { background: var(--panel); border: 1px solid var(--border2); border-radius: 2px; }
+details.all summary {
+cursor: pointer; padding: 11px 16px; list-style: none;
+font-family: var(--sans); font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--label);
+display: flex; align-items: center; gap: 12px;
+}
+details.all summary::-webkit-details-marker { display: none; }
+details.all summary::before { content: '\25B8'; color: var(--accent); font-size: 12px; }
+details.all[open] summary::before { content: '\25BE'; }
+details.all summary .count { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 0; text-transform: none; }
+.table-wrap { overflow-x: auto; padding: 0 8px 8px; }
+table.assets { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 11px; }
+table.assets th {
+text-align: left; font-family: var(--sans); font-size: 9.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+color: var(--muted); padding: 8px 8px; border-bottom: 1px solid var(--border2); cursor: pointer; white-space: nowrap; user-select: none;
+}
+table.assets th:hover { color: var(--accent); }
+table.assets th.on { color: var(--accent); }
+table.assets td { padding: 6px 8px; border-bottom: 1px solid var(--border); color: var(--label); white-space: nowrap; vertical-align: top; }
+table.assets td.name { white-space: normal; word-break: break-all; min-width: 180px; }
+table.assets td.num { text-align: right; }
+table.assets tr.sev-red td.name { color: var(--red); } table.assets tr.sev-amber td.name { color: var(--warn); }
+.tag { display: inline-block; font-family: var(--sans); font-size: 9px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; padding: 1px 5px; border-radius: 2px; border: 1px solid currentColor; margin-right: 4px; }
+.tag.red { color: var(--red); } .tag.amber { color: var(--warn); } .tag.info { color: var(--muted); }
+
+.how {
+font-family: var(--sans); font-size: 11.5px; line-height: 1.6; color: var(--muted);
+background: var(--panel); border: 1px solid var(--border2); border-radius: 2px; padding: 12px 16px;
+}
+.how strong { color: var(--label); font-weight: 500; }
+.how code { font-family: var(--mono); font-size: 10.5px; color: var(--label); background: var(--bg); border: 1px solid var(--border); border-radius: 2px; padding: 1px 4px; }
+</style>
+</head>
+<body>
+<header>
+<div class="site-bar">
+<a class="brand" href="/" title="Slide Size home"><img src="aegfx-logo-white.svg" alt="AEGFX, Slide Size home" width="104" height="24"></a>
+<nav aria-label="Breadcrumb"><ol class="crumbs">
+<li><a href="/">Slide Size</a></li>
+<li aria-current="page">Keynote Inspector</li>
+</ol></nav>
+<a class="site-contact" href="mailto:slidesize@aegfx.com">slidesize@aegfx.com</a>
+</div>
+<div class="logo-mark"></div>
+<div class="logo-text">Keynote <span>Inspector</span></div>
+</header>
+
+<div class="wrap">
+
+<p class="intro">
+Drop a <strong>.key</strong> file and find the content that makes Keynote crash or crawl. Every image, video and PDF
+in the document is read from its header, so a multi-gigabyte deck takes seconds. Flags <strong>16-bit and float images</strong>,
+<strong>HDR</strong> (gain map, PQ, HLG), <strong>HEIC</strong>, <strong>CMYK</strong>, oversized rasters, HDR and 10-bit video,
+heavy PDFs and the total memory the deck needs when everything is decoded at once.
+</p>
+
+<label class="drop" id="drop" for="file">
+<svg class="dz-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M8 13l2 2 4-4"/></svg>
+<div class="dz-big">Drop a Keynote file</div>
+<div class="dz-small">single-file .key, or drag the .key package itself from Finder<br>or tap to browse</div>
+<input type="file" id="file" accept=".key,.zip,application/zip">
+<button type="button" class="alt" id="pick-folder">Choose a package folder instead</button>
+<input type="file" id="folder" webkitdirectory directory style="position:absolute;width:1px;height:1px;opacity:0">
+<div class="privacy">
+<svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+Processed in your browser &middot; nothing uploaded
+</div>
+</label>
+
+<div id="status"></div>
+<div id="results" style="display:none; flex-direction:column; gap:18px;"></div>
+
+<div class="how" id="how">
+<strong>What this looks for.</strong> Keynote composites every slide through Core Animation layers and draws images with Core Graphics.
+Anything over 8 bits per channel, anything HDR, and any float format (EXR, 32-bit PSD, float TIFF) is drawn through the 16-bit float
+RGBAf16 path with HDR headroom tracking, which is the path involved when Keynote aborts in TSDrawables during thumbnail or export rendering.
+HEIC adds an HEVC decode to every draw. CMYK and Lab force a colour conversion. Oversized rasters eat GPU texture memory on every display
+you attach. The fix in every case is the same, 8-bit sRGB PNG or JPEG resampled to the slide size, so the report tells you which files
+and nothing else. The <code>Data/</code> folder is scanned in full, <code>Index/</code> is only counted, so slide-by-slide mapping is not
+in this version.
+</div>
+
+</div>
+
+<footer>
+<span>Created by Andrew Brandse &middot; AEGFX LTD</span>
+<span><a href="mailto:slidesize@aegfx.com">slidesize@aegfx.com</a></span>
+<span>Built with Claude (Anthropic)</span>
+<div class="footer-sep"></div>
+<span>Nothing uploaded &middot; everything stays in your browser</span>
+<a class="footer-brand" href="https://aegfx.com" target="_blank" rel="noopener" title="AEGFX"><img src="aegfx-logo-reversed.svg" alt="AEGFX" width="121" height="28"></a>
+</footer>
+
+<script src="shared.js"></script>
+<script src="key-inspect.js"></script>
+<script>
+(function(){
+'use strict';
+
+var esc = SS.esc;
+var status = document.getElementById('status');
+var results = document.getElementById('results');
+var how = document.getElementById('how');
+var lastReport = null;
+var previewUrl = null;
+
+/* media-inspect.js for the video tracks, loaded only when a deck has video */
+var miReady = null;
+function loadMI() {
+if (miReady) return miReady;
+miReady = new Promise(function(res){
+if (window.MI) { res(window.MI); return; }
+var sc = document.createElement('script');
+sc.src = 'media-inspect.js';
+sc.onload = function(){ res(window.MI || null); };
+sc.onerror = function(){ res(null); };
+document.head.appendChild(sc);
+});
+return miReady;
+}
+
+function setStatus(html, cls) {
+status.innerHTML = html ? '<div class="note ' + (cls || '') + '">' + html + '</div>' : '';
+}
+
+/* ------------------------------------------------------------
+   Reading a dropped folder (Keynote package) via the entries API
+   ------------------------------------------------------------ */
+function readEntries(dirReader) {
+return new Promise(function(res, rej){
+var all = [];
+(function next(){
+dirReader.readEntries(function(batch){
+if (!batch.length) { res(all); return; }
+all = all.concat(Array.prototype.slice.call(batch));
+next();
+}, rej);
+})();
+});
+}
+function walkEntry(entry, prefix, out) {
+if (entry.isFile) {
+return new Promise(function(res, rej){
+entry.file(function(f){ out.push({ path: prefix + entry.name, file: f }); res(); }, rej);
+});
+}
+if (entry.isDirectory) {
+return readEntries(entry.createReader()).then(function(kids){
+return kids.reduce(function(p, k){ return p.then(function(){ return walkEntry(k, prefix + entry.name + '/', out); }); }, Promise.resolve());
+});
+}
+return Promise.resolve();
+}
+function stripRoot(list) {
+/* paths come in as "Deck.key/Index/..." so drop the first segment */
+var root = null;
+list.forEach(function(x){
+var seg = x.path.split('/')[0];
+if (root === null) root = seg; else if (root !== seg) root = '';
+});
+if (root) list.forEach(function(x){ x.path = x.path.slice(root.length + 1); });
+list.rootName = root || 'package';
+return list;
+}
+
+function handleDataTransfer(dt) {
+var items = dt.items ? Array.prototype.slice.call(dt.items) : [];
+var entries = items.map(function(it){ return it.webkitGetAsEntry ? it.webkitGetAsEntry() : null; }).filter(Boolean);
+var dir = entries.filter(function(e){ return e.isDirectory; })[0];
+if (dir) {
+var out = [];
+setStatus('<span class="spinner"></span>Reading package folder&hellip;');
+walkEntry(dir, '', out).then(function(){
+var list = stripRoot(out);
+list.rootName = dir.name;
+return run(list);
+}).catch(function(e){ setStatus('Could not read the folder. ' + esc(e.message || e), 'err'); });
+return;
+}
+var files = Array.prototype.slice.call(dt.files || []);
+if (files.length) run(files[0]);
+}
+
+/* ------------------------------------------------------------
+   Run the inspection and render
+   ------------------------------------------------------------ */
+function run(input) {
+results.style.display = 'none';
+results.innerHTML = '';
+if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = null; }
+var label = input instanceof Blob ? input.name : input.rootName;
+setStatus('<span class="spinner"></span>Opening ' + esc(label) + '&hellip;');
+var src;
+KI.openSource(input).then(function(s){
+src = s;
+var hasVideo = s.entries.some(function(e){ return /Data\/.*\.(mp4|mov|m4v|qt)$/i.test(e.path); });
+return hasVideo ? loadMI() : null;
+}).then(function(MI){
+return KI.inspect(src, {
+MI: MI,
+onProgress: function(done, total, path){
+if (done % 5 === 0 || done === total) setStatus('<span class="spinner"></span>Reading media ' + done + ' / ' + total + '<span class="path">' + esc(path) + '</span>');
+}
+});
+}).then(function(rep){
+lastReport = rep;
+setStatus('');
+render(rep);
+}).catch(function(e){
+setStatus('Could not read this file. ' + esc(e.message || e), 'err');
+});
+}
+
+function pill(sev) {
+var word = sev === 'red' ? 'Fail' : sev === 'amber' ? 'Warn' : 'OK';
+return '<span class="verdict v-' + sev + '">' + word + '</span>';
+}
+function tag(sev, text) { return '<span class="tag ' + sev + '">' + esc(text) + '</span>'; }
+
+function render(rep) {
+var t = rep.totals;
+var h = '';
+
+/* summary */
+h += '<div class="summary">';
+h += '<div class="thumb" id="thumb"></div>';
+h += '<div>';
+h += '<div class="head">' + pill(rep.verdict) + esc(rep.name) + '</div>';
+h += '<div class="stats">';
+var stat = function(k, v, sub, cls){ return '<div class="stat ' + (cls || '') + '"><div class="k">' + k + '</div><div class="v">' + v + (sub ? '<small>' + sub + '</small>' : '') + '</div></div>'; };
+if (rep.slides) h += stat('Slides', rep.slides, rep.masters ? rep.masters + ' masters' : '');
+h += stat('File size', KI.fmtBytes(rep.size));
+h += stat('Images', t.images, t.deepCount ? t.deepCount + ' deep' : '', t.deepCount ? 'bad' : '');
+h += stat('Videos', t.videos);
+if (t.pdfs) h += stat('PDFs', t.pdfs);
+if (t.audio) h += stat('Audio', t.audio);
+h += stat('HDR assets', t.hdrCount, '', t.hdrCount ? 'bad' : '');
+h += stat('Decoded', KI.fmtBytes(t.decodedBytes), 'all images in RAM', t.decodedBytes > 3 * 1073741824 ? 'bad' : t.decodedBytes > 1.5 * 1073741824 ? 'warn' : '');
+if (rep.previewSize && rep.previewSize.width) h += stat('Preview', rep.previewSize.width + '×' + rep.previewSize.height);
+h += '</div>';
+if (rep.versions.length) h += '<div class="versions">Keynote builds that touched this file &middot; ' + esc(rep.versions.join(' · ')) + '</div>';
+h += '</div>';
+h += '<div class="actions">';
+h += '<button class="btn" id="copy-report">Copy report</button>';
+h += '<button class="btn ghost" id="dl-report">Download .txt</button>';
+h += '</div>';
+h += '</div>';
+
+/* deck findings */
+if (rep.findings.length) {
+h += '<div class="sec-head">Deck <span class="count">' + rep.findings.length + '</span></div>';
+h += '<div class="deck-findings">';
+rep.findings.forEach(function(f){
+h += '<div class="find sev-' + f.sev + '"><div class="find-title">' + esc(f.title) + '</div><div class="find-detail">' + esc(f.detail) + '</div></div>';
+});
+h += '</div>';
+}
+
+/* flagged assets */
+var flagged = rep.assets.filter(function(a){ return a.findings.some(function(f){ return f.sev !== 'info'; }); })
+.sort(function(a, b){ return KI.rank(b.worst) - KI.rank(a.worst) || b.size - a.size; });
+h += '<div class="sec-head">Assets to fix <span class="count">' + flagged.length + '</span></div>';
+if (flagged.length) {
+h += '<div class="cards">';
+flagged.forEach(function(a){
+h += '<div class="card sev-' + a.worst + '">';
+h += '<div class="card-head">' + pill(a.worst) + esc(a.name) + '</div>';
+h += '<div class="card-spec">' + esc(KI.describe(a)) + '</div>';
+a.findings.forEach(function(f){
+h += '<div class="find sev-' + f.sev + '"><div class="find-title">' + esc(f.title) + '</div><div class="find-detail">' + esc(f.detail) + '</div></div>';
+});
+h += '</div>';
+});
+h += '</div>';
+} else {
+h += '<div class="note">Nothing in Data/ that this inspector knows to worry about.</div>';
+}
+
+/* all assets table */
+h += '<details class="all"><summary>All assets <span class="count">' + rep.assets.length + ' files &middot; ' + KI.fmtBytes(t.mediaBytes) + '</span></summary>';
+h += '<div class="table-wrap"><table class="assets" id="assets"><thead><tr>';
+h += '<th data-k="name">File</th><th data-k="format">Format</th><th data-k="px" class="num">Pixels</th><th data-k="bits">Depth</th><th>Colour</th><th data-k="size" class="num on">Size</th><th data-k="decoded" class="num">Decoded</th><th>Flags</th>';
+h += '</tr></thead><tbody></tbody></table></div></details>';
+
+results.innerHTML = h;
+results.style.display = 'flex';
+how.style.display = 'none';
+
+if (rep.preview) {
+previewUrl = URL.createObjectURL(rep.preview);
+document.getElementById('thumb').innerHTML = '<img src="' + previewUrl + '" alt="Deck preview">';
+}
+document.getElementById('copy-report').addEventListener('click', function(){
+var txt = KI.textReport(rep);
+if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(function(){ SS.showToast('Report copied'); });
+else SS.showToast('Clipboard not available, use Download');
+});
+document.getElementById('dl-report').addEventListener('click', function(){
+SS.download(KI.textReport(rep), rep.name.replace(/\.key$/i, '') + ' - Keynote Inspector.txt', 'text/plain');
+});
+
+var sortKey = 'size', sortDir = -1;
+function fillTable() {
+var rows = rep.assets.slice().sort(function(a, b){
+var av, bv;
+if (sortKey === 'px') { av = (a.width || 0) * (a.height || 0); bv = (b.width || 0) * (b.height || 0); }
+else if (sortKey === 'bits') { av = a.bits || 0; bv = b.bits || 0; }
+else if (sortKey === 'size') { av = a.size; bv = b.size; }
+else if (sortKey === 'decoded') { av = a.decoded || 0; bv = b.decoded || 0; }
+else { av = String(a[sortKey] || '').toLowerCase(); bv = String(b[sortKey] || '').toLowerCase(); return av < bv ? -sortDir : av > bv ? sortDir : 0; }
+return (av - bv) * sortDir;
+});
+var tb = document.querySelector('#assets tbody');
+tb.innerHTML = rows.map(function(a){
+var colour = a.hdr ? 'HDR ' + a.hdr : a.cmyk ? 'CMYK' : a.lab ? 'Lab' : a.grey ? 'Grey' : a.wideGamut ? a.wideGamut : a.colour ? a.colour : a.icc ? 'ICC' : a.kind === 'png' && a.srgb ? 'sRGB' : (a.width ? 'RGB' : '');
+var flags = a.findings.map(function(f){ return tag(f.sev, f.code); }).join('');
+if (a.error) flags += tag('amber', 'unreadable');
+return '<tr class="sev-' + a.worst + '">'
++ '<td class="name">' + esc(a.name) + '</td>'
++ '<td>' + esc(a.format) + (a.codec ? ' · ' + esc(a.codec) : '') + '</td>'
++ '<td class="num">' + (a.width ? a.width + '×' + a.height : '') + (a.pages ? a.pages + ' pg' : '') + '</td>'
++ '<td>' + (a.bits && a.kind !== 'pdf' ? a.bits + (a.float ? 'f' : '') : '') + '</td>'
++ '<td>' + esc(colour) + '</td>'
++ '<td class="num">' + KI.fmtBytes(a.size) + '</td>'
++ '<td class="num">' + (a.decoded ? KI.fmtBytes(a.decoded) : '') + '</td>'
++ '<td>' + flags + '</td>'
++ '</tr>';
+}).join('');
+}
+fillTable();
+Array.prototype.forEach.call(document.querySelectorAll('#assets th[data-k]'), function(th){
+th.addEventListener('click', function(){
+var k = th.getAttribute('data-k');
+if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = k === 'name' || k === 'format' ? 1 : -1; }
+Array.prototype.forEach.call(document.querySelectorAll('#assets th'), function(x){ x.classList.remove('on'); });
+th.classList.add('on');
+fillTable();
+});
+});
+}
+
+/* ------------------------------------------------------------
+   Drop and pickers
+   ------------------------------------------------------------ */
+var drop = document.getElementById('drop');
+var fileInput = document.getElementById('file');
+var folderInput = document.getElementById('folder');
+['dragenter','dragover'].forEach(function(ev){
+drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.add('drag'); });
+});
+['dragleave','drop'].forEach(function(ev){
+drop.addEventListener(ev, function(e){
+e.preventDefault();
+if (ev === 'drop' || e.target === drop) drop.classList.remove('drag');
+});
+});
+drop.addEventListener('drop', function(e){
+e.preventDefault(); drop.classList.remove('drag');
+handleDataTransfer(e.dataTransfer);
+});
+fileInput.addEventListener('change', function(){
+if (fileInput.files && fileInput.files.length) run(fileInput.files[0]);
+fileInput.value = '';
+});
+document.getElementById('pick-folder').addEventListener('click', function(e){
+e.preventDefault(); e.stopPropagation();
+folderInput.click();
+});
+folderInput.addEventListener('change', function(){
+var fs = Array.prototype.slice.call(folderInput.files || []);
+if (!fs.length) return;
+var list = fs.map(function(f){ return { path: f.webkitRelativePath || f.name, file: f }; });
+run(stripRoot(list));
+folderInput.value = '';
+});
+
+if (window.SS && SS.consumeHandoff) {
+SS.consumeHandoff(function(files){ if (files && files.length) run(files[0]); });
+}
+
+})();
+</script>
+</body>
+</html>
