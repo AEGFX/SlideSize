@@ -369,6 +369,11 @@ h += '<div class="head">' + pill(rep.verdict) + esc(rep.name) + '</div>';
 h += '<div class="stats">';
 var stat = function(k, v, sub, cls){ return '<div class="stat ' + (cls || '') + '"><div class="k">' + k + '</div><div class="v">' + v + (sub ? '<small>' + sub + '</small>' : '') + '</div></div>'; };
 if (rep.slides) h += stat('Slides', rep.slides, rep.masters ? rep.masters + ' masters' : '');
+if (rep.slideSize) {
+var sw = Math.round(rep.slideSize.width), sh = Math.round(rep.slideSize.height);
+var g = (function gcd(a, b){ return b ? gcd(b, a % b) : a; })(sw, sh);
+h += stat('Slide size', sw + '×' + sh, (sw / g) + ':' + (sh / g) + ' · points');
+}
 h += stat('File size', KI.fmtBytes(rep.size));
 h += stat('Images', t.images, t.deepCount ? t.deepCount + ' deep' : '', t.deepCount ? 'bad' : '');
 h += stat('Videos', t.videos);

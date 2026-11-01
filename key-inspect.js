@@ -786,6 +786,7 @@ window.KI = (function () {
     const compDataRefs = {};      /* comp -> Set(dataId) */
     const dataFiles = {};         /* data id -> file name */
     let showTree = null;          /* ordered top-level slide node ids */
+    let showSize = null;          /* { width, height } in points */
     const slideNodes = {};        /* node id -> { slideId, children[], skipped, thumbs[] } */
     const slideArchives = {};     /* slide id -> { name, comp, master:boolean } */
 
@@ -815,6 +816,11 @@ window.KI = (function () {
             if (f.field === 3 && f.wire === 2) {
               showTree = [];
               for (const g of pbFields(b, f.start, f.end)) if (g.field === 2 && g.wire === 2) { const id = pbRefId(b, g); if (id != null) showTree.push(id); }
+            } else if (f.field === 4 && f.wire === 2) {
+              const sz = {};
+              const dv = new DataView(b.buffer, b.byteOffset);
+              for (const g of pbFields(b, f.start, f.end)) if (g.wire === 5) sz[g.field === 1 ? 'width' : 'height'] = dv.getFloat32(g.start, true);
+              if (sz.width && sz.height) showSize = sz;
             }
           }
         } else if (a.type === 4 && a.id != null) {
@@ -886,6 +892,7 @@ window.KI = (function () {
       fileSlides[fn] = [{ key: 'thumb:' + sl.num, kind: 'thumbnail', num: sl.num, name: sl.name }];
     }));
     map.dataFiles = dataFiles;
+    map.showSize = showSize;
     map.masterCount = masters.length;
     return map;
   }
@@ -912,6 +919,7 @@ window.KI = (function () {
     report.slideOrderFromFiles = !!slideMap.fileOrder;
     if (slideMap.ok && slideMap.slides.length) { report.slides = slideMap.slides.length; report.slideList = slideMap.slides; }
     if (slideMap.ok && slideMap.masterCount) report.masters = slideMap.masterCount;
+    if (slideMap.showSize) report.slideSize = slideMap.showSize;
 
     /* Metadata/BuildVersionHistory.plist is XML, lists every Keynote build that touched the file */
     const bvh = entries.find(e => /(^|\/)Metadata\/BuildVersionHistory\.plist$/.test(e.path));
@@ -1057,6 +1065,7 @@ window.KI = (function () {
     const L = [];
     L.push('KEYNOTE INSPECTOR  ·  ' + rep.name);
     L.push('Verdict ' + rep.verdict.toUpperCase() + '  ·  ' + (rep.slides ? rep.slides + ' slides  ·  ' : '') + rep.totals.images + ' images  ·  ' + rep.totals.videos + ' videos  ·  ' + fmtBytes(rep.size));
+    if (rep.slideSize) L.push('Slide size ' + Math.round(rep.slideSize.width) + ' x ' + Math.round(rep.slideSize.height) + ' pt');
     if (rep.versions.length) L.push('Keynote builds ' + rep.versions.join(', '));
     L.push('');
     if (rep.findings.length) {
