@@ -670,6 +670,226 @@ window.KI = (function () {
     return probeReader(blobReader(blob, 0, blob.size), name || blob.name || '');
   }
 
+
+  /* ------------------------------------------------------------------
+     IWA (Index/*.iwa) reading: Snappy chunks of TSP.ArchiveInfo protobufs.
+     Used to map each Data/ asset to the slide(s) that reference it.
+     Type ids: 1 KN.DocumentArchive, 2 KN.ShowArchive, 4 KN.SlideNodeArchive,
+     5 KN.SlideArchive, 6 KN.SlideArchive (master), 11006 TSP.PackageMetadata.
+     ------------------------------------------------------------------ */
+  function snappyUncompress(src) {
+    let p = 0, len = 0, shift = 0, b;
+    do { b = src[p++]; len |= (b & 0x7f) << shift; shift += 7; } while (b & 0x80);
+    const out = new Uint8Array(len);
+    let o = 0;
+    while (p < src.length) {
+      const tag = src[p++];
+      const t = tag & 3;
+      if (t === 0) {
+        let n = tag >> 2;
+        if (n >= 60) { const k = n - 59; n = 0; for (let i = 0; i < k; i++) n |= src[p++] << (8 * i); }
+        n += 1;
+        out.set(src.subarray(p, p + n), o); o += n; p += n;
+      } else {
+        let n, off;
+        if (t === 1) { n = ((tag >> 2) & 7) + 4; off = ((tag >> 5) << 8) | src[p++]; }
+        else if (t === 2) { n = (tag >> 2) + 1; off = src[p] | (src[p + 1] << 8); p += 2; }
+        else { n = (tag >> 2) + 1; off = (src[p] | (src[p + 1] << 8) | (src[p + 2] << 16) | (src[p + 3] << 24)) >>> 0; p += 4; }
+        if (off === 0 || off > o) throw new Error('bad snappy offset');
+        for (let i = 0; i < n; i++) { out[o] = out[o - off]; o++; }
+      }
+    }
+    return o === len ? out : out.subarray(0, o);
+  }
+  function iwaUncompress(bytes) {
+    const parts = []; let p = 0, total = 0;
+    while (p + 4 <= bytes.length) {
+      if (bytes[p] !== 0) throw new Error('IWA chunk header');
+      const len = bytes[p + 1] | (bytes[p + 2] << 8) | (bytes[p + 3] << 16);
+      const chunk = bytes.subarray(p + 4, p + 4 + len);
+      let out;
+      try { out = snappyUncompress(chunk); } catch (e) { out = chunk; }
+      parts.push(out); total += out.length;
+      p += 4 + len;
+    }
+    const all = new Uint8Array(total); let o = 0;
+    for (const x of parts) { all.set(x, o); o += x.length; }
+    return all;
+  }
+  /* minimal protobuf wire reader */
+  function pbVarint(b, p) {
+    let v = 0, mul = 1, byte;
+    do { byte = b[p++]; v += (byte & 0x7f) * mul; mul *= 128; } while (byte & 0x80);
+    return [v, p];
+  }
+  function pbFields(b, start, end) {
+    const out = []; let p = start == null ? 0 : start; end = end == null ? b.length : end;
+    while (p < end) {
+      let key; [key, p] = pbVarint(b, p);
+      const field = Math.floor(key / 8), wire = key % 8;
+      if (wire === 0) { let v; [v, p] = pbVarint(b, p); out.push({ field, wire, v }); }
+      else if (wire === 1) { out.push({ field, wire, start: p, end: p + 8 }); p += 8; }
+      else if (wire === 2) { let n; [n, p] = pbVarint(b, p); out.push({ field, wire, start: p, end: p + n }); p += n; }
+      else if (wire === 5) { out.push({ field, wire, start: p, end: p + 4 }); p += 4; }
+      else throw new Error('protobuf wire type ' + wire);
+    }
+    return out;
+  }
+  const pbStr = (b, f) => utf8(b.subarray(f.start, f.end));
+  function pbPacked(b, f) {   /* repeated varint, packed or not */
+    if (f.wire === 0) return [f.v];
+    const out = []; let p = f.start;
+    while (p < f.end) { let v; [v, p] = pbVarint(b, p); out.push(v); }
+    return out;
+  }
+  function pbRefId(b, f) {    /* TSP.Reference / DataReference { identifier = 1 } */
+    for (const x of pbFields(b, f.start, f.end)) if (x.field === 1 && x.wire === 0) return x.v;
+    return null;
+  }
+  /* Walk one .iwa: yields { id, type, refs, dataRefs, body(bytes), bodyStart, bodyEnd } */
+  function iwaArchives(bytes) {
+    const b = iwaUncompress(bytes);
+    const out = []; let p = 0;
+    while (p < b.length) {
+      let n; [n, p] = pbVarint(b, p);
+      const infoEnd = p + n;
+      let id = null; const msgs = [];
+      for (const f of pbFields(b, p, infoEnd)) {
+        if (f.field === 1 && f.wire === 0) id = f.v;
+        else if (f.field === 2 && f.wire === 2) {
+          const m = { type: 0, length: 0, refs: [], dataRefs: [] };
+          for (const g of pbFields(b, f.start, f.end)) {
+            if (g.field === 1) m.type = g.v;
+            else if (g.field === 3) m.length = g.v;
+            else if (g.field === 5) m.refs = m.refs.concat(pbPacked(b, g));
+            else if (g.field === 6) m.dataRefs = m.dataRefs.concat(pbPacked(b, g));
+          }
+          msgs.push(m);
+        }
+      }
+      p = infoEnd;
+      msgs.forEach((m, i) => {
+        const rec = { id, type: m.type, refs: m.refs, dataRefs: m.dataRefs, bodyStart: p, bodyEnd: p + m.length, b, primary: i === 0 };
+        out.push(rec);
+        p += m.length;
+      });
+    }
+    return out;
+  }
+
+  /* Build { dataIdToFile, fileToSlides, slides[] } */
+  async function buildSlideMap(source, entries) {
+    const map = { ok: false, slides: [], fileSlides: {}, orphans: [] };
+    const iwaEntries = entries.filter(e => /(^|\/)Index\/[^/]+\.iwa$/.test(e.path));
+    if (!iwaEntries.length) return map;
+    const objects = {};           /* id -> { type, comp, refs, dataRefs, rec } */
+    const compDataRefs = {};      /* comp -> Set(dataId) */
+    const dataFiles = {};         /* data id -> file name */
+    let showTree = null;          /* ordered top-level slide node ids */
+    const slideNodes = {};        /* node id -> { slideId, children[], skipped, thumbs[] } */
+    const slideArchives = {};     /* slide id -> { name, comp, master:boolean } */
+
+    for (const e of iwaEntries) {
+      const comp = e.path.replace(/^.*\/Index\//, '').replace(/^Index\//, '').replace(/\.iwa$/, '');
+      let bytes;
+      try { const r = await source.getReader(e); bytes = await r.read(0, r.size); } catch (err) { continue; }
+      let arcs;
+      try { arcs = iwaArchives(bytes); } catch (err) { continue; }
+      const set = compDataRefs[comp] || (compDataRefs[comp] = new Set());
+      for (const a of arcs) {
+        a.dataRefs.forEach(d => set.add(d));
+        if (a.primary && a.id != null) objects[a.id] = { type: a.type, comp, refs: a.refs, dataRefs: a.dataRefs };
+        const b = a.b;
+        if (a.type === 11006) {
+          for (const f of pbFields(b, a.bodyStart, a.bodyEnd)) {
+            if (f.field === 4 && f.wire === 2) {
+              let id = null, fn = null, pref = null;
+              for (const g of pbFields(b, f.start, f.end)) {
+                if (g.field === 1) id = g.v; else if (g.field === 3) pref = pbStr(b, g); else if (g.field === 4) fn = pbStr(b, g);
+              }
+              if (id != null) dataFiles[id] = fn || pref;
+            }
+          }
+        } else if (a.type === 2) {
+          for (const f of pbFields(b, a.bodyStart, a.bodyEnd)) {
+            if (f.field === 3 && f.wire === 2) {
+              showTree = [];
+              for (const g of pbFields(b, f.start, f.end)) if (g.field === 2 && g.wire === 2) { const id = pbRefId(b, g); if (id != null) showTree.push(id); }
+            }
+          }
+        } else if (a.type === 4 && a.id != null) {
+          const node = { slideId: null, children: [], skipped: false, thumbs: [] };
+          for (const f of pbFields(b, a.bodyStart, a.bodyEnd)) {
+            if (f.field === 1 && f.wire === 2) { const id = pbRefId(b, f); if (id != null) node.children.push(id); }
+            else if (f.field === 2 && f.wire === 2) node.slideId = pbRefId(b, f);
+            else if (f.field === 4 && f.wire === 0) node.skipped = !!f.v;
+            else if (f.field === 16 && f.wire === 2) { const id = pbRefId(b, f); if (id != null) node.thumbs.push(id); }
+          }
+          slideNodes[a.id] = node;
+        } else if ((a.type === 5 || a.type === 6) && a.id != null) {
+          let name = null;
+          for (const f of pbFields(b, a.bodyStart, a.bodyEnd)) if (f.field === 10 && f.wire === 2) name = pbStr(b, f);
+          slideArchives[a.id] = { name, comp, master: a.type === 6 || /^MasterSlide/.test(comp) };
+        }
+      }
+    }
+    if (!Object.keys(dataFiles).length) return map;
+    map.ok = true;
+
+    /* slide order: depth-first through the show tree, Keynote numbers every slide incl. skipped */
+    const ordered = [];
+    const seen = new Set();
+    function walk(nodeId, depth) {
+      if (seen.has(nodeId)) return; seen.add(nodeId);
+      const node = slideNodes[nodeId]; if (!node) return;
+      const sa = node.slideId != null ? slideArchives[node.slideId] : null;
+      const comp = sa ? sa.comp : (objects[node.slideId] || {}).comp;
+      ordered.push({ num: ordered.length + 1, nodeId, slideId: node.slideId, comp, name: sa && sa.name, skipped: node.skipped, depth, thumbs: node.thumbs });
+      node.children.forEach(c => walk(c, depth + 1));
+    }
+    if (showTree && showTree.length) showTree.forEach(id => walk(id, 0));
+    else {
+      /* no tree found, fall back to Slide-N file order and say so */
+      map.fileOrder = true;
+      Object.keys(slideArchives).filter(id => !slideArchives[id].master)
+        .sort((x, y) => parseInt((slideArchives[x].comp.match(/\d+/) || [0])[0]) - parseInt((slideArchives[y].comp.match(/\d+/) || [0])[0]))
+        .forEach(id => ordered.push({ num: ordered.length + 1, slideId: Number(id), comp: slideArchives[id].comp, name: slideArchives[id].name, skipped: false, depth: 0, thumbs: [] }));
+    }
+    map.slides = ordered;
+
+    /* component -> slide label(s); masters and the document itself get their own labels */
+    const compLabel = {};
+    ordered.forEach(sl => { if (sl.comp) (compLabel[sl.comp] = compLabel[sl.comp] || []).push(sl); });
+    const masters = Object.keys(slideArchives).filter(id => slideArchives[id].master).map(id => slideArchives[id]);
+
+    /* data id -> file -> slides */
+    const fileSlides = map.fileSlides;
+    const touch = (dataId, where) => {
+      const fn = dataFiles[dataId]; if (!fn) return;
+      const arr = fileSlides[fn] || (fileSlides[fn] = []);
+      if (!arr.some(w => w.key === where.key)) arr.push(where);
+    };
+    for (const comp in compDataRefs) {
+      const sls = compLabel[comp];
+      if (sls) {
+        for (const d of compDataRefs[comp]) sls.forEach(sl => touch(d, { key: 'slide:' + sl.num, kind: 'slide', num: sl.num, name: sl.name, skipped: sl.skipped }));
+      } else if (/^MasterSlide/.test(comp)) {
+        const m = masters.find(x => x.comp === comp);
+        for (const d of compDataRefs[comp]) touch(d, { key: 'master:' + comp, kind: 'master', name: (m && m.name) || comp });
+      } else {
+        for (const d of compDataRefs[comp]) touch(d, { key: 'doc:' + comp, kind: 'document', name: comp });
+      }
+    }
+    /* slide-node thumbnails live in Document.iwa but belong to a slide */
+    ordered.forEach(sl => sl.thumbs.forEach(d => {
+      const fn = dataFiles[d]; if (!fn) return;
+      fileSlides[fn] = [{ key: 'thumb:' + sl.num, kind: 'thumbnail', num: sl.num, name: sl.name }];
+    }));
+    map.dataFiles = dataFiles;
+    map.masterCount = masters.length;
+    return map;
+  }
+
   async function inspect(source, opts = {}) {
     const MI = opts.MI || null;
     const progress = opts.onProgress || function () {};
@@ -685,6 +905,13 @@ window.KI = (function () {
     report.iwaCount = entries.filter(e => /\.iwa$/.test(e.path)).length;
     report.isKeynote = entries.some(e => /(^|\/)Index\/Document\.iwa$/.test(e.path)) || entries.some(e => /(^|\/)index\.apxl$/.test(e.path));
     report.legacy = entries.some(e => /(^|\/)index\.apxl(\.gz)?$/.test(e.path));
+    progress(0, 1, 'Reading slide index');
+    let slideMap = { ok: false, slides: [], fileSlides: {} };
+    try { slideMap = await buildSlideMap(source, entries); } catch (e) { report.slideMapError = e.message || String(e); }
+    report.slideMap = slideMap.ok;
+    report.slideOrderFromFiles = !!slideMap.fileOrder;
+    if (slideMap.ok && slideMap.slides.length) { report.slides = slideMap.slides.length; report.slideList = slideMap.slides; }
+    if (slideMap.ok && slideMap.masterCount) report.masters = slideMap.masterCount;
 
     /* Metadata/BuildVersionHistory.plist is XML, lists every Keynote build that touched the file */
     const bvh = entries.find(e => /(^|\/)Metadata\/BuildVersionHistory\.plist$/.test(e.path));
@@ -770,6 +997,11 @@ window.KI = (function () {
       else report.totals.other++;
       report.totals.mediaBytes += a.size;
       a.worst = a.findings.reduce((w, f) => rank(f.sev) > rank(w) ? f.sev : w, 'green');
+      if (slideMap.ok) {
+        a.where = slideMap.fileSlides[a.name] || [];
+        a.orphan = !a.where.length;
+        if (a.where.some(w => w.kind === 'thumbnail')) a.thumbnail = true;
+      }
       report.assets.push(a);
     }
     progress(dataEntries.length, dataEntries.length, '');
@@ -787,6 +1019,27 @@ window.KI = (function () {
     if (source.kind === 'zip' && !source.stored) add('info', 'deflated', 'Some media is deflate-compressed inside the file', 'Unusual for Keynote. The file may have been re-zipped by hand.');
     const cmykN = report.assets.filter(a => a.cmyk).length;
     if (cmykN) add('amber', 'deck-cmyk', cmykN + ' CMYK asset' + (cmykN > 1 ? 's' : ''), 'Print artwork pasted in. Convert to RGB.');
+
+    /* which slides need attention */
+    if (slideMap.ok) {
+      const bySlide = {};
+      report.assets.forEach(a => {
+        if (!a.findings.some(f => f.sev === 'red' || f.sev === 'amber')) return;
+        (a.where || []).forEach(w => {
+          const k = w.key;
+          const o = bySlide[k] || (bySlide[k] = { key: k, kind: w.kind, num: w.num, name: w.name, skipped: w.skipped, assets: [], worst: 'green' });
+          o.assets.push(a.name);
+          if (rank(a.worst) > rank(o.worst)) o.worst = a.worst;
+        });
+      });
+      report.slidesToFix = Object.values(bySlide).sort((x, y) => rank(y.worst) - rank(x.worst) || (x.num || 9e9) - (y.num || 9e9));
+      const orphanBytes = report.assets.filter(a => a.orphan && !a.thumbnail).reduce((s, a) => s + a.size, 0);
+      const orphanN = report.assets.filter(a => a.orphan && !a.thumbnail).length;
+      if (orphanN) add('info', 'orphans', orphanN + ' unreferenced file' + (orphanN > 1 ? 's' : '') + ' in Data/ (' + fmtBytes(orphanBytes) + ')', 'Not used by any slide or master. Keynote usually clears these on File > Reduce File Size, or on a Save As.');
+      if (slideMap.fileOrder) add('info', 'slide-order', 'Slide numbers are from file order', 'The slide tree could not be read, so Slide-N file numbering is used. Usually right, not guaranteed.');
+    } else if (report.isKeynote && !report.legacy) {
+      add('info', 'no-slide-map', 'Could not map assets to slides', (report.slideMapError ? report.slideMapError + '. ' : '') + 'The findings below are per file only.');
+    }
 
     const worstAsset = report.assets.reduce((w, a) => rank(a.worst) > rank(w) ? a.worst : w, 'green');
     const worstDeck = report.findings.reduce((w, f) => rank(f.sev) > rank(w) ? f.sev : w, 'green');
@@ -811,18 +1064,37 @@ window.KI = (function () {
       rep.findings.forEach(f => L.push('  [' + f.sev.toUpperCase() + '] ' + f.title + '  ' + f.detail));
       L.push('');
     }
+    if (rep.slidesToFix && rep.slidesToFix.length) {
+      L.push('SLIDES TO CHECK');
+      rep.slidesToFix.forEach(sl => {
+        const label = sl.kind === 'slide' ? 'Slide ' + sl.num + (sl.name ? '  "' + sl.name + '"' : '') + (sl.skipped ? '  (skipped)' : '') : sl.kind === 'master' ? 'Master "' + sl.name + '"' : sl.name;
+        L.push('  [' + sl.worst.toUpperCase() + '] ' + label + '  ' + sl.assets.join(', '));
+      });
+      L.push('');
+    }
     const flagged = rep.assets.filter(a => a.findings.length).sort((a, b) => rank(b.worst) - rank(a.worst));
     if (flagged.length) {
       L.push('ASSETS TO FIX');
       flagged.forEach(a => {
-        L.push('  ' + a.name + '  ' + describe(a));
+        L.push('  ' + a.name + '  ' + describe(a) + (a.where ? '  [' + whereLabel(a) + ']' : ''));
         a.findings.forEach(f => L.push('     [' + f.sev.toUpperCase() + '] ' + f.title + '  ' + f.detail));
       });
       L.push('');
     }
     L.push('ALL ASSETS');
-    rep.assets.forEach(a => L.push('  ' + a.name + '  ' + describe(a)));
+    rep.assets.forEach(a => L.push('  ' + a.name + '  ' + describe(a) + (a.where ? '  [' + whereLabel(a) + ']' : '')));
     return L.join('\n');
+  }
+  function whereLabel(a) {
+    if (!a.where) return '';
+    if (!a.where.length) return a.thumbnail ? 'navigator thumbnail' : 'not used on any slide';
+    const slides = a.where.filter(w => w.kind === 'slide').map(w => w.num).sort((x, y) => x - y);
+    const parts = [];
+    if (slides.length) parts.push((slides.length === 1 ? 'Slide ' : 'Slides ') + slides.join(', '));
+    a.where.filter(w => w.kind === 'master').forEach(w => parts.push('Master "' + w.name + '"'));
+    a.where.filter(w => w.kind === 'document').forEach(w => parts.push(w.name === 'Document' ? 'Document' : w.name));
+    if (a.where.some(w => w.kind === 'thumbnail')) parts.push('navigator thumbnail');
+    return parts.join(' · ');
   }
   function describe(a) {
     const parts = [a.format];
@@ -836,5 +1108,5 @@ window.KI = (function () {
     return parts.join(' · ');
   }
 
-  return { openSource, inspect, probeBlob, probeReader, textReport, describe, fmtBytes, fmtPixels, rank };
+  return { openSource, inspect, probeBlob, probeReader, textReport, describe, whereLabel, fmtBytes, fmtPixels, rank };
 })();

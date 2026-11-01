@@ -111,6 +111,20 @@ color: var(--label); display: flex; align-items: center; gap: 12px; margin-top: 
 .find-detail { font-family: var(--sans); font-size: 11px; line-height: 1.55; color: var(--muted); margin-top: 3px; }
 .deck-findings { background: var(--panel); border: 1px solid var(--border2); border-radius: 2px; padding: 10px 16px; display: flex; flex-direction: column; gap: 6px; }
 
+/* Slides to check */
+.slide-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.slide-card {
+background: var(--panel); border: 1px solid var(--border2); border-left: 2px solid var(--border2);
+border-radius: 2px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px;
+}
+.slide-card.sev-red { border-left-color: var(--red); } .slide-card.sev-amber { border-left-color: var(--warn); }
+.slide-num { font-family: var(--sans); font-size: 13px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; }
+.slide-num .verdict { font-size: 9px; padding: 2px 6px; }
+.slide-title { font-family: var(--sans); font-size: 11px; color: var(--muted); }
+.slide-assets { font-family: var(--mono); font-size: 10.5px; color: var(--label); line-height: 1.6; word-break: break-all; }
+.where { font-family: var(--sans); font-size: 11px; color: var(--accent); margin-top: -4px; margin-bottom: 8px; }
+.where.dim { color: var(--muted); }
+
 /* Asset cards */
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 12px; }
 .card {
@@ -201,8 +215,9 @@ Anything over 8 bits per channel, anything HDR, and any float format (EXR, 32-bi
 RGBAf16 path with HDR headroom tracking, which is the path involved when Keynote aborts in TSDrawables during thumbnail or export rendering.
 HEIC adds an HEVC decode to every draw. CMYK and Lab force a colour conversion. Oversized rasters eat GPU texture memory on every display
 you attach. The fix in every case is the same, 8-bit sRGB PNG or JPEG resampled to the slide size, so the report tells you which files
-and nothing else. The <code>Data/</code> folder is scanned in full, <code>Index/</code> is only counted, so slide-by-slide mapping is not
-in this version.
+and nothing else. <code>Data/</code> is scanned in full and <code>Index/</code> is decoded far enough to read the slide tree and each
+slide's asset references, so every flagged file is tied to the slide number you see in the navigator, or to the master
+it belongs to.
 </div>
 
 </div>
@@ -363,6 +378,7 @@ h += stat('HDR assets', t.hdrCount, '', t.hdrCount ? 'bad' : '');
 h += stat('Decoded', KI.fmtBytes(t.decodedBytes), 'all images in RAM', t.decodedBytes > 3 * 1073741824 ? 'bad' : t.decodedBytes > 1.5 * 1073741824 ? 'warn' : '');
 if (rep.previewSize && rep.previewSize.width) h += stat('Preview', rep.previewSize.width + '×' + rep.previewSize.height);
 h += '</div>';
+if (rep.slideMap === false && rep.isKeynote) h += '<div class="versions">Slide mapping unavailable for this file, findings are per asset only.</div>';
 if (rep.versions.length) h += '<div class="versions">Keynote builds that touched this file &middot; ' + esc(rep.versions.join(' · ')) + '</div>';
 h += '</div>';
 h += '<div class="actions">';
@@ -370,6 +386,22 @@ h += '<button class="btn" id="copy-report">Copy report</button>';
 h += '<button class="btn ghost" id="dl-report">Download .txt</button>';
 h += '</div>';
 h += '</div>';
+
+/* slides to check */
+if (rep.slidesToFix && rep.slidesToFix.length) {
+h += '<div class="sec-head">Slides to check <span class="count">' + rep.slidesToFix.length + '</span></div>';
+h += '<div class="slide-list">';
+rep.slidesToFix.forEach(function(sl){
+var label = sl.kind === 'slide' ? 'Slide ' + sl.num : sl.kind === 'master' ? 'Master' : sl.kind === 'thumbnail' ? 'Slide ' + sl.num + ' thumbnail' : esc(sl.name);
+var sub = sl.kind === 'slide' ? (sl.name ? esc(sl.name) : '') + (sl.skipped ? ' (skipped)' : '') : sl.kind === 'master' ? esc(sl.name) : '';
+h += '<div class="slide-card sev-' + sl.worst + '">';
+h += '<div class="slide-num">' + pill(sl.worst) + label + '</div>';
+if (sub) h += '<div class="slide-title">' + sub + '</div>';
+h += '<div class="slide-assets">' + sl.assets.map(esc).join('<br>') + '</div>';
+h += '</div>';
+});
+h += '</div>';
+}
 
 /* deck findings */
 if (rep.findings.length) {
@@ -391,6 +423,7 @@ flagged.forEach(function(a){
 h += '<div class="card sev-' + a.worst + '">';
 h += '<div class="card-head">' + pill(a.worst) + esc(a.name) + '</div>';
 h += '<div class="card-spec">' + esc(KI.describe(a)) + '</div>';
+if (a.where) h += '<div class="where' + (a.where.length ? '' : ' dim') + '">' + esc(KI.whereLabel(a)) + '</div>';
 a.findings.forEach(function(f){
 h += '<div class="find sev-' + f.sev + '"><div class="find-title">' + esc(f.title) + '</div><div class="find-detail">' + esc(f.detail) + '</div></div>';
 });
@@ -404,7 +437,7 @@ h += '<div class="note">Nothing in Data/ that this inspector knows to worry abou
 /* all assets table */
 h += '<details class="all"><summary>All assets <span class="count">' + rep.assets.length + ' files &middot; ' + KI.fmtBytes(t.mediaBytes) + '</span></summary>';
 h += '<div class="table-wrap"><table class="assets" id="assets"><thead><tr>';
-h += '<th data-k="name">File</th><th data-k="format">Format</th><th data-k="px" class="num">Pixels</th><th data-k="bits">Depth</th><th>Colour</th><th data-k="size" class="num on">Size</th><th data-k="decoded" class="num">Decoded</th><th>Flags</th>';
+h += '<th data-k="name">File</th><th data-k="slide">Slide</th><th data-k="format">Format</th><th data-k="px" class="num">Pixels</th><th data-k="bits">Depth</th><th>Colour</th><th data-k="size" class="num">Size</th><th data-k="decoded" class="num">Decoded</th><th>Flags</th>';
 h += '</tr></thead><tbody></tbody></table></div></details>';
 
 results.innerHTML = h;
@@ -424,7 +457,7 @@ document.getElementById('dl-report').addEventListener('click', function(){
 SS.download(KI.textReport(rep), rep.name.replace(/\.key$/i, '') + ' - Keynote Inspector.txt', 'text/plain');
 });
 
-var sortKey = 'size', sortDir = -1;
+var sortKey = rep.slideMap ? 'slide' : 'size', sortDir = rep.slideMap ? 1 : -1;
 function fillTable() {
 var rows = rep.assets.slice().sort(function(a, b){
 var av, bv;
@@ -432,6 +465,7 @@ if (sortKey === 'px') { av = (a.width || 0) * (a.height || 0); bv = (b.width || 
 else if (sortKey === 'bits') { av = a.bits || 0; bv = b.bits || 0; }
 else if (sortKey === 'size') { av = a.size; bv = b.size; }
 else if (sortKey === 'decoded') { av = a.decoded || 0; bv = b.decoded || 0; }
+else if (sortKey === 'slide') { var sn = function(x){ var w = (x.where || []).filter(function(q){ return q.num; }); return w.length ? Math.min.apply(null, w.map(function(q){ return q.num; })) : 1e9; }; av = sn(a); bv = sn(b); }
 else { av = String(a[sortKey] || '').toLowerCase(); bv = String(b[sortKey] || '').toLowerCase(); return av < bv ? -sortDir : av > bv ? sortDir : 0; }
 return (av - bv) * sortDir;
 });
@@ -442,6 +476,7 @@ var flags = a.findings.map(function(f){ return tag(f.sev, f.code); }).join('');
 if (a.error) flags += tag('amber', 'unreadable');
 return '<tr class="sev-' + a.worst + '">'
 + '<td class="name">' + esc(a.name) + '</td>'
++ '<td>' + (a.where ? esc(KI.whereLabel(a).replace(/^Slides? /, '')) : '') + '</td>'
 + '<td>' + esc(a.format) + (a.codec ? ' · ' + esc(a.codec) : '') + '</td>'
 + '<td class="num">' + (a.width ? a.width + '×' + a.height : '') + (a.pages ? a.pages + ' pg' : '') + '</td>'
 + '<td>' + (a.bits && a.kind !== 'pdf' ? a.bits + (a.float ? 'f' : '') : '') + '</td>'
@@ -453,6 +488,7 @@ return '<tr class="sev-' + a.worst + '">'
 }).join('');
 }
 fillTable();
+(function(){ var th0 = document.querySelector('#assets th[data-k="' + sortKey + '"]'); if (th0) th0.classList.add('on'); })();
 Array.prototype.forEach.call(document.querySelectorAll('#assets th[data-k]'), function(th){
 th.addEventListener('click', function(){
 var k = th.getAttribute('data-k');
