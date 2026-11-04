@@ -611,14 +611,28 @@ function proposeMapping(table) {
     }
     return null;
   }
+  /* second pass, a header that contains a synonym as whole words, Guest First Name, Delegate Surname */
+  function byContains(f) {
+    var cands = [f.replace(/_/g, ' ')].concat(SYNONYMS[f] || []).map(normHeader).filter(function (c) { return c.length > 2; });
+    var best = null;
+    table.headers.forEach(function (h) {
+      if (used[h]) return;
+      var nh = ' ' + normHeader(h) + ' ';
+      if (cands.some(function (c) { return nh.indexOf(' ' + c + ' ') >= 0; })) {
+        if (f === 'full_name' && /\b(first|last|sur|family|given|fore)/.test(nh)) return;
+        if (best === null || h.length < best.length) best = h;
+      }
+    });
+    return best;
+  }
   var p = { first: null, last: null, full: null, table: null };
-  p.first = byHeader('first_name'); if (p.first) used[p.first] = true;
-  p.last = byHeader('last_name'); if (p.last) used[p.last] = true;
+  p.first = byHeader('first_name') || byContains('first_name'); if (p.first) used[p.first] = true;
+  p.last = byHeader('last_name') || byContains('last_name'); if (p.last) used[p.last] = true;
   if (!p.first || !p.last) {
-    var full = byHeader('full_name');
+    var full = byHeader('full_name') || byContains('full_name');
     if (full) { p.full = full; used[full] = true; p.first = null; p.last = null; }
   }
-  p.table = byHeader('table'); if (p.table) used[p.table] = true;
+  p.table = byHeader('table') || byContains('table'); if (p.table) used[p.table] = true;
   if (!p.table) {
     for (var i = 0; i < table.headers.length; i++) {
       var h = table.headers[i];
@@ -1048,8 +1062,10 @@ function layoutGeometry(cfg) {
   var hasTable = cfg.fields.indexOf('table') >= 0;
   var hasExtra = cfg.fields.indexOf('extra') >= 0;
   var separate = cfg.fields.indexOf('first_name') >= 0;
-  var tableW = hasTable ? Math.min(0.9, colW * 0.18) : 0;
-  var extraW = hasExtra ? Math.min(1.8, colW * 0.32) : 0;
+  /* width from the longest value, roughly 0.55 em a character at this size */
+  var em = fontPt / 72;
+  var tableW = hasTable ? Math.min(colW * 0.35, Math.max(0.7, (cfg.tableChars || 3) * em * 0.6 + 0.2)) : 0;
+  var extraW = hasExtra ? Math.min(colW * 0.4, Math.max(1.2, (cfg.extraChars || 12) * em * 0.55 + 0.2)) : 0;
   var nameW = colW - tableW - extraW - (hasTable || hasExtra ? 0.1 : 0);
   var rows = [];
   for (var n = 0; n < N; n++) {
@@ -1057,7 +1073,7 @@ function layoutGeometry(cfg) {
     var x = margin + c * (colW + gap), y = top + r * rowH;
     var boxes = {};
     if (separate) {
-      var fw = nameW * 0.42;
+      var fw = Math.min(nameW * 0.42, Math.max(1.4, (cfg.firstChars || 10) * em * 0.6 + 0.3));
       boxes.first_name = { x: x, y: y, w: fw, h: rowH, align: 'l' };
       boxes.last_name = { x: x + fw, y: y, w: nameW - fw, h: rowH, align: 'l' };
     } else {
@@ -1105,10 +1121,11 @@ function xfrm(b) {
    prompt text. Slides reference it by idx and inherit all of this. */
 function layoutPlaceholder(id, name, type, idx, box, style) {
   var ph = type === 'title' ? '<p:ph type="title" hasCustomPrompt="1"/>' : '<p:ph type="body" idx="' + idx + '" hasCustomPrompt="1"/>';
+  var wrap = style.wrap === false ? 'none' : 'square';
   var rPr = '<a:defRPr sz="' + (style.pt * 100) + '"' + (style.bold ? ' b="1"' : '') + '>' + (style.grey ? '<a:solidFill><a:srgbClr val="7F7F7F"/></a:solidFill>' : '') + '</a:defRPr>';
   return '<p:sp><p:nvSpPr><p:cNvPr id="' + id + '" name="' + esc(name) + '"/><p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr><p:nvPr>' + ph + '</p:nvPr></p:nvSpPr>'
     + '<p:spPr>' + xfrm(box) + '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr>'
-    + '<p:txBody><a:bodyPr wrap="square" lIns="45720" tIns="18288" rIns="45720" bIns="18288" anchor="ctr"><a:normAutofit/></a:bodyPr>'
+    + '<p:txBody><a:bodyPr wrap="' + wrap + '" lIns="45720" tIns="18288" rIns="45720" bIns="18288" anchor="ctr"><a:normAutofit/></a:bodyPr>'
     + '<a:lstStyle><a:lvl1pPr marL="0" indent="0" algn="' + (style.align || 'l') + '"><a:buNone/>' + rPr + '</a:lvl1pPr></a:lstStyle>'
     + '<a:p><a:r><a:rPr lang="en-GB"/><a:t>' + esc(name) + '</a:t></a:r></a:p></p:txBody></p:sp>';
 }
@@ -1152,7 +1169,7 @@ function placeholderList(geom, cfg, withHeader) {
     cfg.fields.forEach(function (f) {
       var b = boxes[f];
       if (!b) return;
-      list.push({ name: 'row.' + (n0 + 1) + '.' + f, type: 'body', idx: idx++, box: b, style: { pt: geom.fontPt, align: b.align } });
+      list.push({ name: 'row.' + (n0 + 1) + '.' + f, type: 'body', idx: idx++, box: b, style: { pt: geom.fontPt, align: b.align, wrap: false } });
     });
   });
   return list;
@@ -1238,13 +1255,26 @@ function manifestJson(cfg, listFields, extras) {
   return JSON.stringify(m, null, 1);
 }
 
+/* The geometry inputs for a plan, with the longest value per field so the
+   boxes are wide enough. Shared by the page preview and the writer. */
+function geometryConfig(plan, cfg) {
+  var longest = { table: 0, extra: 0, first_name: 0 };
+  plan.slides.forEach(function (sp) {
+    sp.rows.forEach(function (rec) {
+      Object.keys(longest).forEach(function (f) { var n = toText(rec[f]).length; if (n > longest[f]) longest[f] = n; });
+    });
+  });
+  return { perSlide: cfg.perSlide, fields: cfg.fields, title: !!cfg.title, header: !!cfg.breakOn, range: !!cfg.range, page: !!cfg.page,
+    tableChars: longest.table, extraChars: longest.extra, firstChars: longest.first_name };
+}
+
 /* Build the deck. plan from planFlow, cfg {perSlide, fields, title (text or
    ''), range, page, breakOn, font, docTitle, created}. Returns the JSZip
    instance, caller picks the output type. */
 function buildDeck(plan, cfg, JSZip) {
   var fields = cfg.fields.slice();
   var hasHeader = !!cfg.breakOn;
-  var geomCfg = { perSlide: cfg.perSlide, fields: fields, title: !!cfg.title, header: hasHeader, range: !!cfg.range, page: !!cfg.page };
+  var geomCfg = geometryConfig(plan, cfg);
   var geom = layoutGeometry(geomCfg);
   var layouts = [{ name: 'LIST', phs: placeholderList(geom, geomCfg, false) }];
   if (hasHeader) layouts.push({ name: 'LIST BREAK', phs: placeholderList(geom, geomCfg, true) });
@@ -1398,6 +1428,7 @@ LB.sortFlow = sortFlow;
 LB.planFlow = planFlow;
 LB.headerLabel = headerLabel;
 LB.layoutGeometry = layoutGeometry;
+LB.geometryConfig = geometryConfig;
 LB.placeholderList = placeholderList;
 LB.buildDeck = buildDeck;
 LB.prepare = prepare;

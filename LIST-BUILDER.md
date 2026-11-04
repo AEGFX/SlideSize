@@ -40,7 +40,7 @@ Reading the file. Cells are cleaned of leading and trailing whitespace, tabs, no
 
 Header row. The first row where every non-empty cell is text, at least 60 percent of the widest row is filled, no value repeats within the row, no value repeats below it in its own column, and the next non-empty row has a different type signature. The candidates are kept so the user can override.
 
-Column guesses. By header name first (first name, forename, given name, surname, last name, family name, table, table number, and the Dutch voornaam, achternaam, tafel), then for the table by content, a column that is more than 80 percent small integers.
+Column guesses. By header name first (first name, forename, given name, surname, last name, family name, table, table number, and the Dutch voornaam, achternaam, tafel), then by a header that contains one of those as whole words (Guest First Name, Delegate Surname), then for the table by content, a column that is more than 80 percent small integers.
 
 Names. First and last from two columns, or one full name column split into first and surname where the surname is the last word plus any lower case particle words in front of it. Three fixes are applied automatically because every reference project turns them on, and each is reported. A full name sitting in the first name cell with the last name blank is split. A name in ALL CAPS or all lower case in a list that is otherwise title case is title cased, with Mc, Mac, O' and particles handled. Honorifics and suffixes (Dr, Prof, Sir, Jr, MBE and so on) are removed. Swapped first and last names are reported but not changed.
 
@@ -54,7 +54,7 @@ Rows with no name at all are dropped and the slide that would have held them car
 
 ## Layout
 
-Columns are derived from names per slide, up to 15 names a column and up to four columns. 30 names gives two columns of 15. The row height is the space available divided by the rows per column and the font size follows it, 14 pt at 30 a slide. The table number is right aligned at the edge of its column. Title top left, header below it, range top right, page bottom right.
+Columns are derived from names per slide, up to 15 names a column and up to four columns. 30 names gives two columns of 15. The row height is the space available divided by the rows per column and the font size follows it, 14 pt at 30 a slide. The table box and the extra field box are sized from the longest value in the data, and the first name box when first and last are separate. The table number is right aligned at the edge of its column. Row boxes do not wrap, a name too long for its box runs over the edge where it can be seen rather than folding onto a second line. Title top left, header below it, range top right, page bottom right.
 
 All of this sits on the layout. Nothing is positioned or formatted on the slides.
 

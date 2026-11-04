@@ -520,7 +520,7 @@ renderWarnings(all);
 /* ---------- preview ---------- */
 function renderPreview(r) {
 var o = r.options;
-var cfg = { perSlide: o.perSlide, fields: r.fields, title: !!o.title, header: !!(o.breakOn && r.options.mapping.table), range: o.range, page: o.page };
+var cfg = LB.geometryConfig(r.plan, { perSlide: o.perSlide, fields: r.fields, title: o.title, breakOn: o.breakOn && !!o.mapping.table, range: o.range, page: o.page });
 var geom = LB.layoutGeometry(cfg);
 var listPh = LB.placeholderList(geom, cfg, false);
 var breakPh = cfg.header ? LB.placeholderList(geom, cfg, true) : listPh;
