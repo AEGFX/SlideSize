@@ -521,6 +521,7 @@ margin: 0;
 .tools-grid .pdf-tool    { --emf: #D96EB0; --emf2: #e689c0; --emf-dim: rgba(217,110,176,0.12); }
 .tools-grid .montage-link{ --emf: #A6CE4E; --emf2: #bfe070; --emf-dim: rgba(166,206,78,0.12); }
 .tools-grid .compare-tool{ --emf: #F07C30; --emf2: #f69a5a; --emf-dim: rgba(240,124,48,0.12); }
+.tools-grid .list-tool   { --emf: #E8C547; --emf2: #f2d675; --emf-dim: rgba(232,197,71,0.12); }
 .tools-grid .stone-tool  { --emf: #CDA873; --emf2: #e0c294; --emf-dim: rgba(205,168,115,0.12); }
 .tools-grid .format-tool { --emf: #6FC3E8; --emf2: #96d4ef; --emf-dim: rgba(111,195,232,0.12); }
 /* Second section sits a clear gap below the first */
@@ -1171,6 +1172,17 @@ it starts.
 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
 </a>
 
+<a class="emf-tool tool-link list-tool" href="/list-builder.html">
+<div class="emf-tool-title">List Builder <span class="emf-chip">XLSX &rarr; PPTX</span></div>
+<p class="emf-intro">
+Drop a spreadsheet of names and get a deck of lists, 30 a slide, sorted by surname or by table with a
+header per table. Every name box is a placeholder on a LIST layout, so one change in Slide Master restyles
+the whole deck. Cleans stray spaces, splits full names, warns on blanks, duplicates and odd table numbers.
+</p>
+<div class="go-row"><span>Open List Builder</span>
+<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+</a>
+
 </div>
 </div>
 
@@ -1556,6 +1568,7 @@ var map = {
 '/media-extractor.html': ['pptx','key'],
 '/emf-extractor.html':   ['emf','pptx'],
 '/pdf.html':             ['pdf'],
+'/list-builder.html':    ['xlsx','xlsm','csv','txt','tsv'],
 '/photo-montage.html':   ['jpg','jpeg','png','webp','heic','heif','gif']
 };
 Array.prototype.forEach.call(document.querySelectorAll('.tools-grid .tool-link'), function(el){

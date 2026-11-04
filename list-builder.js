@@ -1398,6 +1398,7 @@ LB.sortFlow = sortFlow;
 LB.planFlow = planFlow;
 LB.headerLabel = headerLabel;
 LB.layoutGeometry = layoutGeometry;
+LB.placeholderList = placeholderList;
 LB.buildDeck = buildDeck;
 LB.prepare = prepare;
 LB.outputName = outputName;

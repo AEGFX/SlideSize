@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>List Builder &middot; SlideSize</title>
+<meta name="description" content="Turn a spreadsheet of names into a PowerPoint deck of lists, N names a slide, sorted by surname or table. The name boxes are real placeholders on a LIST layout, so one change in Slide Master restyles the whole deck. Runs entirely in your browser.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23E8C547'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+/* Page accent override. shared.css provides base header, footer, body, logo and .intro. */
+:root {
+--accent: #E8C547;
+--accent2: #f2d675;
+--lb: #E8C547;
+--lb-dim: rgba(232,197,71,0.12);
+--lb-glow: rgba(232,197,71,0.35);
+--lb-ink: #241f08;
+--amber: #d8a657;
+}
+[hidden] { display: none !important; }
+
+.wrap {
+width: 100%; max-width: 1180px;
+padding: 24px 20px 48px;
+display: flex; flex-direction: column; gap: 18px;
+}
+
+/* Drop zone */
+.drop {
+border: 1px dashed var(--border2);
+border-radius: 3px; background: var(--panel);
+padding: 28px 20px;
+display: flex; flex-direction: column; align-items: center; gap: 7px;
+cursor: pointer; transition: all 0.15s; position: relative;
+}
+.drop:hover { border-color: var(--accent); background: var(--panel2); }
+.drop.drag { border-color: var(--accent); background: var(--lb-dim); box-shadow: 0 0 0 3px var(--lb-glow); }
+.drop svg.dz-icon { width: 34px; height: 34px; stroke: var(--accent); fill: none; stroke-width: 1.6; }
+.drop .dz-big { font-size: 14px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--text); }
+.drop .dz-small { font-size: 11px; color: var(--muted); text-align: center; line-height: 1.6; }
+.drop input[type="file"] { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.drop.loaded { padding: 14px 20px; flex-direction: row; justify-content: center; gap: 14px; }
+.drop.loaded .dz-icon { width: 22px; height: 22px; }
+.drop.loaded .dz-big { font-size: 12px; }
+.privacy {
+font-family: var(--sans); font-size: 11px; color: var(--accent);
+display: flex; align-items: center; gap: 5px; margin-top: 4px;
+}
+.privacy svg { width: 11px; height: 11px; stroke: var(--accent); fill: none; stroke-width: 2; }
+
+.note {
+background: var(--panel); border: 1px solid var(--border2); padding: 12px 16px;
+font-family: var(--sans); font-size: 12px; color: var(--muted);
+border-radius: 2px; display: flex; align-items: center; gap: 10px;
+}
+.note.err { border-left: 2px solid var(--red); color: var(--label); }
+
+/* Panels */
+.panel {
+background: var(--panel);
+border: 1px solid var(--border2);
+border-top: 2px solid var(--lb);
+border-radius: 2px;
+padding: 16px;
+display: flex; flex-direction: column; gap: 12px;
+}
+.panel-title {
+font-family: var(--sans); font-size: 13px; font-weight: 700;
+letter-spacing: 1px; text-transform: uppercase; color: #fff;
+display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
+}
+.step {
+font-family: var(--mono); font-size: 11px; color: var(--lb-ink); background: var(--lb);
+width: 18px; height: 18px; border-radius: 2px; display: inline-flex; align-items: center; justify-content: center;
+}
+.chip {
+font-family: var(--mono); font-size: 10px; font-weight: 400; letter-spacing: 0.5px;
+color: var(--lb); border: 1px solid var(--lb); border-radius: 2px;
+padding: 2px 6px; text-transform: uppercase; white-space: nowrap;
+}
+.chip.dim { color: var(--muted); border-color: var(--border2); }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 20px; }
+.field { display: flex; flex-direction: column; min-width: 0; }
+.fld {
+font-family: var(--sans); font-size: 10px; font-weight: 600; letter-spacing: 1px;
+color: var(--muted); text-transform: uppercase; display: block; margin-bottom: 5px;
+}
+select, input[type="text"], input[type="number"] {
+width: 100%; background: var(--bg); border: 1px solid var(--border2); color: var(--text);
+font-family: var(--sans); font-size: 13px; font-weight: 500;
+padding: 9px 10px; border-radius: 2px; outline: none;
+transition: border-color 0.15s;
+}
+input[type="number"] { font-family: var(--mono); font-size: 15px; }
+select { cursor: pointer; }
+select:focus, input:focus { border-color: var(--lb); }
+select option { background: #1e1e1e; }
+.seg { display: flex; border: 1px solid var(--border2); border-radius: 2px; overflow: hidden; }
+.seg button {
+flex: 1; background: transparent; border: none; border-right: 1px solid var(--border2);
+color: var(--muted); font-family: var(--sans); font-size: 11px; font-weight: 600;
+letter-spacing: 1px; padding: 9px 4px; cursor: pointer; transition: all 0.15s;
+text-transform: uppercase; white-space: nowrap;
+}
+.seg button:last-child { border-right: none; }
+.seg button.active { background: var(--lb-dim); color: var(--lb); }
+.seg button:not(.active):hover { color: var(--text); background: var(--border); }
+.check { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; padding: 2px 0; }
+.check input { width: 15px; height: 15px; accent-color: var(--lb); margin-top: 2px; flex-shrink: 0; cursor: pointer; }
+.check-txt { font-family: var(--sans); font-size: 12.5px; color: var(--label); line-height: 1.45; }
+.check-txt em { font-style: normal; color: var(--muted); font-size: 11px; display: block; margin-top: 2px; }
+.hint { font-family: var(--sans); font-size: 11.5px; color: var(--muted); line-height: 1.55; }
+.hint b { color: var(--label); font-weight: 600; }
+.mono { font-family: var(--mono); }
+
+.btn {
+display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;
+color: var(--lb-ink); background: var(--lb); border: 0; border-radius: 2px;
+padding: 9px 13px; cursor: pointer; white-space: nowrap;
+}
+.btn:hover:not(:disabled) { background: var(--accent2); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn.ghost { background: transparent; color: var(--label); border: 1px solid var(--border2); }
+.btn.ghost:hover:not(:disabled) { border-color: var(--lb); color: var(--lb); }
+.btn.big { width: 100%; font-size: 14px; font-weight: 700; letter-spacing: 3px; padding: 16px; }
+.btn-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* Source summary */
+.stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px 18px; }
+.stat .k { font-family: var(--sans); font-size: 9.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+.stat .v { font-family: var(--mono); font-size: 15px; color: var(--text); margin-top: 2px; word-break: break-all; }
+.stat .v small { font-size: 10.5px; color: var(--muted); margin-left: 4px; }
+
+/* Preview */
+.slides { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+.slide {
+position: relative; aspect-ratio: 16 / 9; background: #fff; color: #1a1a1a;
+border: 1px solid var(--border2); border-radius: 2px; overflow: hidden;
+font-family: Calibri, Carlito, 'DM Sans', sans-serif;
+}
+.slide .ph {
+position: absolute; display: flex; align-items: center; overflow: hidden;
+white-space: nowrap; line-height: 1.1; padding: 0 0.35%;
+}
+.slide .ph.r { justify-content: flex-end; }
+.slide .ph.ctr { justify-content: center; }
+.slide .ph.grey { color: #7f7f7f; }
+.slide .ph.b { font-weight: 700; }
+.slide-label { font-family: var(--sans); font-size: 11px; color: var(--muted); margin-top: 6px; display: flex; justify-content: space-between; gap: 10px; }
+.slide-label b { color: var(--label); font-weight: 600; }
+
+/* Warnings */
+.warn-list { display: flex; flex-direction: column; gap: 4px; }
+.warn { border-left: 2px solid var(--border2); padding: 5px 0 5px 12px; font-family: var(--sans); font-size: 11.5px; line-height: 1.5; color: var(--muted); }
+.warn.error { border-left-color: var(--red); color: var(--label); }
+.warn.warning { border-left-color: var(--warn); color: var(--label); }
+.warn.info { border-left-color: var(--border2); }
+.warn .lvl { font-family: var(--mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: 1px; margin-right: 8px; }
+.warn.error .lvl { color: var(--red); } .warn.warning .lvl { color: var(--warn); } .warn.info .lvl { color: var(--muted); }
+details.more { border: 1px solid var(--border2); border-radius: 2px; background: var(--bg); }
+details.more > summary {
+list-style: none; cursor: pointer; padding: 9px 12px;
+font-family: var(--sans); font-size: 10px; font-weight: 700; letter-spacing: 1px;
+text-transform: uppercase; color: var(--muted);
+}
+details.more > summary::-webkit-details-marker { display: none; }
+details.more > summary:hover { color: var(--lb); }
+details.more .body { padding: 4px 12px 12px; }
+
+.how {
+font-family: var(--sans); font-size: 11.5px; line-height: 1.6; color: var(--muted);
+background: var(--panel); border: 1px solid var(--border2); border-radius: 2px; padding: 12px 16px;
+}
+.how strong { color: var(--label); font-weight: 500; }
+.how code { font-family: var(--mono); font-size: 10.5px; color: var(--label); background: var(--bg); border: 1px solid var(--border); border-radius: 2px; padding: 1px 4px; }
+footer { margin-top: auto; }
+:focus-visible { outline: 2px solid var(--lb); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<header>
+<div class="site-bar">
+<a class="brand" href="/" title="Slide Size home"><img src="aegfx-logo-white.svg" alt="AEGFX, Slide Size home" width="104" height="24"></a>
+<nav aria-label="Breadcrumb"><ol class="crumbs">
+<li><a href="/">Slide Size</a></li>
+<li aria-current="page">List Builder</li>
+</ol></nav>
+<a class="site-contact" href="mailto:slidesize@aegfx.com">slidesize@aegfx.com</a>
+</div>
+<div class="logo-mark"></div>
+<div class="logo-text">List <span>Builder</span></div>
+</header>
+
+<div class="wrap">
+
+<p class="intro">
+Drop a spreadsheet of names and get a PowerPoint deck of lists, <strong>N names a slide</strong>, sorted by surname or
+by table. Every name box is a real placeholder on a <strong>LIST</strong> layout, so one change in Slide Master
+restyles the whole deck. Made for table plans, delegate lists and credits.
+</p>
+
+<label class="drop" id="drop" for="file">
+<svg class="dz-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M3 14h18M9 9v11"/></svg>
+<div class="dz-big" id="dz-big">Drop a spreadsheet</div>
+<div class="dz-small" id="dz-small">.xlsx or .csv with a first name, last name and table column<br>or tap to browse</div>
+<input type="file" id="file" accept=".xlsx,.xlsm,.csv,.txt,.tsv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv">
+<div class="privacy" id="privacy">
+<svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+Processed in your browser &middot; nothing uploaded
+</div>
+</label>
+
+<div id="status"></div>
+
+<div id="work" hidden style="display:flex; flex-direction:column; gap:18px;">
+
+<div class="panel">
+<div class="panel-title"><span class="step">1</span>Source <span class="chip dim" id="src-chip"></span></div>
+<div class="stats" id="src-stats"></div>
+<div class="grid">
+<div class="field" id="sheet-field" hidden><label class="fld" for="sheet">Sheet</label><select id="sheet"></select></div>
+<div class="field"><label class="fld" for="header-row">Header row</label><select id="header-row"></select></div>
+</div>
+<p class="hint" id="src-hint"></p>
+</div>
+
+<div class="panel">
+<div class="panel-title"><span class="step">2</span>Columns</div>
+<div class="grid">
+<div class="field"><label class="fld" for="col-first" id="col-first-label">First name</label><select id="col-first"></select></div>
+<div class="field" id="col-last-field"><label class="fld" for="col-last">Last name</label><select id="col-last"></select></div>
+<div class="field"><label class="fld" for="col-table">Table</label><select id="col-table"></select></div>
+<div class="field"><label class="fld" for="col-extra">Extra field</label><select id="col-extra"></select></div>
+</div>
+<label class="check"><input type="checkbox" id="full-name">
+<span class="check-txt">One column holds the whole name<em>Each cell is split into first name and surname for sorting. The surname is the last word plus any lower case particle in front of it, so Anna van der Berg sorts under V.</em></span></label>
+</div>
+
+<div class="panel">
+<div class="panel-title"><span class="step">3</span>Options</div>
+<div class="grid3">
+<div class="field"><label class="fld" for="per-slide">Names per slide</label><input type="number" id="per-slide" min="1" max="120" step="1" value="30"></div>
+<div class="field"><label class="fld" for="sort">Sort</label>
+<select id="sort">
+<option value="surname">Surname then first name</option>
+<option value="first">First name then surname</option>
+<option value="table">Table then surname</option>
+</select></div>
+<div class="field"><span class="fld" id="particles-label">Surname particles</span>
+<div class="seg" id="particles" role="radiogroup" aria-labelledby="particles-label">
+<button type="button" data-v="uk" class="active" role="radio" aria-checked="true">UK, under V</button>
+<button type="button" data-v="dutch" role="radio" aria-checked="false">Dutch, under B</button>
+</div></div>
+<div class="field"><span class="fld" id="format-label">Name boxes per row</span>
+<div class="seg" id="name-format" role="radiogroup" aria-labelledby="format-label">
+<button type="button" data-v="full" class="active" role="radio" aria-checked="true">One box</button>
+<button type="button" data-v="separate" role="radio" aria-checked="false">First + last</button>
+</div></div>
+<div class="field"><label class="fld" for="title">Title on every slide</label><input type="text" id="title" placeholder="optional, Seating plan" autocomplete="off"></div>
+</div>
+<div class="grid3">
+<label class="check"><input type="checkbox" id="break">
+<span class="check-txt">Break on table change<em>One table per slide with the table in a header. Sorts by table first. Uses a LIST BREAK layout.</em></span></label>
+<label class="check"><input type="checkbox" id="show-table" checked>
+<span class="check-txt">Show the table number next to each name</span></label>
+<label class="check"><input type="checkbox" id="range" checked>
+<span class="check-txt">Range at the top, Adams to Fisher</span></label>
+<label class="check"><input type="checkbox" id="page" checked>
+<span class="check-txt">Page x of y, bottom right</span></label>
+<label class="check"><input type="checkbox" id="fix-names" checked>
+<span class="check-txt">Tidy names<em>Split a full name sitting in one cell, title case ALL CAPS and all lower case names in a title case list, remove Dr, Prof, Jr and the like. Each change is listed below.</em></span></label>
+</div>
+</div>
+
+<div class="panel">
+<div class="panel-title"><span class="step">4</span>Preview <span class="chip" id="deck-chip"></span></div>
+<div class="slides" id="slides"></div>
+<p class="hint">Plain white and Calibri on purpose. Open the deck, go to View, Slide Master, click the <b>LIST</b> layout and restyle the boxes there. Every slide follows.</p>
+</div>
+
+<div class="panel">
+<div class="panel-title"><span class="step">5</span>Build</div>
+<div class="btn-row" style="justify-content:space-between">
+<span class="hint" id="out-name"></span>
+</div>
+<button type="button" class="btn big" id="build">Build deck</button>
+<div id="build-msg"></div>
+</div>
+
+<div class="panel" id="warn-panel">
+<div class="panel-title">Warnings <span class="chip dim" id="warn-chip">none</span></div>
+<p class="hint">Nothing here stops the build. Row numbers are the ones you see in Excel.</p>
+<div class="warn-list" id="warn-list"></div>
+<details class="more" id="info-box" hidden><summary id="info-summary">Info</summary><div class="body warn-list" id="info-list"></div></details>
+</div>
+
+</div>
+
+<div class="how" id="how">
+<strong>How it works.</strong> The header row is detected, the first, last and table columns are guessed from the headers and
+content, and you can change any of it. Cells are cleaned of stray spaces, non-breaking spaces and line breaks. Names sort
+case insensitive and accent folded, with Table 2 before Table 10, and surname particles handled UK or Dutch style. The deck
+has one master and a layout named <code>LIST</code> (plus <code>LIST BREAK</code> when breaking on table) that holds every
+placeholder, named <code>row.1.name</code>, <code>row.1.table</code> and so on. The slides only carry the text, so position,
+size, font and colour all come from the layout. Restyle once in Slide Master and the whole deck changes. The .xlsx is read with
+SheetJS and the .pptx is written with JSZip, both in this tab.
+</div>
+
+</div>
+
+<footer>
+<span>Created by Andrew Brandse &middot; AEGFX LTD</span>
+<span><a href="mailto:slidesize@aegfx.com">slidesize@aegfx.com</a></span>
+<span>Built with Claude (Anthropic)</span>
+<div class="footer-sep"></div>
+<span>Nothing uploaded &middot; everything stays in your browser</span>
+<a class="footer-brand" href="https://aegfx.com" target="_blank" rel="noopener" title="AEGFX"><img src="aegfx-logo-reversed.svg" alt="AEGFX" width="121" height="28"></a>
+</footer>
+
+<script src="shared.js"></script>
+<script src="list-builder.js"></script>
+<script>
+(function(){
+'use strict';
+
+var esc = SS.esc;
+var LB = window.ListBuilder;
+var $ = function(id){ return document.getElementById(id); };
+
+var XLSX_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+var xlsxReady = null;
+function loadXLSX() {
+if (xlsxReady) return xlsxReady;
+xlsxReady = new Promise(function(res, rej){
+if (window.XLSX) { res(window.XLSX); return; }
+var sc = document.createElement('script');
+sc.src = XLSX_SRC;
+sc.onload = function(){ window.XLSX ? res(window.XLSX) : rej(new Error('SheetJS not available')); };
+sc.onerror = function(){ rej(new Error('SheetJS failed to load')); };
+document.head.appendChild(sc);
+});
+return xlsxReady;
+}
+
+/* ---------- state ---------- */
+var state = {
+file: null, kind: null, workbook: null, csvBytes: null,
+sheet: null, headerRow: null, table: null,
+mapping: { first: null, last: null, full: null, table: null, extra: null },
+result: null
+};
+var ui = { particles: 'uk', nameFormat: 'full' };
+
+function setStatus(html, cls) {
+$('status').innerHTML = html ? '<div class="note ' + (cls || '') + '">' + html + '</div>' : '';
+}
+
+/* ---------- loading a file ---------- */
+function openFile(file) {
+state.file = file;
+state.sheet = null; state.headerRow = null;
+var name = file.name || 'file';
+var isCsv = /\.(csv|txt|tsv)$/i.test(name) || /^text\//.test(file.type || '');
+state.kind = isCsv ? 'csv' : 'xlsx';
+setStatus('<span class="spinner"></span>Reading ' + esc(name) + '&hellip;');
+$('work').hidden = true;
+var p = file.arrayBuffer().then(function(ab){
+if (isCsv) { state.csvBytes = new Uint8Array(ab); state.workbook = null; return; }
+return loadXLSX().then(function(XLSX){
+state.workbook = XLSX.read(new Uint8Array(ab), { type: 'array', cellDates: true });
+state.csvBytes = null;
+if (!state.workbook.SheetNames.length) throw new Error('The workbook has no sheets');
+state.sheet = state.workbook.SheetNames[0];
+});
+}).then(function(){
+readTable();
+if (!state.table.rows.length) throw new Error('No data rows found under the header row');
+state.mapping = LB.proposeMapping(state.table);
+if (state.mapping.full) $('full-name').checked = true; else if (state.mapping.first || state.mapping.last) $('full-name').checked = false;
+fillSourcePanel();
+fillColumnSelects();
+$('work').hidden = false;
+$('how').style.display = 'none';
+setStatus('');
+var drop = $('drop');
+drop.classList.add('loaded');
+$('dz-big').textContent = name;
+$('dz-small').innerHTML = 'drop another file to replace it';
+$('privacy').hidden = true;
+recompute();
+}).catch(function(e){
+setStatus('Could not read this file. ' + esc(e.message || e), 'err');
+});
+return p;
+}
+
+function readTable() {
+if (state.kind === 'csv') {
+state.table = LB.readCsv(state.csvBytes, { headerRow: state.headerRow });
+} else {
+state.table = LB.readSheet(state.workbook.Sheets[state.sheet], window.XLSX, { headerRow: state.headerRow });
+}
+if (state.headerRow === null) state.headerRow = state.table.headerRow;
+}
+
+function fillSourcePanel() {
+var t = state.table;
+$('src-chip').textContent = state.kind === 'csv' ? 'csv' + (t.encoding ? ' · ' + t.encoding : '') : 'xlsx';
+var stat = function(k, v, sub){ return '<div class="stat"><div class="k">' + k + '</div><div class="v">' + v + (sub ? '<small>' + sub + '</small>' : '') + '</div></div>'; };
+var h = stat('Rows', t.rows.length, 'with data');
+h += stat('Columns', t.headers.length);
+h += stat('Header row', t.headerRow + 1);
+if (t.hiddenRowsSkipped) h += stat('Hidden rows', t.hiddenRowsSkipped, 'skipped');
+$('src-stats').innerHTML = h;
+/* sheet picker */
+var sf = $('sheet-field'), ss = $('sheet');
+if (state.workbook && state.workbook.SheetNames.length > 1) {
+sf.hidden = false;
+ss.innerHTML = state.workbook.SheetNames.map(function(n){ return '<option value="' + esc(n) + '"' + (n === state.sheet ? ' selected' : '') + '>' + esc(n) + '</option>'; }).join('');
+} else sf.hidden = true;
+/* header row picker, every row of the grid with a short preview, candidates first */
+var hr = $('header-row');
+var grid = t.grid || [];
+var cands = {};
+(t.headerCandidates || []).forEach(function(i){ cands[i] = true; });
+var opts = [];
+for (var i = 0; i < Math.min(grid.length, 60); i++) {
+var cells = grid[i].filter(function(v){ return v !== null && v !== undefined && String(v).trim() !== ''; }).slice(0, 4).map(function(v){ return LB.toText(v); }).join(' · ');
+if (!cells && i !== t.headerRow) continue;
+opts.push('<option value="' + i + '"' + (i === t.headerRow ? ' selected' : '') + '>Row ' + (i + 1) + (cands[i] ? ' ✓' : '') + '  ' + esc(cells.slice(0, 60)) + '</option>');
+}
+hr.innerHTML = opts.join('');
+var hint = 'Row ' + (t.headerRow + 1) + ' looks like the header';
+if (t.headerCandidates && t.headerCandidates.length > 1) hint += ', ' + (t.headerCandidates.length - 1) + ' other candidate' + (t.headerCandidates.length > 2 ? 's' : '') + ' marked ✓';
+hint += '. Change it if the names start somewhere else.';
+$('src-hint').textContent = hint;
+}
+
+function fillColumnSelects() {
+var heads = state.table.headers;
+function opts(sel, none) {
+return '<option value="">' + none + '</option>' + heads.map(function(h){ return '<option value="' + esc(h) + '"' + (h === sel ? ' selected' : '') + '>' + esc(h) + '</option>'; }).join('');
+}
+var m = state.mapping;
+var full = $('full-name').checked;
+$('col-first').innerHTML = opts(full ? m.full : m.first, full ? 'choose a column' : 'none');
+$('col-last').innerHTML = opts(m.last, 'none');
+$('col-table').innerHTML = opts(m.table, 'none');
+$('col-extra').innerHTML = opts(m.extra, 'none');
+applyFullNameMode();
+}
+
+function applyFullNameMode() {
+var full = $('full-name').checked;
+$('col-first-label').textContent = full ? 'Full name' : 'First name';
+$('col-last-field').hidden = full;
+}
+
+function readMapping() {
+var full = $('full-name').checked;
+var m = { first: null, last: null, full: null, table: $('col-table').value || null, extra: $('col-extra').value || null };
+if (full) m.full = $('col-first').value || null;
+else { m.first = $('col-first').value || null; m.last = $('col-last').value || null; }
+if (m.extra && (m.extra === m.table || m.extra === m.first || m.extra === m.last || m.extra === m.full)) m.extra = null;
+state.mapping = m;
+return m;
+}
+
+/* ---------- recompute everything ---------- */
+var timer = null;
+function schedule() { clearTimeout(timer); timer = setTimeout(recompute, 60); }
+
+function options() {
+var per = parseInt($('per-slide').value, 10);
+if (!(per >= 1)) per = 30;
+if (per > 120) per = 120;
+return {
+mapping: readMapping(), perSlide: per, sort: $('sort').value, breakOn: $('break').checked,
+particles: ui.particles, nameFormat: ui.nameFormat, range: $('range').checked, page: $('page').checked,
+fixNames: $('fix-names').checked, showTable: $('show-table').checked, title: $('title').value.trim()
+};
+}
+
+function recompute() {
+if (!state.table) return;
+var o = options();
+var m = o.mapping;
+if (!m.full && !m.first && !m.last) {
+state.result = null;
+$('slides').innerHTML = '<div class="note">Pick a name column to see the preview.</div>';
+$('deck-chip').textContent = '';
+$('build').disabled = true;
+renderWarnings([]);
+return;
+}
+var mapping = Object.assign({}, m);
+if (!o.showTable && !o.breakOn) { /* table still read for the sort, just not shown */ }
+var r = LB.prepare(state.table, { mapping: mapping, perSlide: o.perSlide, sort: o.sort, breakOn: o.breakOn && !!m.table, particles: o.particles, nameFormat: o.nameFormat, range: o.range, page: o.page, fixNames: o.fixNames });
+if (!o.showTable) r.fields = r.fields.filter(function(f){ return f !== 'table'; });
+r.options = o;
+state.result = r;
+var n = r.plan.slides.length;
+$('deck-chip').textContent = n + ' slide' + (n === 1 ? '' : 's') + ' · ' + r.records.length + ' names';
+$('build').disabled = n === 0;
+$('out-name').textContent = 'Saves as ' + LB.outputName(state.file ? state.file.name : 'list');
+$('break').disabled = !m.table;
+$('show-table').disabled = !m.table;
+if (!m.table && $('sort').value === 'table') { $('sort').value = 'surname'; }
+renderPreview(r);
+var all = r.warnings.slice();
+r.plan.warnings.forEach(function(w){ all.push({ level: 'warning', text: w }); });
+renderWarnings(all);
+}
+
+/* ---------- preview ---------- */
+function renderPreview(r) {
+var o = r.options;
+var cfg = { perSlide: o.perSlide, fields: r.fields, title: !!o.title, header: !!(o.breakOn && r.options.mapping.table), range: o.range, page: o.page };
+var geom = LB.layoutGeometry(cfg);
+var listPh = LB.placeholderList(geom, cfg, false);
+var breakPh = cfg.header ? LB.placeholderList(geom, cfg, true) : listPh;
+var statics = [];
+if (cfg.range) statics.push(geom.extras['range.to']);
+if (cfg.page) statics.push(geom.extras['page.of']);
+var slides = r.plan.slides.slice(0, 2);
+var h = '';
+slides.forEach(function(sp){
+var phs = sp.layout === 'LIST BREAK' ? breakPh : listPh;
+h += '<div><div class="slide" data-slide="' + sp.index + '">';
+phs.forEach(function(p){
+var v = p.name === 'title' ? o.title : sp.values[p.name];
+if (v === undefined || v === null || v === '') return;
+h += box(p.box, p.style, v);
+});
+statics.forEach(function(s){ h += box(s, s, s.text); });
+h += '</div><div class="slide-label"><b>Slide ' + sp.index + ' of ' + r.plan.slides.length + '</b><span>' + esc(sp.layout) + ' · ' + sp.rows.length + ' names</span></div></div>';
+});
+if (!slides.length) h = '<div class="note">No names to show.</div>';
+$('slides').innerHTML = h;
+fitPreviewText();
+}
+function box(b, style, text) {
+var cls = 'ph' + (style.align === 'r' ? ' r' : style.align === 'ctr' ? ' ctr' : '') + (style.grey ? ' grey' : '') + (style.bold ? ' b' : '');
+return '<div class="' + cls + '" data-pt="' + style.pt + '" style="left:' + (b.x / 13.333 * 100).toFixed(3) + '%;top:' + (b.y / 7.5 * 100).toFixed(3) + '%;width:' + (b.w / 13.333 * 100).toFixed(3) + '%;height:' + (b.h / 7.5 * 100).toFixed(3) + '%">' + esc(text) + '</div>';
+}
+function fitPreviewText() {
+Array.prototype.forEach.call(document.querySelectorAll('.slide'), function(sl){
+var pxPerIn = sl.clientWidth / 13.333;
+Array.prototype.forEach.call(sl.querySelectorAll('.ph'), function(ph){
+ph.style.fontSize = (parseFloat(ph.getAttribute('data-pt')) / 72 * pxPerIn) + 'px';
+});
+});
+}
+window.addEventListener('resize', fitPreviewText);
+
+/* ---------- warnings ---------- */
+function renderWarnings(list) {
+var main = list.filter(function(w){ return w.level !== 'info'; });
+var info = list.filter(function(w){ return w.level === 'info'; });
+$('warn-chip').textContent = list.length ? (main.length + ' to check' + (info.length ? ' · ' + info.length + ' info' : '')) : 'none';
+$('warn-list').innerHTML = main.length ? main.map(function(w){
+return '<div class="warn ' + w.level + '"><span class="lvl">' + (w.level === 'error' ? 'skipped' : 'check') + '</span>' + esc(w.text) + '</div>';
+}).join('') : '<div class="hint">Nothing to report.</div>';
+$('info-box').hidden = !info.length;
+$('info-summary').textContent = info.length + ' info line' + (info.length === 1 ? '' : 's') + ', cleaned cells, particles, hyphens';
+$('info-list').innerHTML = info.map(function(w){ return '<div class="warn info"><span class="lvl">info</span>' + esc(w.text) + '</div>'; }).join('');
+}
+
+/* ---------- build ---------- */
+$('build').addEventListener('click', function(){
+var r = state.result;
+if (!r) return;
+var btn = $('build');
+btn.disabled = true;
+$('build-msg').innerHTML = '<div class="note"><span class="spinner"></span>Writing the deck&hellip;</div>';
+SS.loadJSZip().then(function(JSZip){
+var o = r.options;
+var zip = LB.buildDeck(r.plan, { perSlide: o.perSlide, fields: r.fields, title: o.title, range: o.range, page: o.page, breakOn: o.breakOn && !!o.mapping.table, docTitle: (state.file.name || 'List').replace(/\.[^.]+$/, ''), created: new Date() }, JSZip);
+return zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', compression: 'DEFLATE' });
+}).then(function(blob){
+var name = LB.outputName(state.file.name);
+SS.download(blob, name);
+$('build-msg').innerHTML = '<div class="note">Saved ' + esc(name) + ' &middot; ' + SS.fmtBytes(blob.size) + ' &middot; ' + r.plan.slides.length + ' slides. Open it and try View, Slide Master, LIST.</div>';
+}).catch(function(e){
+$('build-msg').innerHTML = '<div class="note err">Could not build the deck. ' + esc(e.message || e) + '</div>';
+}).then(function(){ btn.disabled = false; });
+});
+
+/* ---------- wiring ---------- */
+['col-first','col-last','col-table','col-extra','sort','break','show-table','range','page','fix-names'].forEach(function(id){
+$(id).addEventListener('change', schedule);
+});
+['per-slide','title'].forEach(function(id){ $(id).addEventListener('input', schedule); });
+$('full-name').addEventListener('change', function(){
+/* keep whatever the user picked in the first slot, it becomes the full name column */
+var m = readMapping();
+if ($('full-name').checked) { if (!m.full) m.full = m.first || m.last; }
+else { if (!m.first) m.first = m.full; }
+state.mapping = m;
+fillColumnSelects();
+schedule();
+});
+$('break').addEventListener('change', function(){
+if ($('break').checked) { $('sort').value = 'table'; $('show-table').checked = false; }
+else { if ($('sort').value === 'table') $('sort').value = 'surname'; $('show-table').checked = true; }
+});
+$('header-row').addEventListener('change', function(){
+state.headerRow = parseInt($('header-row').value, 10);
+try { readTable(); } catch (e) { setStatus(esc(e.message || e), 'err'); return; }
+state.mapping = LB.proposeMapping(state.table);
+if (state.mapping.full) $('full-name').checked = true;
+fillSourcePanel(); fillColumnSelects(); recompute();
+});
+$('sheet').addEventListener('change', function(){
+state.sheet = $('sheet').value; state.headerRow = null;
+try { readTable(); } catch (e) { setStatus(esc(e.message || e), 'err'); return; }
+state.mapping = LB.proposeMapping(state.table);
+$('full-name').checked = !!state.mapping.full;
+fillSourcePanel(); fillColumnSelects(); recompute();
+});
+function wireSeg(id, key) {
+var seg = $(id);
+Array.prototype.forEach.call(seg.querySelectorAll('button'), function(b){
+b.addEventListener('click', function(){
+Array.prototype.forEach.call(seg.querySelectorAll('button'), function(x){ x.classList.remove('active'); x.setAttribute('aria-checked', 'false'); });
+b.classList.add('active'); b.setAttribute('aria-checked', 'true');
+ui[key] = b.getAttribute('data-v');
+schedule();
+});
+});
+}
+wireSeg('particles', 'particles');
+wireSeg('name-format', 'nameFormat');
+
+var drop = $('drop');
+var fileInput = $('file');
+['dragenter','dragover'].forEach(function(ev){
+drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.add('drag'); });
+});
+['dragleave','drop'].forEach(function(ev){
+drop.addEventListener(ev, function(e){ e.preventDefault(); if (ev === 'drop' || e.target === drop) drop.classList.remove('drag'); });
+});
+drop.addEventListener('drop', function(e){
+e.preventDefault(); drop.classList.remove('drag');
+var fs = (e.dataTransfer && e.dataTransfer.files) || [];
+if (fs.length) openFile(fs[0]);
+});
+fileInput.addEventListener('change', function(){
+if (fileInput.files && fileInput.files.length) openFile(fileInput.files[0]);
+fileInput.value = '';
+});
+
+if (window.SS && SS.consumeHandoff) {
+SS.consumeHandoff(function(files){ if (files && files.length) openFile(files[0]); });
+}
+
+})();
+</script>
+</body>
+</html>

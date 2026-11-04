@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>List Builder tests</title>
+<style>
+body { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; background: #1a1a1a; color: #ddd; padding: 20px; }
+.ok { color: #4caf82; } .fail { color: #ff6b66; } .skip { color: #888; }
+pre { white-space: pre-wrap; color: #ff6b66; margin: 2px 0 8px 20px; }
+h1 { font-size: 15px; }
+</style>
+</head>
+<body>
+<h1>List Builder tests</h1>
+<div id="out"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="../list-builder.js"></script>
+<script src="list-builder.test.js"></script>
+<script>
+/* A small stand-in for node:test and node:assert/strict so the same test
+   file runs here. Open this page from a local server, file:// blocks the
+   script loads in some browsers. */
+(function(){
+var out = document.getElementById('out');
+var pass = 0, fail = 0, skip = 0, queue = [];
+function line(cls, text, err) {
+  var d = document.createElement('div'); d.className = cls; d.textContent = text; out.appendChild(d);
+  if (err) { var p = document.createElement('pre'); p.textContent = err; out.appendChild(p); }
+}
+function fmt(v) { try { return JSON.stringify(v); } catch (e) { return String(v); } }
+function deepEqual(a, b) {
+  if (a === b) return true;
+  if (typeof a !== typeof b || a === null || b === null) return false;
+  if (typeof a !== 'object') return false;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  var ka = Object.keys(a), kb = Object.keys(b);
+  if (ka.length !== kb.length) return false;
+  return ka.every(function(k){ return deepEqual(a[k], b[k]); });
+}
+var assert = {
+  equal: function(a, b, m){ if (a !== b) throw new Error((m ? m + ': ' : '') + 'expected ' + fmt(b) + ' got ' + fmt(a)); },
+  deepEqual: function(a, b, m){ if (!deepEqual(a, b)) throw new Error((m ? m + ': ' : '') + 'expected ' + fmt(b) + ' got ' + fmt(a)); },
+  ok: function(v, m){ if (!v) throw new Error(m || 'expected truthy, got ' + fmt(v)); },
+  match: function(s, re, m){ if (!re.test(s)) throw new Error((m ? m + ': ' : '') + 'expected match ' + re); }
+};
+function test(name, opts, fn) {
+  if (typeof opts === 'function') { fn = opts; opts = {}; }
+  queue.push({ name: name, opts: opts || {}, fn: fn });
+}
+window.listBuilderTests(test, assert, window.ListBuilder, window.JSZip || null);
+(function run(i) {
+  if (i >= queue.length) { line(fail ? 'fail' : 'ok', '\n' + pass + ' passed, ' + fail + ' failed, ' + skip + ' skipped'); document.title = (fail ? 'FAIL ' : 'PASS ') + document.title; return; }
+  var t = queue[i];
+  if (t.opts.skip) { skip++; line('skip', 'skip  ' + t.name + ' (' + t.opts.skip + ')'); run(i + 1); return; }
+  Promise.resolve().then(t.fn).then(function(){ pass++; line('ok', 'ok    ' + t.name); }, function(e){ fail++; line('fail', 'FAIL  ' + t.name, e && (e.stack || e.message)); }).then(function(){ run(i + 1); });
+})(0);
+})();
+</script>
+</body>
+</html>
