@@ -266,6 +266,13 @@ function isHyphenated(surname) {
    of it, so 'Mary Jane Smith' gives ['Mary Jane', 'Smith']. Honorifics and
    suffixes are dropped first. */
 function splitFullName(full) {
+  /* 'Smith, John' is surname first */
+  var comma = String(full || '').indexOf(',');
+  if (comma > 0) {
+    var last = stripHonorifics(full.slice(0, comma))[0].trim();
+    var first = stripHonorifics(full.slice(comma + 1))[0].trim();
+    if (last && first) return [first, last];
+  }
   var cleaned = stripHonorifics(full)[0];
   var words = cleaned.split(' ').filter(Boolean);
   if (words.length < 2) return [cleaned, ''];

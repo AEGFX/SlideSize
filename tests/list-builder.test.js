@@ -115,6 +115,8 @@ test('split a full name', () => {
   assert.deepEqual(LB.splitFullName('Mary Jane Smith'), ['Mary Jane', 'Smith']);
   assert.deepEqual(LB.splitFullName('Dr Amara Okafor'), ['Amara', 'Okafor']);
   assert.deepEqual(LB.splitFullName('Madonna'), ['Madonna', '']);
+  assert.deepEqual(LB.splitFullName('M\u00fcller, Hans'), ['Hans', 'M\u00fcller']);
+  assert.deepEqual(LB.splitFullName('Smith, Dr John'), ['John', 'Smith']);
 });
 
 /* ---------- source.py ---------- */
