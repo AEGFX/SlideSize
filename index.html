@@ -522,6 +522,7 @@ margin: 0;
 .tools-grid .montage-link{ --emf: #A6CE4E; --emf2: #bfe070; --emf-dim: rgba(166,206,78,0.12); }
 .tools-grid .compare-tool{ --emf: #F07C30; --emf2: #f69a5a; --emf-dim: rgba(240,124,48,0.12); }
 .tools-grid .list-tool   { --emf: #E8C547; --emf2: #f2d675; --emf-dim: rgba(232,197,71,0.12); }
+.tools-grid .font-tool   { --emf: #8C9EFF; --emf2: #aab8ff; --emf-dim: rgba(140,158,255,0.12); }
 .tools-grid .stone-tool  { --emf: #CDA873; --emf2: #e0c294; --emf-dim: rgba(205,168,115,0.12); }
 .tools-grid .format-tool { --emf: #6FC3E8; --emf2: #96d4ef; --emf-dim: rgba(111,195,232,0.12); }
 /* Second section sits a clear gap below the first */
@@ -1161,6 +1162,17 @@ decks. Takes a single .emf or a whole .pptx.
 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
 </a>
 
+<a class="emf-tool tool-link font-tool" href="/font-extractor.html">
+<div class="emf-tool-title">Font Extractor <span class="emf-chip">Embedded &rarr; TTF</span></div>
+<p class="emf-intro">
+Pull the fonts embedded in a deck back out as ordinary .ttf or .otf files, with the style slot each one
+fills. Flags any font that is only a subset of its characters before you rely on it, and saves a copy of
+the deck with the embedded fonts removed.
+</p>
+<div class="go-row"><span>Open Font Extractor</span>
+<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+</a>
+
 <a class="emf-tool tool-link pdf-tool" href="/pdf.html">
 <div class="emf-tool-title">PDF to Slides <span class="emf-chip">PDF &rarr; PNG + PPTX</span></div>
 <p class="emf-intro">
@@ -1567,6 +1579,7 @@ var map = {
 '/keynote-inspector.html': ['key'],
 '/media-extractor.html': ['pptx','key'],
 '/emf-extractor.html':   ['emf','pptx'],
+'/font-extractor.html':  ['pptx','ppsx','potx','pptm','fntdata','eot'],
 '/pdf.html':             ['pdf'],
 '/list-builder.html':    ['xlsx','xlsm','csv','txt','tsv'],
 '/photo-montage.html':   ['jpg','jpeg','png','webp','heic','heif','gif']

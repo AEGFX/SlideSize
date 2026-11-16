@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Font Extractor &middot; SlideSize</title>
+<meta name="description" content="Pull the embedded fonts out of a PowerPoint deck as TTF or OTF, see which ones are only subsets, and save a copy of the deck with the fonts removed. Runs entirely in your browser.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%238C9EFF'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+/* Page accent override. shared.css provides base header, footer, body, logo and .intro. */
+:root {
+--panel2: #2d2d2d;
+--accent: #8C9EFF;
+--accent2: #aab8ff;
+--emf: #8C9EFF;
+--emf2: #aab8ff;
+--emf-dim: rgba(140,158,255,0.12);
+--emf-glow: rgba(140,158,255,0.35);
+--amber: #d8a657;
+}
+.wrap {
+width: 100%; max-width: 1280px;
+padding: 24px 20px 48px;
+display: flex; flex-direction: column; gap: 18px;
+}
+
+/* Drop zone */
+.drop {
+border: 1px dashed var(--border2);
+border-radius: 3px; background: var(--panel);
+padding: 28px 20px;
+display: flex; flex-direction: column; align-items: center; gap: 7px;
+cursor: pointer; transition: all 0.15s; position: relative;
+}
+.drop:hover { border-color: var(--accent); background: var(--panel2); }
+.drop.drag { border-color: var(--accent); background: var(--emf-dim); box-shadow: 0 0 0 3px var(--emf-glow); }
+.drop svg.dz-icon { width: 34px; height: 34px; stroke: var(--accent); fill: none; stroke-width: 1.6; }
+.drop .dz-big { font-size: 14px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--text); }
+.drop .dz-small { font-size: 11px; color: var(--muted); }
+.drop input[type="file"] { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.drop.compact { padding: 14px 18px; flex-direction: row; justify-content: space-between; cursor: default; }
+.drop.compact svg.dz-icon { width: 20px; height: 20px; }
+.drop.compact .dz-big { font-size: 12px; letter-spacing: 0.5px; }
+.drop.compact .dz-small { font-size: 11px; }
+.drop.compact .dz-left { display: flex; align-items: center; gap: 12px; }
+.drop.compact .dz-info { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.drop.compact .replace-btn {
+background: transparent; border: 1px solid var(--border2); color: var(--label);
+font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+text-transform: uppercase; padding: 7px 13px; border-radius: 2px; cursor: pointer;
+transition: all 0.15s;
+}
+.drop.compact .replace-btn:hover { border-color: var(--accent); color: var(--accent); }
+.privacy {
+font-family: var(--sans); font-size: 11px; color: var(--accent);
+display: flex; align-items: center; gap: 5px; margin-top: 4px;
+}
+.privacy svg { width: 11px; height: 11px; stroke: var(--accent); fill: none; stroke-width: 2; }
+
+/* Buttons */
+.btn {
+background: transparent; border: 1px solid var(--border2); color: var(--label);
+font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: 1px;
+text-transform: uppercase; padding: 9px 14px; border-radius: 2px; cursor: pointer;
+transition: all 0.15s;
+}
+.btn:hover { border-color: var(--emf); color: var(--emf); }
+.btn.primary { background: var(--emf); border-color: var(--emf); color: #10142e; font-weight: 700; }
+.btn.primary:hover { background: var(--emf2); color: #10142e; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+
+#results { display: flex; flex-direction: column; gap: 26px; }
+.deck { display: flex; flex-direction: column; gap: 12px; }
+
+/* Deck bar: name, counts and the whole-deck actions */
+.deck-bar {
+background: var(--panel); border: 1px solid var(--border2);
+border-left: 2px solid var(--emf); border-radius: 2px;
+padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;
+}
+.deck-bar.bad { border-left-color: var(--red); }
+.deck-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.deck-name { font-family: var(--mono); font-size: 13px; color: var(--text); word-break: break-all; }
+.deck-counts { display: flex; gap: 8px; flex-wrap: wrap; }
+.pill {
+font-family: var(--sans); font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase;
+padding: 4px 9px; border-radius: 2px; border: 1px solid var(--border2); color: var(--label); white-space: nowrap;
+}
+.pill.full { color: var(--green); border-color: rgba(76,175,130,0.45); background: rgba(76,175,130,0.08); }
+.pill.subset { color: var(--red); border-color: rgba(231,48,42,0.5); background: rgba(231,48,42,0.1); }
+.pill.check { color: var(--amber); border-color: rgba(216,166,87,0.45); background: rgba(216,166,87,0.1); }
+.deck-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.deck-hint { font-family: var(--sans); font-size: 11.5px; line-height: 1.55; color: var(--muted); max-width: 900px; }
+.deck-hint strong { color: var(--label); font-weight: 600; }
+.deck-hint.warn { color: var(--label); }
+.deck-hint.warn b { color: var(--red); font-weight: 700; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+.card {
+background: var(--panel); border: 1px solid var(--border2);
+border-left: 2px solid var(--green); border-radius: 2px;
+overflow: hidden; display: flex; flex-direction: column; min-width: 0;
+animation: pop 0.22s ease both;
+}
+.card.subset, .card.failed { border-left-color: var(--red); }
+.card.check { border-left-color: var(--amber); }
+@keyframes pop { 0% { transform: scale(0.98); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
+.card-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--border2); }
+.card-title { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.card-title .face { font-family: var(--sans); font-size: 14px; font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
+.card-title .slot { font-family: var(--sans); font-size: 10px; letter-spacing: 0.8px; text-transform: uppercase; color: var(--muted); }
+.card-body { padding: 14px; display: flex; flex-direction: column; gap: 12px; flex: 1; }
+
+.sample {
+background: #fff; color: #111; border: 1px solid var(--border2); border-radius: 2px;
+padding: 14px 14px; min-height: 92px; display: flex; flex-direction: column; justify-content: center; gap: 4px;
+overflow: hidden;
+}
+.sample .big { font-size: 30px; line-height: 1.3; overflow-wrap: anywhere; }
+.sample .small { font-size: 15px; line-height: 1.45; overflow-wrap: anywhere; }
+.sample .ph { font-family: var(--sans); font-size: 11px; color: #777; text-align: center; }
+
+.meta { font-family: var(--sans); font-size: 12px; display: flex; flex-direction: column; gap: 5px; }
+.meta .r { display: flex; gap: 10px; }
+.meta .r .k { color: var(--muted); min-width: 78px; flex: none; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; padding-top: 2px; }
+.meta .r .v { color: var(--text); font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; min-width: 0; }
+.note { font-family: var(--sans); font-size: 11.5px; line-height: 1.5; color: var(--amber); }
+.note.bad { color: #ff7d78; }
+.note.ok { color: var(--green); }
+.chars {
+font-family: var(--mono); font-size: 12px; line-height: 1.6; color: var(--text);
+background: var(--bg); border: 1px solid var(--border2); border-radius: 2px;
+padding: 8px 10px; overflow-wrap: anywhere; max-height: 96px; overflow-y: auto;
+}
+.chars .lbl { display: block; font-family: var(--sans); font-size: 10px; letter-spacing: 0.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+.chars .miss { color: #ff7d78; }
+.actions { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; margin-top: auto; }
+
+.spinner {
+width: 13px; height: 13px; border: 2px solid var(--border2);
+border-top-color: var(--emf); border-radius: 50%;
+animation: spin 0.7s linear infinite; display: inline-block; vertical-align: -2px; margin-right: 5px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-note {
+background: var(--panel); border: 1px solid var(--border2); padding: 14px 18px;
+font-family: var(--sans); font-size: 12px; color: var(--muted);
+border-radius: 2px; display: flex; align-items: center; gap: 10px;
+}
+@media (max-width: 520px) {
+.cards { grid-template-columns: 1fr; }
+.deck-btns .btn { flex: 1 1 100%; }
+}
+</style>
+</head>
+<body>
+<header>
+<div class="site-bar">
+<a class="brand" href="/" title="Slide Size home"><img src="aegfx-logo-white.svg" alt="AEGFX, Slide Size home" width="104" height="24"></a>
+<nav aria-label="Breadcrumb"><ol class="crumbs">
+<li><a href="/">Slide Size</a></li>
+<li aria-current="page">Font Extractor</li>
+</ol></nav>
+<a class="site-contact" href="mailto:slidesize@aegfx.com">slidesize@aegfx.com</a>
+</div>
+<div class="logo-mark"></div>
+<div class="logo-text">Font <span>Extractor</span></div>
+</header>
+
+<div class="wrap">
+
+<p class="intro">
+When a deck is saved with <strong>Embed fonts in the file</strong>, PowerPoint packs each font into the
+.pptx in a compressed wrapper that nothing else can read. Drop the deck here to get them back out as
+ordinary <strong>.ttf</strong> or <strong>.otf</strong> files, see which style slot each one fills, and
+have any font that is <strong>only a subset</strong> flagged before you rely on it. You can also save a
+copy of the deck with the embedded fonts taken out.
+</p>
+
+<label class="drop" id="drop" for="file">
+<svg class="dz-icon" viewBox="0 0 24 24"><path d="M12 16V4m0 0l-4 4m4-4l4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+<div class="dz-big">Drop a PowerPoint deck</div>
+<div class="dz-small">or tap to browse &middot; .pptx .ppsx .potx .pptm &middot; loose .fntdata and .eot files too</div>
+<input type="file" id="file" accept=".pptx,.ppsx,.potx,.pptm,.ppsm,.potm,.fntdata,.eot,.odttf,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/octet-stream" multiple>
+<div class="privacy">
+<svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+Processed in your browser &middot; nothing uploaded
+</div>
+</label>
+
+<div id="results"></div>
+
+</div>
+
+<footer>
+<span>Created by Andrew Brandse &middot; AEGFX LTD</span>
+<span><a href="mailto:slidesize@aegfx.com">slidesize@aegfx.com</a></span>
+<span>Built with Claude (Anthropic)</span>
+<div class="footer-sep"></div>
+<span>Nothing uploaded &middot; everything stays in your browser</span>
+<a class="footer-brand" href="https://aegfx.com" target="_blank" rel="noopener" title="AEGFX"><img src="aegfx-logo-reversed.svg" alt="AEGFX" width="121" height="28"></a>
+</footer>
+
+<script src="shared.js"></script>
+<script src="mtx-decompressor.min.js"></script>
+<script src="font-extract.js"></script>
+<script src="font-extractor-ui.js"></script>
+<!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "66c0e2a5a3c24f63ba6e54b208600878"}'></script><!-- End Cloudflare Web Analytics -->
+</body>
+</html>
