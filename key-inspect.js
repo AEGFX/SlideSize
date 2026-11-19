@@ -1,4 +1,4 @@
-/* key-inspect.js — Keynote Inspector engine
+/* key-inspect.js — Keynote engine for Deck Report and Media Extractor
  *
  * Reads a Keynote document (single-file .key zip, or the package folder)
  * entirely in the browser and reports every media asset in Data/ with
@@ -1086,7 +1086,7 @@ window.KI = (function () {
      ------------------------------------------------------------------ */
   function textReport(rep) {
     const L = [];
-    L.push('KEYNOTE INSPECTOR  ·  ' + rep.name);
+    L.push('DECK REPORT (KEYNOTE)  ·  ' + rep.name);
     L.push('Verdict ' + rep.verdict.toUpperCase() + '  ·  ' + (rep.slides ? rep.slides + ' slides  ·  ' : '') + rep.totals.images + ' images  ·  ' + rep.totals.videos + ' videos  ·  ' + fmtBytes(rep.size));
     if (rep.slideSize) L.push('Slide size ' + Math.round(rep.slideSize.width) + ' x ' + Math.round(rep.slideSize.height) + ' pt');
     if (rep.versions.length) L.push('Keynote builds ' + rep.versions.join(', '));
