@@ -471,62 +471,53 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 /* ===== Other Tools: EMF Extractor (complementary teal accent) ===== */
 .other-tools {
 width: 100%;
-max-width: var(--max-w);
-padding: 0 20px;
+max-width: 1200px;   /* the boxes run wider than the calculator, as on aegfx.com */
+padding: 0 24px;
 display: flex;
 flex-direction: column;
-gap: 16px;
+gap: 18px;
 margin: 4px auto 0;
 --emf: #1FB6A6;        /* teal — complementary to the red accent */
 --emf2: #43d6c6;
 --emf-dim: rgba(31,182,166,0.12);
 }
+/* Home page tool boxes. Same box as aegfx.com/tools so the two sites read as
+   one: 10px radius, no top stripe, one colour per section set as --emf and
+   --emf2 on the section, heading and every box inside take it. */
 .tools-grid {
 display: grid;
-grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-gap: 12px;
+grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+gap: 14px;
 }
 .tools-grid .emf-tool {
-padding: 16px 16px 14px;
-gap: 10px;
-height: 200px;
-display: flex;
-flex-direction: column;
+border: 1px solid var(--border2);
+border-radius: 10px;
+padding: 22px 20px 14px;
+gap: 14px;
 }
-.tools-grid .emf-tool-title { font-size: 14px; }
-.tools-grid .emf-tool-title .emf-chip { font-size: 8.5px; padding: 2px 5px; }
-/* The blurb never stretches, so nothing can show below its ellipsis. Four lines
-   fit every tile whatever the title and link wrap to; fitTileText() in the page
-   script raises the clamp per tile to fill whatever room is actually there. */
-.tools-grid .emf-intro {
-font-size: 11.5px; line-height: 1.5;
-flex: 0 0 auto;
-display: -webkit-box;
--webkit-line-clamp: 4;
--webkit-box-orient: vertical;
-overflow: hidden;
-margin: 0;
+.tools-grid .emf-tool-title { font-size: 17px; flex-wrap: wrap; gap: 10px; }
+.tools-grid .emf-tool-title .emf-chip {
+font-size: 11px; padding: 2px 6px; border-radius: 4px;
+color: var(--emf2); border-color: var(--emf2);
 }
-.tools-grid .emf-tool strong { color: var(--label); font-weight: 500; }
-.tools-grid .go-row { font-size: 10px; letter-spacing: 1.5px; margin-top: auto; }
-/* PDF to Slides pink accent for the grid */
-/* Per-tool accent for the grid tiles. Each tool class redefines --emf so the
-   shared .tool-link:hover border-color, the go-row text and arrow all pick up
-   the right colour. --emf-dim is the hover background tint. */
-.tools-grid .report-tool { --emf: #4A78B5; --emf2: #6a96d0; --emf-dim: rgba(74,120,181,0.12); }
-.tools-grid .vt-tool     { --emf: #9B7BD4; --emf2: #b295e0; --emf-dim: rgba(155,123,212,0.12); }
-.tools-grid .keynote-tool{ --emf: #E8705F; --emf2: #f28c7d; --emf-dim: rgba(232,112,95,0.12); }
-.tools-grid .link-tool   { --emf: #7FD1AE; --emf2: #9fe0c4; --emf-dim: rgba(127,209,174,0.12); }
-.tools-grid .media-tool  { --emf: #E0A020; --emf2: #f0b840; --emf-dim: rgba(224,160,32,0.12); }
-.tools-grid .pdf-tool    { --emf: #D96EB0; --emf2: #e689c0; --emf-dim: rgba(217,110,176,0.12); }
-.tools-grid .montage-link{ --emf: #A6CE4E; --emf2: #bfe070; --emf-dim: rgba(166,206,78,0.12); }
-.tools-grid .compare-tool{ --emf: #F07C30; --emf2: #f69a5a; --emf-dim: rgba(240,124,48,0.12); }
-.tools-grid .list-tool   { --emf: #E8C547; --emf2: #f2d675; --emf-dim: rgba(232,197,71,0.12); }
-.tools-grid .font-tool   { --emf: #8C9EFF; --emf2: #aab8ff; --emf-dim: rgba(140,158,255,0.12); }
-.tools-grid .stone-tool  { --emf: #CDA873; --emf2: #e0c294; --emf-dim: rgba(205,168,115,0.12); }
-.tools-grid .format-tool { --emf: #6FC3E8; --emf2: #96d4ef; --emf-dim: rgba(111,195,232,0.12); }
-/* Second section sits a clear gap below the first */
-.tools-next { margin-top: 28px; }
+.tools-grid .emf-intro { font-size: 14px; line-height: 1.6; color: #9C9C9C; flex-grow: 1; margin: 0; }
+.tools-grid .emf-tool.tool-link:hover,
+.tools-grid .emf-tool.tool-link:focus-visible {
+border-color: var(--emf); box-shadow: 0 0 0 1px var(--emf); background: #2b2b2b; outline: none;
+}
+.tools-grid .emf-tool.tool-link .go-row { min-height: 44px; font-size: 12px; letter-spacing: 2px; color: var(--emf2); }
+.tools-grid .emf-tool.tool-link .go-row svg {
+width: 16px; height: 16px; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round;
+}
+.tools-grid .tool-link.loading::after { border-radius: 10px; color: var(--emf2); }
+/* Section colours, the same three as aegfx.com/tools */
+.sec-ppt    { --emf: #F08A24; --emf2: #F6A655; --emf-dim: rgba(240,138,36,0.12); }
+.sec-other  { --emf: #4CAF82; --emf2: #7FD1AE; --emf-dim: rgba(76,175,130,0.12); }
+.sec-prompt { --emf: #9B7BD4; --emf2: #B295E0; --emf-dim: rgba(155,123,212,0.12); }
+/* Each section sits a clear gap below the one before */
+.tools-next { margin-top: 38px; }
+/* and the last one clears the footer */
+.other-tools:last-of-type { margin-bottom: 56px; }
 /* EMF Extractor uses the default --emf teal already set on .other-tools */
 .other-tools-head {
 display: flex;
@@ -536,11 +527,11 @@ margin-top: 8px;
 }
 .other-tools-head .ot-label {
 font-family: var(--sans);
-font-size: 11px;
+font-size: 13px;
 font-weight: 700;
 letter-spacing: 3px;
 text-transform: uppercase;
-color: var(--accent);
+color: var(--emf2);
 white-space: nowrap;
 }
 .other-tools-head::before,
@@ -957,8 +948,6 @@ text-transform: uppercase; color: var(--emf);
 }
 .emf-tool.tool-link .go-row svg { width: 15px; height: 15px; stroke: var(--emf); fill: none; stroke-width: 2; }
 
-/* ===== Photo Montage link (lime accent, matches photo-montage.html) ===== */
-.emf-tool.montage-link { --emf: #A6CE4E; --emf2: #bfe070; --emf-dim: rgba(166,206,78,0.12); }
 </style>
 </head>
 <body>
@@ -1125,172 +1114,113 @@ Standard Presets Reference
 </div>
 </div>
 </div>
-<div class="other-tools">
-<div class="other-tools-head"><span class="ot-label">PPT Tools</span></div>
+<div class="other-tools sec-ppt">
+<div class="other-tools-head"><span class="ot-label">Presentation Tools</span></div>
 <div class="tools-grid">
 
-<a class="emf-tool tool-link report-tool" href="/ppt-report.html">
+<a class="emf-tool tool-link" href="/ppt-report.html">
 <div class="emf-tool-title">PPT Report <span class="emf-chip">Pre-flight</span></div>
-<p class="emf-intro">
-Pre-flight summary for graphics ops. Slide count, hidden slides, aspect, fonts, videos, audio,
-transitions, animation click counts, speaker notes, OS origin pill (macOS or Windows), sortable
-per-slide table. Export to TXT, CSV or a printable PDF.
-</p>
+<p class="emf-intro">Pre-flight summary of a PowerPoint deck for graphics ops. Fonts, videos, hidden slides and click counts.</p>
 <div class="go-row"><span>Open PPT Report</span>
-<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
 </a>
 
-<a class="emf-tool tool-link compare-tool" href="/deck-compare.html">
-<div class="emf-tool-title">Deck Compare <span class="emf-chip">v1 vs v2</span></div>
-<p class="emf-intro">
-Drop two versions of a deck and see exactly what changed, slide by slide. Text edits word by word,
-swapped pictures and videos, playback settings, hidden, moved, added and deleted slides. Tracks slides
-by PowerPoint's own IDs, so reordering does not throw it.
-</p>
-<div class="go-row"><span>Open Deck Compare</span>
-<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+<a class="emf-tool tool-link" href="/keynote-inspector.html">
+<div class="emf-tool-title">Keynote Inspector <span class="emf-chip">Crash check</span></div>
+<p class="emf-intro">Drop a .key file and find the content that makes Keynote crash or crawl, tied to slide numbers.</p>
+<div class="go-row"><span>Open Keynote Inspector</span>
+<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+</a>
+
+<a class="emf-tool tool-link" href="/media-extractor.html">
+<div class="emf-tool-title">Media Extractor <span class="emf-chip">Deck &rarr; files</span></div>
+<p class="emf-intro">Pull every embedded asset out of a PowerPoint or Keynote deck with pixel dimensions and metadata.</p>
+<div class="go-row"><span>Open Media Extractor</span>
+<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+</a>
+
+<a class="emf-tool tool-link" href="/pdf.html">
+<div class="emf-tool-title">PDF to Slides <span class="emf-chip">PDF &rarr; PNG + PPTX</span></div>
+<p class="emf-intro">Drop a PDF, get a folder of numbered images plus a PowerPoint deck with one image per slide.</p>
+<div class="go-row"><span>Open PDF to Slides</span>
+<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+</a>
+
+<a class="emf-tool tool-link" href="/table-plan.html">
+<div class="emf-tool-title">Table Plan <span class="emf-chip">XLSX &rarr; PPTX</span></div>
+<p class="emf-intro">Drop a spreadsheet of names and get a deck of lists that restyles from the Slide Master.</p>
+<div class="go-row"><span>Open Table Plan</span>
+<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+</a>
+
+<a class="emf-tool tool-link" href="/font-extractor.html">
+<div class="emf-tool-title">Font Extractor <span class="emf-chip">Embedded &rarr; TTF</span></div>
+<p class="emf-intro">Pull the fonts embedded in a deck back out as ordinary .ttf or .otf files.</p>
+<div class="go-row"><span>Open Font Extractor</span>
+<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
 </a>
 
 <a class="emf-tool tool-link" href="/emf-extractor.html">
 <div class="emf-tool-title">EMF Extractor <span class="emf-chip">Hybrid EMF &rarr; PDF</span></div>
-<p class="emf-intro">
-Mac apps save EMFs with a full-quality PDF hidden inside, which Windows PowerPoint cannot see. This
-pulls the real PDF or fallback raster back out, and batch-converts to PNG at any DPI for Windows-bound
-decks. Takes a single .emf or a whole .pptx.
-</p>
+<p class="emf-intro">Pulls the full quality PDF hidden inside Mac EMFs back out and batch converts to PNG for Windows bound decks.</p>
 <div class="go-row"><span>Open EMF Extractor</span>
-<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
 </a>
 
-<a class="emf-tool tool-link font-tool" href="/font-extractor.html">
-<div class="emf-tool-title">Font Extractor <span class="emf-chip">Embedded &rarr; TTF</span></div>
-<p class="emf-intro">
-Pull the fonts embedded in a deck back out as ordinary .ttf or .otf files, with the style slot each one
-fills. Flags any font that is only a subset of its characters before you rely on it, and saves a copy of
-the deck with the embedded fonts removed.
-</p>
-<div class="go-row"><span>Open Font Extractor</span>
-<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
-</a>
-
-<a class="emf-tool tool-link pdf-tool" href="/pdf.html">
-<div class="emf-tool-title">PDF to Slides <span class="emf-chip">PDF &rarr; PNG + PPTX</span></div>
-<p class="emf-intro">
-Drop a PDF, get a folder of numbered images plus a PowerPoint deck with one image per slide, sized to
-match the PDF rather than squashed into a guess. Flags non-embedded fonts and mixed page sizes before
-it starts.
-</p>
-<div class="go-row"><span>Open PDF to Slides</span>
-<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
-</a>
-
-<a class="emf-tool tool-link list-tool" href="/table-plan.html">
-<div class="emf-tool-title">Table Plan <span class="emf-chip">XLSX &rarr; PPTX</span></div>
-<p class="emf-intro">
-Drop a spreadsheet of names and get a deck of lists, 30 a slide, sorted by surname or by table with a
-header per table. Every name box is a placeholder on a LIST layout, so one change in Slide Master restyles
-the whole deck. Cleans stray spaces, splits full names, warns on blanks, duplicates and odd table numbers.
-</p>
-<div class="go-row"><span>Open Table Plan</span>
-<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+<a class="emf-tool tool-link" href="/deck-compare.html">
+<div class="emf-tool-title">Deck Compare <span class="emf-chip">v1 vs v2</span></div>
+<p class="emf-intro">Drop two versions of a deck and see exactly what changed, slide by slide.</p>
+<div class="go-row"><span>Open Deck Compare</span>
+<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
 </a>
 
 </div>
 </div>
 
-<div class="other-tools tools-next">
-<div class="other-tools-head"><span class="ot-label">Keynote Tools</span></div>
-<div class="tools-grid">
-
-<a class="emf-tool tool-link keynote-tool" href="/keynote-inspector.html">
-<div class="emf-tool-title">Keynote Inspector <span class="emf-chip">Crash check</span></div>
-<p class="emf-intro">
-Drop a .key file and find the content that makes Keynote crash or crawl. 16-bit and float images, HDR
-gain maps, HEIC, CMYK, oversized rasters, HDR video, heavy PDFs and the RAM the deck needs with
-everything decoded. Reads headers only, so a multi-gigabyte deck takes seconds.
-</p>
-<div class="go-row"><span>Open Keynote Inspector</span>
-<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
-</a>
-
-</div>
-</div>
-
-<div class="other-tools tools-next">
+<div class="other-tools sec-other tools-next">
 <div class="other-tools-head"><span class="ot-label">Other Tools</span></div>
 <div class="tools-grid">
 
-<a class="emf-tool tool-link media-tool" href="/media-extractor.html">
-<div class="emf-tool-title">Media Extractor <span class="emf-chip">PPT / KEY &rarr; files</span></div>
-<p class="emf-intro">
-Pull every embedded asset out of a PowerPoint or Keynote deck as thumbnails with pixel dimensions and
-per-file metadata. Images, EMF, WMF, HEIC, video, audio and fonts. Pick the ones you want or save them all to a folder of your choice. No renaming to
-.zip and digging through folders.
-</p>
-<div class="go-row"><span>Open Media Extractor</span>
-<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
-</a>
-
-<a class="emf-tool tool-link vt-tool" href="/vt-inspector.html">
-<div class="emf-tool-title">VT Inspector <span class="emf-chip">Playback check</span></div>
-<p class="emf-intro">
-Inspect MP4, MOV, M4V and M4A video down to the bitstream. Catches misdeclared H.264 levels, VFR,
-odd pixel aspect, HDR tags, edit lists and more. Gives the ffmpeg fix, and rewrites header-only
-fixes right here with no re-encode.
-</p>
-<div class="go-row"><span>Open VT Inspector</span>
-<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
-</a>
-
-<a class="emf-tool tool-link link-tool" href="/link-matrix.html">
-<div class="emf-tool-title">Link Matrix <span class="emf-chip">HDMI / DP / Mac</span></div>
-<p class="emf-intro">
-Will this canvas fit down this cable? Enter a resolution, refresh and bit depth and see which HDMI, DisplayPort
-and Thunderbolt versions carry it, uncompressed or with DSC, and which MacBook can output it. Reference tables for
-every link standard and every Apple silicon MacBook.
-</p>
-<div class="go-row"><span>Open Link Matrix</span>
-<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
-</a>
-
-<a class="emf-tool tool-link montage-link" href="/photo-montage.html" id="montage-link">
+<a class="emf-tool tool-link" href="/photo-montage.html" id="montage-link">
 <div class="emf-tool-title">Photo Montage <span class="emf-chip">Looping video</span></div>
-<p class="emf-intro">
-Drop photos and get a finished video for the screen, with slow Ken Burns motion, crossfades, exact
-timing and a loop that joins without a jump. Any pixel size including wide blends, up to 60 fps.
-Picks up the pixel size from the calculator.
-</p>
+<p class="emf-intro">Drop photos and get a finished looping video with Ken Burns motion and crossfades.</p>
 <div class="go-row"><span>Open Photo Montage</span>
-<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+</a>
+
+<a class="emf-tool tool-link" href="/vt-inspector.html">
+<div class="emf-tool-title">VT Inspector <span class="emf-chip">Playback check</span></div>
+<p class="emf-intro">Inspect MP4 and MOV video down to the bitstream and get the ffmpeg fix.</p>
+<div class="go-row"><span>Open VT Inspector</span>
+<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+</a>
+
+<a class="emf-tool tool-link" href="/link-matrix.html">
+<div class="emf-tool-title">Link Matrix <span class="emf-chip">HDMI / DP / Mac</span></div>
+<p class="emf-intro">Will this canvas fit down this cable? See which HDMI, DisplayPort and Thunderbolt versions carry it.</p>
+<div class="go-row"><span>Open Link Matrix</span>
+<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
 </a>
 
 </div>
 </div>
 
-<div class="other-tools tools-next prompt-tools">
+<div class="other-tools sec-prompt tools-next">
 <div class="other-tools-head"><span class="ot-label">Prompting Tools</span></div>
 <div class="tools-grid">
 
-<a class="emf-tool tool-link stone-tool" href="/script-compare.html">
-<div class="emf-tool-title">Script Compare <span class="emf-chip">Script v1 vs v2</span></div>
-<p class="emf-intro">
-Drop two versions of a script and get the new one with every change marked. Added words in green, cuts
-struck through, moved paragraphs and highlight or colour changes flagged, every paragraph numbered so you
-can find it fast. Reads TXT, Word, PDF, PowerPoint notes, RTF and Final Draft.
-</p>
-<div class="go-row"><span>Open Script Compare</span>
-<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+<a class="emf-tool tool-link" href="/script-format.html">
+<div class="emf-tool-title">Script Format <span class="emf-chip">One sentence a line</span></div>
+<p class="emf-intro">Drop or paste a script and get every sentence on its own line for the prompter.</p>
+<div class="go-row"><span>Open Script Format</span>
+<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
 </a>
 
-<a class="emf-tool tool-link format-tool" href="/script-format.html">
-<div class="emf-tool-title">Script Format <span class="emf-chip">One sentence a line</span></div>
-<p class="emf-intro">
-Drop or paste a script and get every sentence on its own line for the prompter. Reads each full stop in
-context, so U.S.A., Dr. Pullen and 9 a.m. stay in one piece, and flags the calls worth a check. Save as TXT
-or Word with highlights kept.
-</p>
-<div class="go-row"><span>Open Script Format</span>
-<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+<a class="emf-tool tool-link" href="/script-compare.html">
+<div class="emf-tool-title">Script Compare <span class="emf-chip">Script v1 vs v2</span></div>
+<p class="emf-intro">Drop two versions of a script and get the new one with every change marked.</p>
+<div class="go-row"><span>Open Script Compare</span>
+<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
 </a>
 
 </div>
@@ -1588,39 +1518,6 @@ Array.prototype.forEach.call(document.querySelectorAll('.tools-grid .tool-link')
 var href = el.getAttribute('href');
 if (map[href]) SS.wireTileDrop(el, { accept: map[href] });
 });
-})();
-
-/* ============================================================
-   Tile blurb fit
-   Each tile is a fixed height but its title and link can wrap to
-   one or two lines, so the room left for the blurb varies. Clamp
-   each blurb to the whole lines that fit so the ellipsis always
-   lands on the last visible line.
-   ============================================================ */
-(function fitTileText() {
-var grids = document.querySelectorAll('.tools-grid');
-if (!grids.length) return;
-function fit() {
-Array.prototype.forEach.call(document.querySelectorAll('.tools-grid .tool-link'), function(tile){
-var title = tile.querySelector('.emf-tool-title');
-var text = tile.querySelector('.emf-intro');
-var go = tile.querySelector('.go-row');
-if (!title || !text || !go) return;
-var cs = getComputedStyle(tile);
-var gap = parseFloat(cs.rowGap) || 0;
-var lineH = parseFloat(getComputedStyle(text).lineHeight);
-if (!lineH) return;
-var top = title.getBoundingClientRect().bottom + gap;
-var bottom = tile.getBoundingClientRect().bottom - parseFloat(cs.borderBottomWidth)
-- parseFloat(cs.paddingBottom) - go.getBoundingClientRect().height - gap;
-text.style.webkitLineClamp = Math.max(1, Math.floor((bottom - top + 0.5) / lineH));
-});
-}
-fit();
-if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
-window.addEventListener('load', fit);
-if (window.ResizeObserver) { var ro = new ResizeObserver(fit); Array.prototype.forEach.call(grids, function(g){ ro.observe(g); }); }
-else window.addEventListener('resize', fit);
 })();
 </script>
 <!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "66c0e2a5a3c24f63ba6e54b208600878"}'></script><!-- End Cloudflare Web Analytics -->
