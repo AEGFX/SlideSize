@@ -11,15 +11,24 @@
 <style>
 /* --max-w and most primitives come from shared.css; only the calculator-specific
    width override and the logo-mark width transition live here. */
-:root { --max-w: 720px; }
+:root { --max-w: 1200px; }   /* same width as the tool boxes below */
 .logo-mark { transition: width 0.4s ease; }
 .wrap {
 width: 100%;
 max-width: var(--max-w);
-padding: 28px 20px 48px;
+padding: 28px 24px 48px;
 display: flex;
 flex-direction: column;
 gap: 16px;
+}
+.calc-in { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+/* On a desktop the inputs sit on the left and the result on the right, so the
+   calculator fills the same width as the boxes without stretching the fields. */
+@media (min-width: 900px) {
+.wrap { display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; row-gap: 16px; align-items: start; }
+.wrap > * { grid-column: 1 / -1; min-width: 0; }
+.wrap > .calc-in { grid-column: 1; grid-row: 1; }
+.wrap > .result-hero { grid-column: 2; grid-row: 1; align-self: stretch; }
 }
 .mode-toggle {
 display: grid;
@@ -971,6 +980,7 @@ text-transform: uppercase; color: var(--emf);
 <div class="logo-text">Slide Size <span>Calculator</span></div>
 </header>
 <div class="wrap">
+<div class="calc-in">
 <div class="mode-toggle">
 <button class="mode-btn active" id="btn-pixel" onclick="setMode('pixel')">Pixels</button>
 <button class="mode-btn" id="btn-physical" onclick="setMode('physical')">Physical</button>
@@ -1032,6 +1042,7 @@ Physical size derives aspect ratio only &middot; PPT anchored to 19.05cm height
 </div>
 </div>
 <button class="calc-btn" onclick="calculate()">Calculate</button>
+</div>
 <div class="result-hero empty" id="result-hero">
 <div class="result-hero-label">Slide Size</div>
 <div class="result-cm-row">
