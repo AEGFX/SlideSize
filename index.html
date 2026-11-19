@@ -509,13 +509,20 @@ margin: 0;
 }
 .tools-grid .emf-tool strong { color: var(--label); font-weight: 500; }
 .tools-grid .go-row { font-size: 10px; letter-spacing: 1.5px; margin-top: auto; }
+/* PPT and KEY tags on the tiles of tools that take both PowerPoint and Keynote decks.
+   They hang off the coloured top edge of the tile, clear of the title and its chip. */
+.tools-grid .tool-link { position: relative; }
+.fmt-tags { position: absolute; top: 0; right: 12px; display: inline-flex; gap: 4px; }
+.fmt-tag {
+font-family: var(--mono); font-size: 8.5px; font-weight: 400; letter-spacing: 1px; line-height: 1;
+color: var(--emf); border: 1px solid var(--emf); border-top: 0; border-radius: 0 0 2px 2px; padding: 3px 5px;
+}
 /* PDF to Slides pink accent for the grid */
 /* Per-tool accent for the grid tiles. Each tool class redefines --emf so the
    shared .tool-link:hover border-color, the go-row text and arrow all pick up
    the right colour. --emf-dim is the hover background tint. */
 .tools-grid .report-tool { --emf: #4A78B5; --emf2: #6a96d0; --emf-dim: rgba(74,120,181,0.12); }
 .tools-grid .vt-tool     { --emf: #9B7BD4; --emf2: #b295e0; --emf-dim: rgba(155,123,212,0.12); }
-.tools-grid .keynote-tool{ --emf: #E8705F; --emf2: #f28c7d; --emf-dim: rgba(232,112,95,0.12); }
 .tools-grid .link-tool   { --emf: #7FD1AE; --emf2: #9fe0c4; --emf-dim: rgba(127,209,174,0.12); }
 .tools-grid .media-tool  { --emf: #E0A020; --emf2: #f0b840; --emf-dim: rgba(224,160,32,0.12); }
 .tools-grid .pdf-tool    { --emf: #D96EB0; --emf2: #e689c0; --emf-dim: rgba(217,110,176,0.12); }
@@ -1129,15 +1136,16 @@ Standard Presets Reference
 <div class="other-tools-head"><span class="ot-label">PPT Tools</span></div>
 <div class="tools-grid">
 
-<a class="emf-tool tool-link report-tool" href="/ppt-report.html">
-<div class="emf-tool-title">PPT Report <span class="emf-chip">Pre-flight</span></div>
+<a class="emf-tool tool-link report-tool" href="/deck-report.html">
+<div class="emf-tool-title">Deck Report <span class="emf-chip">Pre-flight</span></div>
 <p class="emf-intro">
-Pre-flight summary for graphics ops. Slide count, hidden slides, aspect, fonts, videos, audio,
-transitions, animation click counts, speaker notes, OS origin pill (macOS or Windows), sortable
-per-slide table. Export to TXT, CSV or a printable PDF.
+Pre-flight summary of a PowerPoint or Keynote deck for graphics ops. A .pptx gets slide count, hidden slides,
+aspect, fonts, videos, audio, transitions, click counts, notes and the OS it was last saved on. A .key gets a
+crash check, 16-bit and HDR images, HEIC, CMYK, oversized rasters and HDR video, tied to slide numbers.
 </p>
-<div class="go-row"><span>Open PPT Report</span>
+<div class="go-row"><span>Open Deck Report</span>
 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+<span class="fmt-tags" title="Takes PowerPoint and Keynote decks"><span class="fmt-tag">PPT</span><span class="fmt-tag">KEY</span></span>
 </a>
 
 <a class="emf-tool tool-link compare-tool" href="/deck-compare.html">
@@ -1199,29 +1207,11 @@ the whole deck. Cleans stray spaces, splits full names, warns on blanks, duplica
 </div>
 
 <div class="other-tools tools-next">
-<div class="other-tools-head"><span class="ot-label">Keynote Tools</span></div>
-<div class="tools-grid">
-
-<a class="emf-tool tool-link keynote-tool" href="/keynote-inspector.html">
-<div class="emf-tool-title">Keynote Inspector <span class="emf-chip">Crash check</span></div>
-<p class="emf-intro">
-Drop a .key file and find the content that makes Keynote crash or crawl. 16-bit and float images, HDR
-gain maps, HEIC, CMYK, oversized rasters, HDR video, heavy PDFs and the RAM the deck needs with
-everything decoded. Reads headers only, so a multi-gigabyte deck takes seconds.
-</p>
-<div class="go-row"><span>Open Keynote Inspector</span>
-<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
-</a>
-
-</div>
-</div>
-
-<div class="other-tools tools-next">
 <div class="other-tools-head"><span class="ot-label">Other Tools</span></div>
 <div class="tools-grid">
 
 <a class="emf-tool tool-link media-tool" href="/media-extractor.html">
-<div class="emf-tool-title">Media Extractor <span class="emf-chip">PPT / KEY &rarr; files</span></div>
+<div class="emf-tool-title">Media Extractor <span class="emf-chip">Deck &rarr; files</span></div>
 <p class="emf-intro">
 Pull every embedded asset out of a PowerPoint or Keynote deck as thumbnails with pixel dimensions and
 per-file metadata. Images, EMF, WMF, HEIC, video, audio and fonts. Pick the ones you want or save them all to a folder of your choice. No renaming to
@@ -1229,6 +1219,7 @@ per-file metadata. Images, EMF, WMF, HEIC, video, audio and fonts. Pick the ones
 </p>
 <div class="go-row"><span>Open Media Extractor</span>
 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+<span class="fmt-tags" title="Takes PowerPoint and Keynote decks"><span class="fmt-tag">PPT</span><span class="fmt-tag">KEY</span></span>
 </a>
 
 <a class="emf-tool tool-link vt-tool" href="/vt-inspector.html">
@@ -1547,7 +1538,7 @@ link.href = '/photo-montage.html?w=' + w + '&h=' + h + '&fps=' + encodeURICompon
 
 /* Inline tool JS (EMF Extractor, PPTX Media Extractor, PPT Report, VT Inspector)
    has moved to their own dedicated pages at /emf-extractor.html,
-   /media-extractor.html, /ppt-report.html and /vt-inspector.html.
+   /media-extractor.html, /deck-report.html and /vt-inspector.html.
    This landing page is a launchpad for them, not an inline host. */
 
 ['px-w', 'px-h', 'phys-w', 'phys-h'].forEach(function(id) {
@@ -1571,12 +1562,11 @@ loadFromURL();
 (function wireTileDrops() {
 if (!window.SS || !SS.wireTileDrop) return;
 var map = {
-'/ppt-report.html':      ['pptx'],
+'/deck-report.html':     ['pptx','key'],
 '/deck-compare.html':    ['pptx'],
 '/script-format.html':   ['txt','text','md','docx','pdf','pptx','rtf','odt','fdx','fountain','html','htm'],
 '/script-compare.html':    ['txt','text','md','docx','pdf','pptx','rtf','odt','fdx','fountain','html','htm','srt','vtt'],
 '/vt-inspector.html':    ['mp4','mov','m4v','m4a'],
-'/keynote-inspector.html': ['key'],
 '/media-extractor.html': ['pptx','key'],
 '/emf-extractor.html':   ['emf','pptx'],
 '/font-extractor.html':  ['pptx','ppsx','potx','pptm','fntdata','eot'],
