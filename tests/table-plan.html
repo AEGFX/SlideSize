@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>List Builder tests</title>
+<title>Table Plan tests</title>
 <style>
 body { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; background: #1a1a1a; color: #ddd; padding: 20px; }
 .ok { color: #4caf82; } .fail { color: #ff6b66; } .skip { color: #888; }
@@ -11,11 +11,11 @@ h1 { font-size: 15px; }
 </style>
 </head>
 <body>
-<h1>List Builder tests</h1>
+<h1>Table Plan tests</h1>
 <div id="out"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="../list-builder.js"></script>
-<script src="list-builder.test.js"></script>
+<script src="../table-plan.js"></script>
+<script src="table-plan.test.js"></script>
 <script>
 /* A small stand-in for node:test and node:assert/strict so the same test
    file runs here. Open this page from a local server, file:// blocks the
@@ -47,7 +47,7 @@ function test(name, opts, fn) {
   if (typeof opts === 'function') { fn = opts; opts = {}; }
   queue.push({ name: name, opts: opts || {}, fn: fn });
 }
-window.listBuilderTests(test, assert, window.ListBuilder, window.JSZip || null);
+window.tablePlanTests(test, assert, window.TablePlan, window.JSZip || null);
 (function run(i) {
   if (i >= queue.length) { line(fail ? 'fail' : 'ok', '\n' + pass + ' passed, ' + fail + ' failed, ' + skip + ' skipped'); document.title = (fail ? 'FAIL ' : 'PASS ') + document.title; return; }
   var t = queue[i];

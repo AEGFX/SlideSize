@@ -1,8 +1,8 @@
-# List Builder
+# Table Plan
 
 Turns a spreadsheet of names into a PowerPoint deck of lists, N names a slide. The name boxes are real placeholders that inherit from a LIST layout on one slide master, so the whole deck is restyled from Slide Master view. Typical job is a dinner table plan, 300 guests, 30 a slide, sorted by surname. Everything runs in the browser. Nothing is uploaded.
 
-Lives at `/list-builder.html` with the engine in `list-builder.js`. The homepage links to it under PPT Tools.
+Lives at `/table-plan.html` with the engine in `table-plan.js`. The homepage links to it under PPT Tools.
 
 ## How the pptx is written and why
 
@@ -76,12 +76,12 @@ Everything else, the sort order, the chunk boundaries, the layouts chosen and th
 
 ## Tests
 
-`node --test tests/list-builder.test.js` runs the sort, particle, title case, header detection, CSV and chunking cases copied from the Python tests, plus a build that checks the pptx structure. `tests/list-builder.html` runs the same cases in a browser.
+`node --test tests/table-plan.test.js` runs the sort, particle, title case, header detection, CSV and chunking cases copied from the Python tests, plus a build that checks the pptx structure. `tests/table-plan.html` runs the same cases in a browser.
 
 ## Files
 
-- `list-builder.html`, the page
-- `list-builder.js`, the engine and the pptx writer, loads in the browser and in Node
-- `tests/list-builder.test.js` and `tests/list-builder.html`
+- `table-plan.html`, the page
+- `table-plan.js`, the engine and the pptx writer, loads in the browser and in Node
+- `tests/table-plan.test.js` and `tests/table-plan.html`
 
 Libraries from CDN, SheetJS 0.18.5 for .xlsx and JSZip 3.10.1 for the package.

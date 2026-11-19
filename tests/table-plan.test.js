@@ -1,20 +1,20 @@
-/* List Builder tests. The cases are copied from the NAMEDROP reference tests
+/* Table Plan tests. The cases are copied from the NAMEDROP reference tests
    (test_rules.py, test_engines.py, test_source.py) so the JavaScript engine
    can be held to the same behaviour as the Python.
 
-   Run from the repository root with:  node --test tests/list-builder.test.js
-   The browser runner tests/list-builder.html loads this same file. */
+   Run from the repository root with:  node --test tests/table-plan.test.js
+   The browser runner tests/table-plan.html loads this same file. */
 'use strict';
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) {
     const test = require('node:test');
     const assert = require('node:assert/strict');
-    const LB = require('../list-builder.js');
+    const LB = require('../table-plan.js');
     let JSZip = null;
     try { JSZip = require('jszip'); } catch (e) { /* optional, the build test is skipped without it */ }
     factory(test, assert, LB, JSZip);
   } else {
-    root.listBuilderTests = factory;
+    root.tablePlanTests = factory;
   }
 }(typeof self !== 'undefined' ? self : this, function (test, assert, LB, JSZip) {
 

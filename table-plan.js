@@ -1,4 +1,4 @@
-/* list-builder.js, the List Builder engine
+/* table-plan.js, the Table Plan engine
  *
  * Turns a spreadsheet of names into a PowerPoint deck of lists, N names a
  * slide, with every name box a real placeholder that inherits from a LIST
@@ -7,7 +7,7 @@
  * package by hand with JSZip, because no library writes true inherited
  * placeholders.
  *
- * Loads in a browser as window.ListBuilder and in Node through
+ * Loads in a browser as window.TablePlan and in Node through
  * module.exports, so the tests and the headless build script share this
  * exact code with the page. Nothing here touches the DOM. JSZip and SheetJS
  * are passed in by the caller.
@@ -23,7 +23,7 @@
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
-  else root.ListBuilder = factory();
+  else root.TablePlan = factory();
 }(typeof self !== 'undefined' ? self : this, function () {
 'use strict';
 
@@ -1222,11 +1222,11 @@ function masterXml(layoutCount, manifest, font) {
 function themeXml(font) {
   var f = esc(font || 'Calibri');
   function fonts(tag) { return '<a:' + tag + '><a:latin typeface="' + f + '"/><a:ea typeface=""/><a:cs typeface=""/></a:' + tag + '>'; }
-  return XML_HEAD + '<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="List Builder"><a:themeElements>'
-    + '<a:clrScheme name="List Builder"><a:dk1><a:srgbClr val="1A1A1A"/></a:dk1><a:lt1><a:srgbClr val="FFFFFF"/></a:lt1><a:dk2><a:srgbClr val="44546A"/></a:dk2><a:lt2><a:srgbClr val="E7E6E6"/></a:lt2>'
+  return XML_HEAD + '<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Table Plan"><a:themeElements>'
+    + '<a:clrScheme name="Table Plan"><a:dk1><a:srgbClr val="1A1A1A"/></a:dk1><a:lt1><a:srgbClr val="FFFFFF"/></a:lt1><a:dk2><a:srgbClr val="44546A"/></a:dk2><a:lt2><a:srgbClr val="E7E6E6"/></a:lt2>'
     + '<a:accent1><a:srgbClr val="E7302A"/></a:accent1><a:accent2><a:srgbClr val="4A78B5"/></a:accent2><a:accent3><a:srgbClr val="A6CE4E"/></a:accent3><a:accent4><a:srgbClr val="E0A020"/></a:accent4><a:accent5><a:srgbClr val="9B7BD4"/></a:accent5><a:accent6><a:srgbClr val="7FD1AE"/></a:accent6>'
     + '<a:hlink><a:srgbClr val="0563C1"/></a:hlink><a:folHlink><a:srgbClr val="954F72"/></a:folHlink></a:clrScheme>'
-    + '<a:fontScheme name="List Builder">' + fonts('majorFont') + fonts('minorFont') + '</a:fontScheme>'
+    + '<a:fontScheme name="Table Plan">' + fonts('majorFont') + fonts('minorFont') + '</a:fontScheme>'
     + '<a:fmtScheme name="Office"><a:fillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:fillStyleLst>'
     + '<a:lnStyleLst><a:ln w="6350"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln><a:ln w="12700"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln><a:ln w="19050"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln></a:lnStyleLst>'
     + '<a:effectStyleLst><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle></a:effectStyleLst>'
@@ -1257,7 +1257,7 @@ function manifestJson(cfg, listFields, extras) {
     budgets: {},
     placeholders: placeholders,
     list_fields: listFields,
-    generator: 'SlideSize List Builder ' + LB.version
+    generator: 'SlideSize Table Plan ' + LB.version
   };
   return JSON.stringify(m, null, 1);
 }
@@ -1345,9 +1345,9 @@ function buildDeck(plan, cfg, JSZip) {
 
   var when = isoNow(cfg.created || new Date());
   zip.file('docProps/core.xml', XML_HEAD + '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
-    + '<dc:title>' + esc(cfg.docTitle || 'List') + '</dc:title><dc:creator>SlideSize List Builder</dc:creator><cp:lastModifiedBy>SlideSize List Builder</cp:lastModifiedBy>'
+    + '<dc:title>' + esc(cfg.docTitle || 'List') + '</dc:title><dc:creator>SlideSize Table Plan</dc:creator><cp:lastModifiedBy>SlideSize Table Plan</cp:lastModifiedBy>'
     + '<dcterms:created xsi:type="dcterms:W3CDTF">' + when + '</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">' + when + '</dcterms:modified></cp:coreProperties>');
-  zip.file('docProps/app.xml', XML_HEAD + '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"><Application>SlideSize List Builder</Application><Slides>' + plan.slides.length + '</Slides><PresentationFormat>Widescreen</PresentationFormat></Properties>');
+  zip.file('docProps/app.xml', XML_HEAD + '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"><Application>SlideSize Table Plan</Application><Slides>' + plan.slides.length + '</Slides><PresentationFormat>Widescreen</PresentationFormat></Properties>');
   zip.file('[Content_Types].xml', XML_HEAD + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' + ct.join('') + '</Types>');
   zip.file('_rels/.rels', rels([{ id: 'rId1', type: 'officeDocument', target: 'ppt/presentation.xml' },
     { id: 'rId2', fullType: 'http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties', target: 'docProps/core.xml' },
