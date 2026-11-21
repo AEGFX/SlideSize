@@ -11,7 +11,7 @@
 <style>
 /* --max-w and most primitives come from shared.css; only the calculator-specific
    width override and the logo-mark width transition live here. */
-:root { --max-w: 960px; }   /* calculator and tool boxes share this width */
+:root { --max-w: 720px; }   /* the calculator; the tool boxes below run wider */
 .logo-mark { transition: width 0.4s ease; }
 .wrap {
 width: 100%;
@@ -472,7 +472,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 /* ===== Other Tools: EMF Extractor (complementary teal accent) ===== */
 .other-tools {
 width: 100%;
-max-width: var(--max-w);   /* same width as the calculator above */
+max-width: 960px;   /* three boxes across, a little wider than the calculator */
 padding: 0 24px;
 display: flex;
 flex-direction: column;
