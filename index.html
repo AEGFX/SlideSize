@@ -13,11 +13,15 @@
    width override and the logo-mark width transition live here. */
 :root { --max-w: 720px; }   /* the calculator; the tool boxes below run wider */
 .logo-mark { transition: width 0.4s ease; }
-/* Home page header. No top bar here: the AEGFX logo sits to the right of the
-   title, which stays centred on the page. On a phone it drops below the title. */
+/* Home page header. No top bar here: the title stays centred on the page and
+   the AEGFX logo sits at the right, its edge in line with the right edge of the
+   boxes below. On a phone it drops below the title. */
 .home-head { padding: 20px 0; }
-.title-lockup { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.title-lockup .brand { position: absolute; left: 100%; top: 50%; transform: translateY(-50%); margin-left: 40px; }
+.title-lockup {
+position: relative; width: 100%; max-width: 960px; padding: 0 24px;
+display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.title-lockup .brand { position: absolute; right: 24px; top: 50%; transform: translateY(-50%); }
 @media (max-width: 720px) {
 .title-lockup .brand { position: static; transform: none; margin: 8px 0 0; }
 }
@@ -983,7 +987,7 @@ text-transform: uppercase; color: var(--emf);
 <div class="title-lockup">
 <div class="logo-mark" id="logo-mark"></div>
 <div class="logo-text">Slide Size <span>Calculator</span></div>
-<a class="brand" href="/" title="Slide Size home"><img src="aegfx-logo-white.svg" alt="AEGFX, Slide Size home" width="104" height="24"></a>
+<a class="brand" href="https://aegfx.com" title="AEGFX LTD"><img src="aegfx-logo-white.svg" alt="AEGFX LTD" width="104" height="24"></a>
 </div>
 </header>
 <div class="calc-shell">
