@@ -29,6 +29,19 @@ display: flex;
 flex-direction: column;
 gap: 16px;
 }
+/* The calculator sits in one rounded box as wide as three tool boxes, with the
+   calculator itself kept at its own width in the middle. */
+.calc-shell { width: 100%; max-width: 960px; padding: 28px 24px 40px; }
+.calc-card {
+background: var(--panel); border: 1px solid var(--border2); border-radius: 10px;
+display: flex; justify-content: center;
+}
+.calc-card .wrap { padding: 32px 24px 36px; }
+.calc-card .result-hero { background: var(--bg); }
+@media (max-width: 560px) {
+.calc-shell { padding: 20px 24px 32px; }   /* same side margin as the tool boxes */
+.calc-card .wrap { padding: 20px 16px 24px; }
+}
 .calc-in { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .mode-toggle {
 display: grid;
@@ -973,6 +986,8 @@ text-transform: uppercase; color: var(--emf);
 <a class="brand" href="/" title="Slide Size home"><img src="aegfx-logo-white.svg" alt="AEGFX, Slide Size home" width="104" height="24"></a>
 </div>
 </header>
+<div class="calc-shell">
+<div class="calc-card">
 <div class="wrap">
 <div class="calc-in">
 <div class="mode-toggle">
@@ -1127,6 +1142,9 @@ Standard Presets Reference
 </div>
 </div>
 </div>
+</div>
+</div>
+
 <div class="other-tools sec-ppt">
 <div class="other-tools-head"><span class="ot-label">Presentation Tools</span></div>
 <div class="tools-grid">
